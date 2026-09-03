@@ -80,3 +80,8 @@ export async function deletePatientApi(id) {
     method: "DELETE",
   });
 }
+
+// NEW — Activity Log
+export async function getActivityLogsApi(perPage = 5) {
+  return request(`/activity-logs?per_page=${perPage}`);
+}

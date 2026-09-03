@@ -6,6 +6,7 @@ import PatientCard from "./PatientsTable/PatientCard";
 import AddPatientModal from "./modals/AddPatientModal";
 import EditPatientModal from "./modals/EditPatientModal";
 import PatientViewModal from "./modals/PatientViewModal";
+import ConfirmModal from "../Patients/modals/ConfirmModal";
 import {
   getPatientsApi,
   getPatientApi,
@@ -35,6 +36,7 @@ export default function Patients() {
   const [loading, setLoading] = useState(true);
   const [viewingPatient, setViewingPatient] = useState(null);
   const [editingPatient, setEditingPatient] = useState(null);
+  const [deletingPatient, setDeletingPatient] = useState(null);
 
   const loadPatients = useCallback(async (query = "") => {
     setLoading(true);
@@ -113,10 +115,15 @@ export default function Patients() {
     }
   }
 
-  async function handleDelete(id) {
-    if (!confirm("Delete this patient?")) return;
+  function handleDelete(id) {
+    const patient = patients.find((p) => p.id === id);
+    setDeletingPatient(patient);
+  }
+
+  async function confirmDelete() {
     try {
-      await deletePatientApi(id);
+      await deletePatientApi(deletingPatient.id);
+      setDeletingPatient(null);
       loadPatients(search);
     } catch (err) {
       alert(err.message);
@@ -173,6 +180,17 @@ export default function Patients() {
           patient={editingPatient}
           onClose={() => setEditingPatient(null)}
           onSave={handleSaveEdit}
+        />
+      )}
+
+      {deletingPatient && (
+        <ConfirmModal
+          title="Remove Patient"
+          message={`Are you sure you want to remove ${deletingPatient.name}? This action cannot be undone.`}
+          confirmLabel="Remove"
+          danger
+          onConfirm={confirmDelete}
+          onClose={() => setDeletingPatient(null)}
         />
       )}
     </div>

@@ -45,3 +45,8 @@ export async function logoutApi() {
     method: "POST",
   });
 }
+
+// NEW — Activity Log
+export async function getActivityLogsApi(perPage = 5) {
+  return request(`/activity-logs?per_page=${perPage}`);
+}

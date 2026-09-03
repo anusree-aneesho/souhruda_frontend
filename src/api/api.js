@@ -26,6 +26,8 @@ async function request(endpoint, options = {}) {
   return data;
 }
 
+// ── Authentication ──────────────────────────────
+
 export async function loginApi(email, password) {
   return request("/login", {
     method: "POST",
@@ -38,23 +40,17 @@ export async function getMeApi() {
 }
 
 export async function logoutApi() {
-  return request("/logout", { method: "POST" });
+  return request("/logout", {
+    method: "POST",
+  });
 }
-
-
-
-
-
-
-
-
-
-
 
 // ── Patients ──────────────────────────────
 
 export async function getPatientsApi(query = "") {
-  return request(`/patients${query ? `?q=${encodeURIComponent(query)}` : ""}`);
+  return request(
+    `/patients${query ? `?q=${encodeURIComponent(query)}` : ""}`
+  );
 }
 
 export async function getPatientApi(id) {
@@ -81,7 +77,38 @@ export async function deletePatientApi(id) {
   });
 }
 
-// NEW — Activity Log
+// ── Settings ──────────────────────────────
+
+export async function getSettingsApi() {
+  return request("/settings");
+}
+
+export async function updateSettingsApi(settingsData) {
+  return request("/settings", {
+    method: "PUT",
+    body: JSON.stringify(settingsData),
+  });
+}
+
+// ── Branch ──────────────────────────────
+
+export async function getBranchesApi() {
+  return request("/branches");
+}
+
+export async function getBranchApi(id) {
+  return request(`/branches/${id}`);
+}
+
+export async function createBranchApi(branchData) {
+  return request("/branches", {
+    method: "POST",
+    body: JSON.stringify(branchData),
+  });
+}
+
+// ── Activity Log ──────────────────────────────
+
 export async function getActivityLogsApi(perPage = 5) {
   return request(`/activity-logs?per_page=${perPage}`);
 }

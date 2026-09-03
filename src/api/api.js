@@ -45,3 +45,31 @@ export async function logoutApi() {
     method: "POST",
   });
 }
+
+// Settings
+export async function getSettingsApi() {
+  return request("/settings");
+}
+
+export async function updateSettingsApi(settingsData) {
+  return request("/settings", {
+    method: "PUT",
+    body: JSON.stringify(settingsData),
+  });
+}
+
+// Branch
+export async function getBranchesApi() {
+  return request("/branches");
+}
+
+export async function getBranchApi(id) {
+  return request(`/branches/${id}`);
+}
+
+export async function createBranchApi(branchData) {
+  return request("/branches", {
+    method: "POST",
+    body: JSON.stringify(branchData),
+  });
+}

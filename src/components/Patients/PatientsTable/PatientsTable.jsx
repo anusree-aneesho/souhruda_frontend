@@ -1,7 +1,6 @@
-// src/components/Patients/PatientsTable/PatientsTable.jsx
 import PatientRow from "./PatientRow";
 
-export default function PatientsTable({ patients }) {
+export default function PatientsTable({ patients, onView, onEdit, onDelete }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[720px]">
@@ -17,7 +16,7 @@ export default function PatientsTable({ patients }) {
         </thead>
         <tbody>
           {patients.map((p) => (
-            <PatientRow key={p.regNo} {...p} />
+            <PatientRow key={p.id} {...p} onView={onView} onEdit={onEdit} onDelete={onDelete} />
           ))}
         </tbody>
       </table>

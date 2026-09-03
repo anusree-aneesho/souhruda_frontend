@@ -29,10 +29,7 @@ async function request(endpoint, options = {}) {
 export async function loginApi(email, password) {
   return request("/login", {
     method: "POST",
-    body: JSON.stringify({
-      email,
-      password,
-    }),
+    body: JSON.stringify({ email, password }),
   });
 }
 
@@ -41,7 +38,45 @@ export async function getMeApi() {
 }
 
 export async function logoutApi() {
-  return request("/logout", {
+  return request("/logout", { method: "POST" });
+}
+
+
+
+
+
+
+
+
+
+
+
+// ── Patients ──────────────────────────────
+
+export async function getPatientsApi(query = "") {
+  return request(`/patients${query ? `?q=${encodeURIComponent(query)}` : ""}`);
+}
+
+export async function getPatientApi(id) {
+  return request(`/patients/${id}`);
+}
+
+export async function createPatientApi(data) {
+  return request("/patients", {
     method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updatePatientApi(id, data) {
+  return request(`/patients/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deletePatientApi(id) {
+  return request(`/patients/${id}`, {
+    method: "DELETE",
   });
 }

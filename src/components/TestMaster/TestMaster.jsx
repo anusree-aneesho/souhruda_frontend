@@ -5,20 +5,20 @@ import CategoryList from "./CategoryList/CategoryList";
 import TestsTable from "../TestMaster/CategoryList/TestsTable/TestsTable";
 import AddCategoryModal from "./modals/AddCategoryModal";
 import AddTestModal from "./modals/AddTestModal";
-import { testsByCategory as initialTests } from "../../data/testCatalog";
 import {
   getTestCategories,
+  getLabTests,
   createTestCategory,
   createLabTest,
   updateLabTest,
   deleteLabTest,
-} from "../../api/api"; // ⬅ CHANGED: added createLabTest, updateLabTest, deleteLabTest
+} from "../../api/api"; 
 
 const dotColors = ["teal", "pink", "purple", "amber"];
 
 export default function TestMaster() {
   const [categories, setCategories] = useState([]);
-  const [testsByCategory, setTestsByCategory] = useState(initialTests);
+  const [testsByCategory, setTestsByCategory] = useState({});
   const [activeCategory, setActiveCategory] = useState("");
   const [loadingCategories, setLoadingCategories] = useState(true);
 
@@ -28,25 +28,51 @@ export default function TestMaster() {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadCategories() {
+    async function loadCategoriesAndTests() {
       try {
-        const res = await getTestCategories();
+        const [catRes, testRes] = await Promise.all([
+          getTestCategories(),
+          getLabTests(),
+        ]);
         if (cancelled) return;
-        const mapped = res.data.map((c, i) => ({
+
+        const mapped = catRes.data.map((c, i) => ({
           id: c.id,
           name: c.name,
           color: dotColors[i % dotColors.length],
         }));
         setCategories(mapped);
         setActiveCategory(mapped[0]?.name || "");
+
+        const catIdToName = Object.fromEntries(mapped.map((c) => [c.id, c.name]));
+        const grouped = {};
+        testRes.data.forEach((t) => {
+          const catName = catIdToName[t.category_id];
+          if (!catName) return;
+          if (!grouped[catName]) grouped[catName] = [];
+          grouped[catName].push({
+            id: t.id,
+            name: t.name,
+            unit: t.unit,
+            price: t.price,
+            criticalLow: t.critical_low,
+            criticalHigh: t.critical_high,
+            followupWeeks: t.followup_weeks,
+            criteria: t.criteria,
+            demographicRanges: Object.fromEntries(
+              (t.ranges || []).map((r) => [r.demographic_group, r.range_raw])
+            ),
+          });
+        });
+        setTestsByCategory(grouped);
       } catch (err) {
-        console.error("Failed to load categories:", err.message);
+        console.error("Failed to load categories/tests:", err.message);
       } finally {
         if (!cancelled) setLoadingCategories(false);
       }
     }
 
-    loadCategories();
+    loadCategoriesAndTests();
     return () => { cancelled = true; };
   }, []);
 

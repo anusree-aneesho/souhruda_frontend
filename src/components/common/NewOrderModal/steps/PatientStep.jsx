@@ -1,23 +1,35 @@
 // src/components/NewOrderModal/steps/PatientStep.jsx
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, ChevronDown } from "lucide-react";
-import { patients } from "../../../../data/patients";
+import { useEffect, useRef, useState } from "react";
+import { Search, ChevronDown, Loader2 } from "lucide-react";
+import { getPatientsApi } from "../../../../api/api";
 
-function PatientCombobox({ selectedPatientRegNo, onSelectPatient }) {
+// Maps the /patients API shape to the shape this combobox (and the rest of
+// the order flow) works with.
+function mapPatient(p) {
+  return {
+    id: p.id,
+    regNo: p.patient_number,
+    name: p.full_name,
+    age: p.age,
+    gender: p.gender,
+    contact: p.phone,
+  };
+}
+
+function PatientCombobox({ selectedPatient, onSelectPatient }) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
   const wrapperRef = useRef(null);
-
-  const selectedPatient = patients.find((p) => p.regNo === selectedPatientRegNo);
 
   // Keep the input text in sync with the selection whenever the dropdown is closed
   useEffect(() => {
     if (!isOpen) {
       setQuery(selectedPatient ? `${selectedPatient.name} (${selectedPatient.regNo})` : "");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPatientRegNo, isOpen]);
+  }, [selectedPatient, isOpen]);
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -29,22 +41,39 @@ function PatientCombobox({ selectedPatientRegNo, onSelectPatient }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filteredPatients = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    // If the box currently just shows the selected patient's label, treat it as "no filter"
+  // Search the real `patients` table (via GET /v1/patients?q=) whenever the
+  // dropdown is open, debounced so we don't fire a request on every keystroke.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // If the box currently just shows the selected patient's label (user
+    // hasn't typed anything new), treat it as "no filter" and load the list.
     const isShowingSelectedLabel =
-      !isOpen && selectedPatient && query === `${selectedPatient.name} (${selectedPatient.regNo})`;
-    if (!q || isShowingSelectedLabel) return patients;
-    return patients.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.regNo.toLowerCase().includes(q) ||
-        p.contact.includes(q)
-    );
+      selectedPatient && query === `${selectedPatient.name} (${selectedPatient.regNo})`;
+    const search = isShowingSelectedLabel ? "" : query.trim();
+
+    let cancelled = false;
+    setLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await getPatientsApi(search);
+        if (!cancelled) setResults((res.data || []).map(mapPatient));
+      } catch (err) {
+        if (!cancelled) setResults([]);
+        console.error("Failed to search patients:", err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [query, isOpen, selectedPatient]);
 
   function handleSelect(patient) {
-    onSelectPatient(patient.regNo);
+    onSelectPatient(patient);
     setQuery(`${patient.name} (${patient.regNo})`);
     setIsOpen(false);
   }
@@ -58,13 +87,13 @@ function PatientCombobox({ selectedPatientRegNo, onSelectPatient }) {
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setHighlightedIndex((i) => Math.min(i + 1, filteredPatients.length - 1));
+      setHighlightedIndex((i) => Math.min(i + 1, results.length - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setHighlightedIndex((i) => Math.max(i - 1, 0));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      const patient = filteredPatients[highlightedIndex];
+      const patient = results[highlightedIndex];
       if (patient) handleSelect(patient);
     } else if (e.key === "Escape") {
       setIsOpen(false);
@@ -95,10 +124,14 @@ function PatientCombobox({ selectedPatientRegNo, onSelectPatient }) {
 
       {isOpen && (
         <div className="absolute z-10 mt-1 w-full max-h-56 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-          {filteredPatients.length === 0 ? (
+          {loading ? (
+            <p className="flex items-center gap-2 px-3.5 py-3 text-sm text-gray-400">
+              <Loader2 size={14} className="animate-spin" /> Searching patients...
+            </p>
+          ) : results.length === 0 ? (
             <p className="px-3.5 py-3 text-sm text-gray-400">No patients match your search.</p>
           ) : (
-            filteredPatients.map((p, index) => (
+            results.map((p, index) => (
               <button
                 key={p.regNo}
                 type="button"
@@ -106,7 +139,7 @@ function PatientCombobox({ selectedPatientRegNo, onSelectPatient }) {
                 onMouseEnter={() => setHighlightedIndex(index)}
                 className={`flex w-full flex-col items-start gap-0.5 px-3.5 py-2.5 text-left text-sm transition-colors ${
                   index === highlightedIndex ? "bg-teal-50" : "hover:bg-gray-50"
-                } ${p.regNo === selectedPatientRegNo ? "font-semibold text-teal-700" : "text-gray-900"}`}
+                } ${p.regNo === selectedPatient?.regNo ? "font-semibold text-teal-700" : "text-gray-900"}`}
               >
                 <span>{p.name}</span>
                 <span className="text-xs text-gray-400">
@@ -123,7 +156,7 @@ function PatientCombobox({ selectedPatientRegNo, onSelectPatient }) {
 
 export default function PatientStep({
   patientType, onPatientTypeChange,
-  selectedPatientRegNo, onSelectPatient,
+  selectedPatient, onSelectPatient,
   newPatientData, onNewPatientChange,
 }) {
   return (
@@ -151,7 +184,7 @@ export default function PatientStep({
         <div>
           <label className="block text-sm font-semibold text-gray-900 mb-1.5">Select Patient</label>
           <PatientCombobox
-            selectedPatientRegNo={selectedPatientRegNo}
+            selectedPatient={selectedPatient}
             onSelectPatient={onSelectPatient}
           />
         </div>

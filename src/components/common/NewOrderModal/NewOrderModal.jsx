@@ -39,7 +39,7 @@ export default function NewOrderModal() {
   const [patientType, setPatientType] = useState("existing");
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [newPatientData, setNewPatientData] = useState(emptyNewPatient);
-  const [activeCategory, setActiveCategory] = useState("Biochemistry");
+  const [activeCategory, setActiveCategory] = useState(null);
   const [selectedTests, setSelectedTests] = useState([]);
   const [paymentDone, setPaymentDone] = useState(false);
 
@@ -82,7 +82,7 @@ export default function NewOrderModal() {
     setPatientType("existing");
     setSelectedPatient(null);
     setNewPatientData(emptyNewPatient);
-    setActiveCategory("Biochemistry");
+    setActiveCategory(null);
     setSelectedTests([]);
     setPaymentDone(false);
     setAddress("");

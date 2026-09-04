@@ -9,7 +9,7 @@ export default function SettingsHeader({ onAddBranch }) {
       </div>
       <button
         onClick={onAddBranch}
-        className="rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
+        className="rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors cursor-pointer"
       >
         + Add Branch
       </button>

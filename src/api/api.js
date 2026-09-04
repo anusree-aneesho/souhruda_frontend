@@ -26,7 +26,7 @@ async function request(endpoint, options = {}) {
   return data;
 }
 
-// ── Authentication ──────────────────────────────
+// ── Authentication ─────────────────────────────────────────
 
 export async function loginApi(email, password) {
   return request("/login", {
@@ -45,7 +45,33 @@ export async function logoutApi() {
   });
 }
 
-// ── Patients ──────────────────────────────
+// ── Technicians ──────────────────────────────
+
+export async function getTechniciansApi() {
+  return request("/technicians");
+}
+
+export async function createTechnicianApi(payload) {
+  return request("/technicians", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateTechnicianApi(id, payload) {
+  return request(`/technicians/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteTechnicianApi(id) {
+  return request(`/technicians/${id}`, {
+    method: "DELETE",
+  });
+}
+
+// ── Patients ───────────────────────────────────────────────
 
 export async function getPatientsApi(query = "") {
   return request(
@@ -77,7 +103,7 @@ export async function deletePatientApi(id) {
   });
 }
 
-// ── Settings ──────────────────────────────
+// ── Settings ───────────────────────────────────────────────
 
 export async function getSettingsApi() {
   return request("/settings");
@@ -90,7 +116,7 @@ export async function updateSettingsApi(settingsData) {
   });
 }
 
-// ── Branch ──────────────────────────────
+// ── Branch ─────────────────────────────────────────────────
 
 export async function getBranchesApi() {
   return request("/branches");
@@ -107,8 +133,66 @@ export async function createBranchApi(branchData) {
   });
 }
 
-// ── Activity Log ──────────────────────────────
+// ── Activity Log ───────────────────────────────────────────
 
 export async function getActivityLogsApi(perPage = 5, page = 1) {
   return request(`/activity-logs?per_page=${perPage}&page=${page}`);
+}
+
+// ── Test Category ──────────────────────────────────────────
+
+export function getTestCategories() {
+  return request("/test-categories", {
+    method: "GET",
+  });
+}
+
+export function createTestCategory(payload) {
+  return request("/test-categories", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateTestCategory(id, payload) {
+  return request(`/test-categories/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteTestCategory(id) {
+  return request(`/test-categories/${id}`, {
+    method: "DELETE",
+  });
+}
+
+// ── Lab Test ───────────────────────────────────────────────
+
+export function getLabTests(categoryId = null) {
+  const query = categoryId ? `?category_id=${categoryId}` : "";
+
+  return request(`/lab-tests${query}`, {
+    method: "GET",
+  });
+}
+
+export function createLabTest(payload) {
+  return request("/lab-tests", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateLabTest(id, payload) {
+  return request(`/lab-tests/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteLabTest(id) {
+  return request(`/lab-tests/${id}`, {
+    method: "DELETE",
+  });
 }

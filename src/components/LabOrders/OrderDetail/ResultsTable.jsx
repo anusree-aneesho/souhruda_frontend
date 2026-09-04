@@ -42,10 +42,10 @@ export default function ResultsTable({ tests, results, flags, onResultChange, on
           Bill total: <span className="font-semibold text-gray-900">₹{billTotal.toFixed(2)}</span>
         </p>
         <div className="flex gap-3">
-          <button onClick={onSaveClose} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          <button onClick={onSaveClose} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
             Save & Close
           </button>
-          <button onClick={onMarkCompleted} className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700">
+          <button onClick={onMarkCompleted} className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer">
             Mark Completed & View Report
           </button>
         </div>

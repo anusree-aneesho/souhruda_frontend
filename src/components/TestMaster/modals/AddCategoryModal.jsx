@@ -13,7 +13,7 @@ export default function AddCategoryModal({ onClose, onAdd }) {
   }
 
   return (
-    <ModalShell title="New Category" onClose={onClose} maxWidth="max-w-md">
+    <ModalShell title="New Category" onClose={onClose} maxWidth="max-w-md ">
       <form onSubmit={handleSubmit}>
         <div className="px-6 py-5">
           <label className="block text-sm font-semibold text-gray-900 mb-1.5">
@@ -31,13 +31,13 @@ export default function AddCategoryModal({ onClose, onAdd }) {
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700"
+            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer"
           >
             Add Category
           </button>

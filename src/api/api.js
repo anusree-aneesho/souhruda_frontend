@@ -45,6 +45,32 @@ export async function logoutApi() {
   });
 }
 
+// ── Technicians ──────────────────────────────
+
+export async function getTechniciansApi() {
+  return request("/technicians");
+}
+
+export async function createTechnicianApi(payload) {
+  return request("/technicians", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateTechnicianApi(id, payload) {
+  return request(`/technicians/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteTechnicianApi(id) {
+  return request(`/technicians/${id}`, {
+    method: "DELETE",
+  });
+}
+
 // ── Patients ───────────────────────────────────────────────
 
 export async function getPatientsApi(query = "") {

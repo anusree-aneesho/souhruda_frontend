@@ -12,7 +12,7 @@ export default function Login() {
   const location = useLocation();
   const redirectTo = location.state?.from?.pathname || "/";
 
-  const [identifier, setIdentifier] = useState("");
+  const [identifier, setIdentifier] = useState("");  
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);

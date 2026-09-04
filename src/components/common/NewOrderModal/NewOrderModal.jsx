@@ -8,8 +8,19 @@ import SelectTestsStep from "./steps/SelectTestsStep";
 import ConfirmStep from "./steps/ConfirmStep";
 import AddressSlotStep from "./steps/AddressSlotStep";
 import PaymentStep from "./steps/PaymentStep";
-import { patients } from "../../../data/patients";
+import { getPatientsApi } from "../../../api/api";
 import { useOrderModal } from "../../../Context/OrderModalContext";
+
+function mapPatient(p) {
+  return {
+    id: p.id,
+    regNo: p.patient_number,
+    name: p.full_name,
+    age: p.age,
+    gender: p.gender,
+    contact: p.phone,
+  };
+}
 
 const emptyNewPatient = { name: "", age: "", gender: "Male", contact: "" };
 const emptyPinnedLocation = { lat: "11.2738", lng: "75.8004", distanceKm: "2.7" };
@@ -26,19 +37,34 @@ export default function NewOrderModal() {
 
   const [step, setStep] = useState(1);
   const [patientType, setPatientType] = useState("existing");
-  const [selectedPatientRegNo, setSelectedPatientRegNo] = useState(patients[0].regNo);
+  const [selectedPatient, setSelectedPatient] = useState(null);
   const [newPatientData, setNewPatientData] = useState(emptyNewPatient);
   const [activeCategory, setActiveCategory] = useState("Biochemistry");
   const [selectedTests, setSelectedTests] = useState([]);
   const [paymentDone, setPaymentDone] = useState(false);
 
   // When the modal opens for a specific patient, jump straight to the
-  // Select Tests step with that patient pre-selected.
+  // Select Tests step with that patient pre-selected. The caller only gives
+  // us the reg. no., so look the patient up in the real patients table.
   useEffect(() => {
     if (isOpen && skipPatientStep) {
       setPatientType("existing");
-      setSelectedPatientRegNo(presetPatientRegNo);
       setStep(2);
+
+      let cancelled = false;
+      (async () => {
+        try {
+          const res = await getPatientsApi(presetPatientRegNo);
+          const match = (res.data || []).find((p) => p.patient_number === presetPatientRegNo);
+          if (!cancelled && match) setSelectedPatient(mapPatient(match));
+        } catch (err) {
+          console.error("Failed to load patient:", err.message);
+        }
+      })();
+
+      return () => {
+        cancelled = true;
+      };
     } else if (isOpen) {
       setStep(1);
     }
@@ -54,7 +80,7 @@ export default function NewOrderModal() {
   function resetAndClose() {
     setStep(1);
     setPatientType("existing");
-    setSelectedPatientRegNo(patients[0].regNo);
+    setSelectedPatient(null);
     setNewPatientData(emptyNewPatient);
     setActiveCategory("Biochemistry");
     setSelectedTests([]);
@@ -98,7 +124,7 @@ export default function NewOrderModal() {
 
   const currentPatient =
     patientType === "existing"
-      ? patients.find((p) => p.regNo === selectedPatientRegNo)
+      ? selectedPatient
       : { name: newPatientData.name || "New Patient", age: newPatientData.age || "-", gender: newPatientData.gender, regNo: "NEW" };
 
   function handleCreateOrder() {
@@ -119,7 +145,8 @@ export default function NewOrderModal() {
   }
 
   const isNextDisabled =
-    (step === 2 && selectedTests.length === 0) ||
+    (step === 1 && patientType === "existing" && !selectedPatient) ||
+    (step === 2 && (selectedTests.length === 0 || !currentPatient)) ||
     (isHomeCollection && step === 3 && (!address.trim() || !preferredDate));
 
   if (!isOpen) return null;
@@ -132,8 +159,8 @@ export default function NewOrderModal() {
         <PatientStep
           patientType={patientType}
           onPatientTypeChange={setPatientType}
-          selectedPatientRegNo={selectedPatientRegNo}
-          onSelectPatient={setSelectedPatientRegNo}
+          selectedPatient={selectedPatient}
+          onSelectPatient={setSelectedPatient}
           newPatientData={newPatientData}
           onNewPatientChange={(field, value) => setNewPatientData((prev) => ({ ...prev, [field]: value }))}
         />

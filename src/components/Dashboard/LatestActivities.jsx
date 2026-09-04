@@ -1,5 +1,6 @@
 // src/components/Dashboard/LatestActivities.jsx
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ActivityItem from "./ActivityItem";
 import { getActivityLogsApi } from "../../api/api";
 
@@ -20,6 +21,7 @@ function mapSubjectType(subjectType) {
 }
 
 export default function LatestActivities() {
+  const navigate = useNavigate();
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,7 +29,7 @@ export default function LatestActivities() {
   useEffect(() => {
     async function fetchActivities() {
       try {
-        const result = await getActivityLogsApi(5);
+        const result = await getActivityLogsApi(5, 1);
 
         const mapped = result.data.map((log) => ({
           date: formatDate(log.created_at),
@@ -49,7 +51,15 @@ export default function LatestActivities() {
 
   return (
     <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-      <h3 className="font-semibold text-sm text-gray-900 mb-2">Latest Activities</h3>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="font-semibold text-sm text-gray-900">Latest Activities</h3>
+        <button
+          onClick={() => navigate("/activity-logs")}
+          className="text-xs font-medium text-teal-600 hover:underline"
+        >
+          View all
+        </button>
+      </div>
 
       {loading && <p className="text-xs text-gray-400">Loading...</p>}
       {error && <p className="text-xs text-red-500">Failed to load activities.</p>}

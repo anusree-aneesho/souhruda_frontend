@@ -109,6 +109,6 @@ export async function createBranchApi(branchData) {
 
 // ── Activity Log ──────────────────────────────
 
-export async function getActivityLogsApi(perPage = 5) {
-  return request(`/activity-logs?per_page=${perPage}`);
+export async function getActivityLogsApi(perPage = 5, page = 1) {
+  return request(`/activity-logs?per_page=${perPage}&page=${page}`);
 }

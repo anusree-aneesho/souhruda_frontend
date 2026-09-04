@@ -15,9 +15,7 @@ import FollowUps from "../components/Follow-ups/FollowUps";
 import Settings from "../components/SettingPage/Settings";
 import OrderDetail from "../components/LabOrders/OrderDetail/OrderDetail";
 import Report from "../components/LabOrders/Report/Report";
-
-// import LabOrders from "../components/LabOrders/LabOrders";
-// ...add as each page is built
+import ActivityLogPage from "../components/Dashboard/ActivityLogPage";
 
 export default function AppRoutes() {
   return (
@@ -38,6 +36,7 @@ export default function AppRoutes() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/lab-orders/:orderId" element={<OrderDetail />} />
           <Route path="/lab-orders/:orderId/report" element={<Report />} />
+          <Route path="/activity-logs" element={<ActivityLogPage />} />
         </Route>
       </Route>
     </Routes>

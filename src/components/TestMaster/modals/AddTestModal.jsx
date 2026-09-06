@@ -13,6 +13,9 @@ const emptyForm = {
   name: "",
   unit: "",
   price: "",
+  criticalLow: "",
+  criticalHigh: "",
+  followupWeeks: "",
   criteria: "",
   demographicRanges: { ...emptyDemographicRanges },
 };
@@ -28,6 +31,9 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
         name: editingTest.name,
         unit: editingTest.unit,
         price: editingTest.price,
+        criticalLow: editingTest.criticalLow ?? "",
+        criticalHigh: editingTest.criticalHigh ?? "",
+        followupWeeks: editingTest.followupWeeks ?? "",
         criteria: editingTest.criteria || "",
         demographicRanges: { ...emptyDemographicRanges, ...(editingTest.demographicRanges || {}) },
       });
@@ -53,6 +59,9 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
     onSave({
       ...form,
       price: parseFloat(form.price) || 0,
+      criticalLow: form.criticalLow === "" ? null : parseFloat(form.criticalLow),
+      criticalHigh: form.criticalHigh === "" ? null : parseFloat(form.criticalHigh),
+      followupWeeks: form.followupWeeks === "" ? null : parseInt(form.followupWeeks, 10),
       id: editingTest?.id || form.name.trim().toLowerCase().replace(/\s+/g, "-"),
     });
   }
@@ -105,6 +114,43 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
                 className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Critical Low</label>
+              <input
+                type="number"
+                step="any"
+                value={form.criticalLow}
+                onChange={(e) => handleChange("criticalLow", e.target.value)}
+                placeholder="Optional"
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Critical High</label>
+              <input
+                type="number"
+                step="any"
+                value={form.criticalHigh}
+                onChange={(e) => handleChange("criticalHigh", e.target.value)}
+                placeholder="Optional"
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Follow-up (weeks)</label>
+            <input
+              type="number"
+              min="0"
+              value={form.followupWeeks}
+              onChange={(e) => handleChange("followupWeeks", e.target.value)}
+              placeholder="Optional"
+              className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+            />
           </div>
 
           <div>

@@ -1,5 +1,7 @@
 // src/components/TestMaster/TestsTable/TestRow.jsx
 export default function TestRow({ test, onEdit, onRemove, onViewRange }) {
+  const hasFollowup = test.followupWeeks !== null && test.followupWeeks !== undefined && test.followupWeeks !== "";
+
   return (
     <tr className="border-b border-gray-100 last:border-0">
       <td className="py-3 text-sm font-medium text-gray-900">{test.name}</td>
@@ -13,6 +15,9 @@ export default function TestRow({ test, onEdit, onRemove, onViewRange }) {
         </button>
       </td>
       <td className="py-3 text-sm text-gray-900">₹{Number(test.price).toFixed(2)}</td>
+      <td className="py-3 text-sm text-gray-500">
+        {hasFollowup ? `${test.followupWeeks}w` : <span className="text-gray-300">—</span>}
+      </td>
       <td className="py-3 text-right space-x-3">
         <button onClick={() => onEdit(test)} className="text-sm text-teal-600 font-medium hover:underline cursor-pointer">
           Edit

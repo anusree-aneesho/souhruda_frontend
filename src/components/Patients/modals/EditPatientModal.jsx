@@ -9,6 +9,7 @@ export default function EditPatientModal({ patient, onClose, onSave }) {
     contact: patient.contact,
     email: patient.email || "",
     address: patient.address || "",
+    isPregnant: patient.isPregnant || false,
   });
 
   function handleChange(field, value) {
@@ -66,6 +67,21 @@ export default function EditPatientModal({ patient, onClose, onSave }) {
               />
             </div>
           </div>
+
+          {form.gender === "Female" && (
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="editIsPregnant"
+                checked={form.isPregnant}
+                onChange={(e) => handleChange("isPregnant", e.target.checked)}
+                className="rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+              />
+              <label htmlFor="editIsPregnant" className="text-sm text-gray-700 cursor-pointer">
+                Currently pregnant
+              </label>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-1.5">Email ID</label>

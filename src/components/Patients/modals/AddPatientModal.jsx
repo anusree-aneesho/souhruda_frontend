@@ -1,8 +1,7 @@
-// src/components/Patients/modals/AddPatientModal.jsx
 import { useState } from "react";
 import ModalShell from "../../common/Modal/ModalShell";
 
-const emptyForm = { name: "", age: "", gender: "Male", contact: "", email: "", address: "" };
+const emptyForm = { name: "", age: "", gender: "Male", contact: "", email: "", address: "", isPregnant: false };
 
 export default function AddPatientModal({ onClose, onAdd }) {
   const [form, setForm] = useState(emptyForm);
@@ -68,6 +67,21 @@ export default function AddPatientModal({ onClose, onAdd }) {
               />
             </div>
           </div>
+
+          {form.gender === "Female" && (
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isPregnant"
+                checked={form.isPregnant}
+                onChange={(e) => handleChange("isPregnant", e.target.checked)}
+                className="rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+              />
+              <label htmlFor="isPregnant" className="text-sm text-gray-700 cursor-pointer">
+                Currently pregnant
+              </label>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-1.5">Email ID</label>

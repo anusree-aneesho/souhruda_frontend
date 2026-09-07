@@ -166,7 +166,18 @@ export function deleteTestCategory(id) {
     method: "DELETE",
   });
 }
+// ── Home Collection ──────────────────────────────
 
+export async function getHomeCollectionRequestsApi() {
+  return request("/home-collection-requests");
+}
+
+export async function createHomeCollectionRequestApi(payload) {
+  return request("/home-collection-requests", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
 // ── Lab Test ───────────────────────────────────────────────
 
 export function getLabTests(categoryId = null) {
@@ -195,4 +206,5 @@ export function deleteLabTest(id) {
   return request(`/lab-tests/${id}`, {
     method: "DELETE",
   });
+
 }

@@ -8,7 +8,7 @@ import SelectTestsStep from "./steps/SelectTestsStep";
 import ConfirmStep from "./steps/ConfirmStep";
 import AddressSlotStep from "./steps/AddressSlotStep";
 import PaymentStep from "./steps/PaymentStep";
-import { getPatientsApi } from "../../../api/api";
+import { getPatientsApi, createHomeCollectionRequestApi } from "../../../api/api";
 import { useOrderModal } from "../../../Context/OrderModalContext";
 
 function mapPatient(p) {
@@ -22,17 +22,32 @@ function mapPatient(p) {
   };
 }
 
+// Fallback origin (the lab's own location) used only if device GPS is
+// unavailable or denied — keep in sync with LAB_LATITUDE/LAB_LONGITUDE in
+// the backend .env. Replace with real Maps/geocoding once that's added.
+const LAB_FALLBACK = { lat: 11.2588, lng: 75.7804 };
+
 const emptyNewPatient = { name: "", age: "", gender: "Male", contact: "" };
-const emptyPinnedLocation = { lat: "11.2738", lng: "75.8004", distanceKm: "2.7" };
+
+// Haversine distance in km — client-side estimate only, for display.
+// The server recomputes the authoritative distance via PostGIS.
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 export default function NewOrderModal() {
   const { isOpen, close, flowType, presetPatientRegNo } = useOrderModal();
   const navigate = useNavigate();
   const isHomeCollection = flowType === "homeCollection";
   const totalSteps = isHomeCollection ? 4 : 3;
-  // Opened directly from a patient's "Book test" / "Home collection" action —
-  // the patient is already known, so the Patient step is skipped and the
-  // flow starts at Select Tests.
   const skipPatientStep = Boolean(presetPatientRegNo);
 
   const [step, setStep] = useState(1);
@@ -43,9 +58,6 @@ export default function NewOrderModal() {
   const [selectedTests, setSelectedTests] = useState([]);
   const [paymentDone, setPaymentDone] = useState(false);
 
-  // When the modal opens for a specific patient, jump straight to the
-  // Select Tests step with that patient pre-selected. The caller only gives
-  // us the reg. no., so look the patient up in the real patients table.
   useEffect(() => {
     if (isOpen && skipPatientStep) {
       setPatientType("existing");
@@ -73,9 +85,12 @@ export default function NewOrderModal() {
   // Home collection only
   const [address, setAddress] = useState("");
   const [pinnedLocation, setPinnedLocation] = useState(null);
+  const [isLocating, setIsLocating] = useState(false);
   const [preferredDate, setPreferredDate] = useState("");
   const [timeSlot, setTimeSlot] = useState("Morning · 7–9 AM");
   const [paymentMethod, setPaymentMethod] = useState("UPI");
+  const [isBooking, setIsBooking] = useState(false);
+  const [bookingError, setBookingError] = useState("");
 
   function resetAndClose() {
     setStep(1);
@@ -87,9 +102,12 @@ export default function NewOrderModal() {
     setPaymentDone(false);
     setAddress("");
     setPinnedLocation(null);
+    setIsLocating(false);
     setPreferredDate("");
     setTimeSlot("Morning · 7–9 AM");
     setPaymentMethod("UPI");
+    setIsBooking(false);
+    setBookingError("");
     close();
   }
 
@@ -99,9 +117,32 @@ export default function NewOrderModal() {
     );
   }
 
+  // Uses the device's own GPS via the browser Geolocation API — no Maps API
+  // key needed. Falls back to the lab's fixed location if permission is
+  // denied or the device has no GPS, so booking can still proceed.
   function handlePinLocation() {
-    // No real map integration yet — drops a representative pin near the lab.
-    setPinnedLocation(emptyPinnedLocation);
+    if (!navigator.geolocation) {
+      setPinnedLocation({ lat: LAB_FALLBACK.lat, lng: LAB_FALLBACK.lng, distanceKm: null });
+      return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setPinnedLocation({
+          lat: Number(latitude.toFixed(6)),
+          lng: Number(longitude.toFixed(6)),
+          distanceKm: haversineKm(latitude, longitude, LAB_FALLBACK.lat, LAB_FALLBACK.lng).toFixed(1),
+        });
+        setIsLocating(false);
+      },
+      () => {
+        setPinnedLocation({ lat: LAB_FALLBACK.lat, lng: LAB_FALLBACK.lng, distanceKm: null });
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
   }
 
   const flowLabel = isHomeCollection ? "Home Collection" : "New Order";
@@ -138,16 +179,44 @@ export default function NewOrderModal() {
     });
   }
 
-  function handleConfirmBooking() {
-    // TODO: replace with real API call once home collection bookings are backed by a shared data store.
-    resetAndClose();
-    navigate("/home-collection");
+  async function handleConfirmBooking() {
+    if (patientType !== "existing" || !selectedPatient?.id) {
+      setBookingError("Home collection currently requires an existing patient.");
+      return;
+    }
+    if (!pinnedLocation) {
+      setBookingError("Please pin the collection location before confirming.");
+      return;
+    }
+
+    setIsBooking(true);
+    setBookingError("");
+
+    try {
+      const payload = {
+        patient_id: selectedPatient.id,
+        tests: selectedTests.map((t) => t.id),
+        address_line: address,
+        latitude: pinnedLocation.lat,
+        longitude: pinnedLocation.lng,
+        slot_date: preferredDate,
+        slot_label: timeSlot,
+        payment_mode: paymentMethod.toLowerCase(),
+      };
+
+      const created = await createHomeCollectionRequestApi(payload);
+      resetAndClose();
+      navigate("/home-collection", { state: { justBooked: created } });
+    } catch (err) {
+      setIsBooking(false);
+      setBookingError(err.message || "Couldn't create the booking. Please try again.");
+    }
   }
 
   const isNextDisabled =
     (step === 1 && patientType === "existing" && !selectedPatient) ||
     (step === 2 && (selectedTests.length === 0 || !currentPatient)) ||
-    (isHomeCollection && step === 3 && (!address.trim() || !preferredDate));
+    (isHomeCollection && step === 3 && (!address.trim() || !preferredDate || !pinnedLocation));
 
   if (!isOpen) return null;
 
@@ -181,6 +250,7 @@ export default function NewOrderModal() {
           onAddressChange={setAddress}
           pinnedLocation={pinnedLocation}
           onPinLocation={handlePinLocation}
+          isLocating={isLocating}
           preferredDate={preferredDate}
           onPreferredDateChange={setPreferredDate}
           timeSlot={timeSlot}
@@ -197,11 +267,16 @@ export default function NewOrderModal() {
       )}
 
       {step === 4 && isHomeCollection && (
-        <PaymentStep
-          selectedTests={selectedTests}
-          paymentMethod={paymentMethod}
-          onPaymentMethodChange={setPaymentMethod}
-        />
+        <>
+          <PaymentStep
+            selectedTests={selectedTests}
+            paymentMethod={paymentMethod}
+            onPaymentMethodChange={setPaymentMethod}
+          />
+          {bookingError && (
+            <p className="px-6 text-sm text-red-600">{bookingError}</p>
+          )}
+        </>
       )}
 
       <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
@@ -226,9 +301,10 @@ export default function NewOrderModal() {
         ) : (
           <button
             onClick={isHomeCollection ? handleConfirmBooking : handleCreateOrder}
-            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700"
+            disabled={isHomeCollection && isBooking}
+            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60"
           >
-            {isHomeCollection ? "Confirm Booking" : "Create Order"}
+            {isHomeCollection ? (isBooking ? "Booking…" : "Confirm Booking") : "Create Order"}
           </button>
         )}
       </div>

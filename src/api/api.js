@@ -210,9 +210,6 @@ export function deleteLabTest(id) {
   });
 }
 
-
-
-
 // ── Front Officer ──────────────────────────────
 
 export async function getFrontOfficersApi() {
@@ -246,13 +243,46 @@ export async function getLabAssistantsApi() {
 }
 
 export async function createLabAssistantApi(data) {
-  return request("/lab-assistants", { method: "POST", body: JSON.stringify(data) });
+  return request("/lab-assistants", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
 
 export async function updateLabAssistantApi(id, data) {
-  return request(`/lab-assistants/${id}`, { method: "PUT", body: JSON.stringify(data) });
+  return request(`/lab-assistants/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
 }
 
 export async function deleteLabAssistantApi(id) {
-  return request(`/lab-assistants/${id}`, { method: "DELETE" });
+  return request(`/lab-assistants/${id}`, {
+    method: "DELETE",
+  });
+}
+
+// ── Reset Password ──────────────────────────────────────────
+
+export async function requestProfilePasswordResetApi() {
+  return request("/profile/reset-password", {
+    method: "POST",
+  });
+}
+
+export async function resetPasswordApi({
+  token,
+  email,
+  password,
+  password_confirmation,
+}) {
+  return request("/reset-password", {
+    method: "POST",
+    body: JSON.stringify({
+      token,
+      email,
+      password,
+      password_confirmation,
+    }),
+  });
 }

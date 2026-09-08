@@ -1,8 +1,9 @@
 // src/components/common/Topbar/TopbarActions.jsx
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, LogOut } from "lucide-react";
 import { useAuth } from "../../../Context/AuthContext";
+import { Bell, LogOut, KeyRound } from "lucide-react";
+import { requestProfilePasswordResetApi } from "../../../api/api";
 
 function useLiveClock() {
   const [now, setNow] = useState(new Date());
@@ -26,6 +27,8 @@ export default function TopbarActions() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  const [sendingReset, setSendingReset] = useState(false);
+  const [resetMessage, setResetMessage] = useState("");
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -40,6 +43,19 @@ export default function TopbarActions() {
   function handleLogout() {
     logout();
     navigate("/login", { replace: true });
+  }
+
+  async function handleResetPassword() {
+    setSendingReset(true);
+    setResetMessage("");
+    try {
+      await requestProfilePasswordResetApi();
+      setResetMessage("Reset link sent to your email.");
+    } catch (err) {
+      setResetMessage(err.message || "Failed to send reset link.");
+    } finally {
+      setSendingReset(false);
+    }
   }
 
   return (
@@ -70,6 +86,20 @@ export default function TopbarActions() {
                 <p className="text-xs text-gray-400 mt-0.5">{user.branch}</p>
               )}
             </div>
+
+            <button
+              onClick={handleResetPassword}
+              disabled={sendingReset}
+              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <KeyRound size={15} />
+              {sendingReset ? "Sending..." : "Reset Password"}
+            </button>
+
+            {resetMessage && (
+              <p className="px-4 py-1.5 text-xs text-gray-500">{resetMessage}</p>
+            )}
+
             <button
               onClick={handleLogout}
               className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors cursor-pointer"

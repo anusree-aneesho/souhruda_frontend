@@ -16,11 +16,13 @@ import Settings from "../components/SettingPage/Settings";
 import OrderDetail from "../components/LabOrders/OrderDetail/OrderDetail";
 import Report from "../components/LabOrders/Report/Report";
 import ActivityLogPage from "../components/Dashboard/ActivityLogPage";
+import ResetPassword from "../components/Auth/ResetPassword";
 
 export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<MainLayout />}>

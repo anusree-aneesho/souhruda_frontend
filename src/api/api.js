@@ -335,3 +335,9 @@ export async function completeOrderApi(orderId, results) {
     body: JSON.stringify({ results }),
   });
 }
+
+export async function deleteOrderApi(orderId) {
+  return request(`/orders/${orderId}`, {
+    method: "DELETE",
+  });
+}

@@ -1,23 +1,33 @@
 // src/components/Auth/ForgotPasswordModal.jsx
 import { useState } from "react";
 import ModalShell from "../common/Modal/ModalShell";
+import { forgotPasswordApi } from "../../api/api";
 
 export default function ForgotPasswordModal({ onClose }) {
   const [identifier, setIdentifier] = useState("");
   const [error, setError] = useState("");
   const [isSent, setIsSent] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
+
     if (!identifier.trim()) {
-      setError("Enter your Front Officer ID or email.");
+      setError("Enter your email.");
       return;
     }
+
     setError("");
-    // NOTE (demo build): there is no backend wired up yet, so this just
-    // confirms the request was received. Once a real API exists, swap this
-    // out for an actual POST /auth/forgot-password call that emails a reset link.
-    setIsSent(true);
+    setSending(true);
+
+    try {
+      await forgotPasswordApi(identifier.trim());
+      setIsSent(true);
+    } catch (err) {
+      setError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -40,17 +50,17 @@ export default function ForgotPasswordModal({ onClose }) {
         <form onSubmit={handleSubmit}>
           <div className="px-6 py-5 space-y-4">
             <p className="text-sm text-gray-500">
-              Enter your Front Officer ID or email and we'll send you a link to reset your password.
+              Enter your email and we'll send you a link to reset your password.
             </p>
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1.5">
-                Front Officer ID or Email
+                Email
               </label>
               <input
                 autoFocus
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="FO-001 or frontofficer@lab.com"
+                placeholder="frontofficer@lab.com"
                 className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
               />
             </div>
@@ -72,9 +82,10 @@ export default function ForgotPasswordModal({ onClose }) {
             </button>
             <button
               type="submit"
-              className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer"
+              disabled={sending}
+              className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer disabled:opacity-50"
             >
-              Send Reset Link
+              {sending ? "Sending..." : "Send Reset Link"}
             </button>
           </div>
         </form>

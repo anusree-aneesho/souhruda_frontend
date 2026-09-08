@@ -8,8 +8,13 @@ import SelectTestsStep from "./steps/SelectTestsStep";
 import ConfirmStep from "./steps/ConfirmStep";
 import AddressSlotStep from "./steps/AddressSlotStep";
 import PaymentStep from "./steps/PaymentStep";
-import { getPatientsApi, createHomeCollectionRequestApi, createPatientApi } from "../../../api/api";
 import { useOrderModal } from "../../../Context/OrderModalContext";
+import {
+  getPatientsApi,
+  createPatientApi,
+  createHomeCollectionRequestApi,
+  createOrderApi,
+} from "../../../api/api";
 
 function mapPatient(p) {
   return {
@@ -22,9 +27,6 @@ function mapPatient(p) {
   };
 }
 
-// Fallback origin (the lab's own location) used only if device GPS is
-// unavailable or denied — keep in sync with LAB_LATITUDE/LAB_LONGITUDE in
-// the backend .env. Replace with real Maps/geocoding once that's added.
 const LAB_FALLBACK = { lat: 11.2588, lng: 75.7804 };
 
 const emptyNewPatient = {
@@ -37,8 +39,6 @@ const emptyNewPatient = {
   address: "",
 };
 
-// Haversine distance in km — client-side estimate only, for display.
-// The server recomputes the authoritative distance via PostGIS.
 function haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -49,6 +49,22 @@ function haversineKm(lat1, lon1, lat2, lon2) {
       Math.cos((lat2 * Math.PI) / 180) *
       Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function buildNewPatientPayload(newPatientData) {
+  const [firstName, ...rest] = newPatientData.name.trim().split(" ");
+  const lastName = rest.join(" ") || null;
+
+  return {
+    first_name: firstName,
+    last_name: lastName,
+    date_of_birth: newPatientData.dateOfBirth,
+    gender: newPatientData.gender?.toLowerCase(),
+    phone: newPatientData.contact || null,
+    email: newPatientData.email || null,
+    address: newPatientData.address || null,
+    is_pregnant: newPatientData.gender === "Female" ? newPatientData.isPregnant : false,
+  };
 }
 
 export default function NewOrderModal() {
@@ -65,6 +81,8 @@ export default function NewOrderModal() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [selectedTests, setSelectedTests] = useState([]);
   const [paymentDone, setPaymentDone] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
   useEffect(() => {
     if (isOpen && skipPatientStep) {
@@ -90,7 +108,6 @@ export default function NewOrderModal() {
     }
   }, [isOpen, skipPatientStep, presetPatientRegNo]);
 
-  // Home collection only
   const [address, setAddress] = useState("");
   const [pinnedLocation, setPinnedLocation] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
@@ -116,6 +133,8 @@ export default function NewOrderModal() {
     setPaymentMethod("UPI");
     setIsBooking(false);
     setBookingError("");
+    setIsSubmitting(false);
+    setSubmitError(null);
     close();
   }
 
@@ -125,9 +144,6 @@ export default function NewOrderModal() {
     );
   }
 
-  // Uses the device's own GPS via the browser Geolocation API — no Maps API
-  // key needed. Falls back to the lab's fixed location if permission is
-  // denied or the device has no GPS, so booking can still proceed.
   function handlePinLocation() {
     if (!navigator.geolocation) {
       setPinnedLocation({ lat: LAB_FALLBACK.lat, lng: LAB_FALLBACK.lng, distanceKm: null });
@@ -176,15 +192,49 @@ export default function NewOrderModal() {
       ? selectedPatient
       : { name: newPatientData.name || "New Patient", age: newPatientData.age || "-", gender: newPatientData.gender, regNo: "NEW" };
 
-  function handleCreateOrder() {
-    const newOrderId = Math.floor(Math.random() * 900 + 28344); // TODO: replace with real API response
-    const orderedAt = new Date().toLocaleString("en-GB", {
-      day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
-    });
-    resetAndClose();
-    navigate(`/lab-orders/${newOrderId}`, {
-      state: { patient: currentPatient, tests: selectedTests, orderedAt, paymentDone },
-    });
+  async function handleCreateOrder() {
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      let patientId = selectedPatient?.id;
+
+      if (patientType === "new") {
+        if (!newPatientData.name.trim()) {
+          setSubmitError("Please enter the patient's name.");
+          setIsSubmitting(false);
+          return;
+        }
+        if (!newPatientData.dateOfBirth) {
+          setSubmitError("Please enter the patient's date of birth.");
+          setIsSubmitting(false);
+          return;
+        }
+
+        const res = await createPatientApi(buildNewPatientPayload(newPatientData));
+        patientId = res.data.id;
+      }
+
+      const payload = {
+        patient_id: patientId,
+        tests: selectedTests.map((t) => ({
+          lab_test_id: t.id,
+          price: t.price,
+        })),
+        payment_received: paymentDone,
+      };
+
+      const res = await createOrderApi(payload);
+      const order = res.data;
+
+      resetAndClose();
+      navigate(`/lab-orders/${order.order_no}`, {
+        state: { patient: currentPatient, tests: selectedTests, orderedAt: order.ordered_at, paymentDone },
+      });
+    } catch (err) {
+      setSubmitError(err.message);
+      setIsSubmitting(false);
+    }
   }
 
   async function handleConfirmBooking() {
@@ -199,8 +249,6 @@ export default function NewOrderModal() {
     try {
       let patientId = selectedPatient?.id;
 
-      // New patient: create them first (via the same /patients endpoint the
-      // main Patients page uses), then use the returned id for the booking.
       if (patientType === "new") {
         if (!newPatientData.name.trim()) {
           setBookingError("Please enter the patient's name.");
@@ -214,24 +262,8 @@ export default function NewOrderModal() {
           return;
         }
 
-        const [firstName, ...rest] = newPatientData.name.trim().split(" ");
-        const lastName = rest.join(" ") || null;
-        const createdPatient = await createPatientApi({
-          first_name: firstName,
-          last_name: lastName,
-          date_of_birth: newPatientData.dateOfBirth,
-          gender: newPatientData.gender?.toLowerCase(),
-          phone: newPatientData.contact,
-          email: newPatientData.email || null,
-          address: newPatientData.address || null,
-          is_pregnant: newPatientData.gender === "Female" ? newPatientData.isPregnant : false,
-        });
-
-        
-
-        patientId = createdPatient.data.id;  // ← .data added
-
-        
+        const createdPatient = await createPatientApi(buildNewPatientPayload(newPatientData));
+        patientId = createdPatient.data.id;
       }
 
       if (!patientId) {
@@ -260,12 +292,12 @@ export default function NewOrderModal() {
     }
   }
 
-   const isNextDisabled =
+  const isNextDisabled =
     (step === 1 && patientType === "existing" && !selectedPatient) ||
     (step === 1 && patientType === "new" && (!newPatientData.name.trim() || !newPatientData.dateOfBirth)) ||
     (step === 2 && (selectedTests.length === 0 || !currentPatient)) ||
     (isHomeCollection && step === 3 && (!address.trim() || !preferredDate || !pinnedLocation));
-    
+
   if (!isOpen) return null;
 
   return (
@@ -327,7 +359,11 @@ export default function NewOrderModal() {
         </>
       )}
 
-      <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 ">
+      <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
+        {submitError && (
+          <p className="text-sm text-red-500 mr-auto">{submitError}</p>
+        )}
+
         {step === 1 || (skipPatientStep && step === 2) ? (
           <button onClick={resetAndClose} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
             Cancel
@@ -347,13 +383,15 @@ export default function NewOrderModal() {
             {nextButtonLabels[step]}
           </button>
         ) : (
-     <button
-  onClick={isHomeCollection ? handleConfirmBooking : handleCreateOrder}
-  disabled={isHomeCollection && isBooking}
-  className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
->
-  {isHomeCollection ? (isBooking ? "Booking…" : "Confirm Booking") : "Create Order"}
-</button>
+          <button
+            onClick={isHomeCollection ? handleConfirmBooking : handleCreateOrder}
+            disabled={isHomeCollection ? isBooking : isSubmitting}
+            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {isHomeCollection
+              ? (isBooking ? "Booking…" : "Confirm Booking")
+              : (isSubmitting ? "Creating…" : "Create Order")}
+          </button>
         )}
       </div>
     </ModalShell>

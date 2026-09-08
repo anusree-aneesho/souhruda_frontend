@@ -5,6 +5,7 @@ export const DEMOGRAPHIC_GROUPS = [
   "Newborns (0–2 weeks)",
   "Infants (2–6 months)",
   "Children (6 months–12 years)",
+  "Teenagers (13–17 years)",
   "Adult Men (18–65 years)",
   "Adult Women (18–65 years)",
   "Pregnant Women",

@@ -30,7 +30,7 @@ export default function HomeCollectionRow({ requestId, patient, tests, distance,
         <StatusBadge status={status} />
       </td>
       <td className="py-3 text-right">
-        <button onClick={()=>open(requestId)} className="text-sm text-teal-600 font-medium hover:underline">
+        <button onClick={()=>open(requestId)} className="text-sm text-teal-600 font-medium hover:underline cursor-pointer">
           Open →
         </button>
       </td>

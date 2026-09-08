@@ -27,7 +27,7 @@ export default function ActivityItem({ date, text, type, targetId, isLatest }) {
       <span className="text-xs text-gray-400 w-14 shrink-0 mt-0.5">{date}</span>
       <span className="text-gray-300 mt-0.5">→</span>
       {isClickable ? (
-        <button onClick={handleClick} className="text-sm text-teal-600 font-medium hover:underline text-left">
+        <button onClick={handleClick} className="text-sm text-teal-600 font-medium hover:underline text-left cursor-pointer">
           {text}
         </button>
       ) : (

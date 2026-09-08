@@ -196,3 +196,39 @@ export function deleteLabTest(id) {
     method: "DELETE",
   });
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ── Lab Assistants ──────────────────────────────────────────
+
+export async function getLabAssistantsApi() {
+  return request("/lab-assistants");
+}
+
+export async function createLabAssistantApi(data) {
+  return request("/lab-assistants", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function updateLabAssistantApi(id, data) {
+  return request(`/lab-assistants/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export async function deleteLabAssistantApi(id) {
+  return request(`/lab-assistants/${id}`, { method: "DELETE" });
+}

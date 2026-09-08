@@ -51,11 +51,11 @@ export default function LatestActivities() {
 
   return (
     <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-2 ">
         <h3 className="font-semibold text-sm text-gray-900">Latest Activities</h3>
         <button
           onClick={() => navigate("/activity-logs")}
-          className="text-xs font-medium text-teal-600 hover:underline"
+          className="text-xs font-medium text-teal-600 hover:underline cursor-pointer"
         >
           View all
         </button>

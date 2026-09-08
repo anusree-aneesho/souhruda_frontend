@@ -1,52 +1,115 @@
 // src/components/LabAssistants/LabAssistants.jsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import LabAssistantsHeader from "./LabAssistantsHeader";
 import LabAssistantsSearch from "./LabAssistantsSearch";
 import LabAssistantsTable from "./LabAssistantsTable/LabAssistantsTable";
 import LabAssistantCard from "./LabAssistantsTable/LabAssistantCard";
 import AddLabAssistantModal from "./modals/AddLabAssistantModal";
-import { labAssistants as initialLabAssistants } from "../../data/labAssistants";
+import Toast from "../common/Toast/Toast";
+import { useToast } from "../common/Toast/useToast";
+import {
+  getLabAssistantsApi,
+  createLabAssistantApi,
+  updateLabAssistantApi,
+  deleteLabAssistantApi,
+  getBranchesApi,
+} from "../../api/api";
 
-function generateLabAssistantId(existing) {
-  const maxNo = existing.reduce((max, la) => {
-    const num = parseInt(String(la.laId).replace(/\D/g, ""), 10) || 0;
-    return Math.max(max, num);
-  }, 0);
-  return `LA-${String(maxNo + 1).padStart(3, "0")}`;
+function mapFromApi(apiLabAssistant) {
+  return {
+    id: apiLabAssistant.id,
+    laId: apiLabAssistant.number,
+    name: apiLabAssistant.name,
+    email: apiLabAssistant.email,
+    phone: apiLabAssistant.phone,
+    branch: apiLabAssistant.branch,
+    status: apiLabAssistant.status,
+  };
 }
 
 export default function LabAssistants() {
-  const [labAssistants, setLabAssistants] = useState(initialLabAssistants);
+  const [labAssistants, setLabAssistants] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [search, setSearch] = useState("");
-  const [modalState, setModalState] = useState(null); // null | { editingLabAssistant: null | labAssistant }
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [modalState, setModalState] = useState(null);
+
+  const { toast, showToast, hideToast } = useToast();
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [labAssistantsResult, branchesResult] = await Promise.all([
+          getLabAssistantsApi(),
+          getBranchesApi(),
+        ]);
+
+        setLabAssistants(labAssistantsResult.map(mapFromApi));
+        setBranches(branchesResult.data ?? branchesResult);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
 
   const filteredLabAssistants = useMemo(() => {
     return labAssistants.filter(
       (la) =>
         la.name.toLowerCase().includes(search.toLowerCase()) ||
         la.laId.toLowerCase().includes(search.toLowerCase()) ||
-        la.phone.includes(search) ||
-        la.branch.toLowerCase().includes(search.toLowerCase())
+        (la.phone ?? "").includes(search) ||
+        (la.branch ?? "").toLowerCase().includes(search.toLowerCase())
     );
   }, [labAssistants, search]);
 
-  function handleSaveLabAssistant(formData) {
-    if (formData.laId) {
-      // Editing existing lab assistant
-      setLabAssistants((prev) =>
-        prev.map((la) => (la.laId === formData.laId ? { ...formData } : la))
-      );
-    } else {
-      // Adding new lab assistant
-      const newLabAssistant = { ...formData, laId: generateLabAssistantId(labAssistants) };
-      setLabAssistants((prev) => [...prev, newLabAssistant]);
+  async function handleSaveLabAssistant(formData) {
+    try {
+      if (formData.id) {
+        const updated = await updateLabAssistantApi(formData.id, {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          branch_id: formData.branch_id,
+          status: formData.status.toLowerCase(),
+        });
+
+        setLabAssistants((prev) =>
+          prev.map((la) => (la.id === formData.id ? mapFromApi(updated) : la))
+        );
+        showToast(`${formData.name} updated successfully`);
+      } else {
+        const created = await createLabAssistantApi({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          branch_id: formData.branch_id,
+          status: formData.status.toLowerCase(),
+        });
+
+        setLabAssistants((prev) => [...prev, mapFromApi(created)]);
+        showToast(`${formData.name} added successfully`);
+      }
+      setModalState(null);
+    } catch (err) {
+      showToast(err.message, "error");
     }
-    setModalState(null);
   }
 
-  function handleRemoveLabAssistant(member) {
+  async function handleRemoveLabAssistant(member) {
     if (!window.confirm(`Remove "${member.name}"? This can't be undone.`)) return;
-    setLabAssistants((prev) => prev.filter((la) => la.laId !== member.laId));
+
+    try {
+      await deleteLabAssistantApi(member.id);
+      setLabAssistants((prev) => prev.filter((la) => la.id !== member.id));
+      showToast(`${member.name} removed successfully`);
+    } catch (err) {
+      showToast(err.message, "error");
+    }
   }
 
   return (
@@ -56,36 +119,46 @@ export default function LabAssistants() {
       <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-5">
         <LabAssistantsSearch value={search} onChange={setSearch} />
 
-        <div className="hidden md:block">
-          <LabAssistantsTable
-            labAssistants={filteredLabAssistants}
-            onEdit={(la) => setModalState({ editingLabAssistant: la })}
-            onRemove={handleRemoveLabAssistant}
-          />
-        </div>
-        <div className="md:hidden space-y-3">
-          {filteredLabAssistants.map((la) => (
-            <LabAssistantCard
-              key={la.laId}
-              labAssistant={la}
-              onEdit={(item) => setModalState({ editingLabAssistant: item })}
-              onRemove={handleRemoveLabAssistant}
-            />
-          ))}
-        </div>
+        {loading && <p className="text-sm text-gray-400 text-center py-6">Loading...</p>}
+        {error && <p className="text-sm text-red-500 text-center py-6">Failed to load lab assistants.</p>}
 
-        {filteredLabAssistants.length === 0 && (
-          <p className="text-sm text-gray-400 text-center py-6">No lab assistants found.</p>
+        {!loading && !error && (
+          <>
+            <div className="hidden md:block">
+              <LabAssistantsTable
+                labAssistants={filteredLabAssistants}
+                onEdit={(la) => setModalState({ editingLabAssistant: la })}
+                onRemove={handleRemoveLabAssistant}
+              />
+            </div>
+            <div className="md:hidden space-y-3">
+              {filteredLabAssistants.map((la) => (
+                <LabAssistantCard
+                  key={la.laId}
+                  labAssistant={la}
+                  onEdit={(item) => setModalState({ editingLabAssistant: item })}
+                  onRemove={handleRemoveLabAssistant}
+                />
+              ))}
+            </div>
+
+            {filteredLabAssistants.length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-6">No lab assistants found.</p>
+            )}
+          </>
         )}
       </div>
 
       {modalState && (
         <AddLabAssistantModal
           editingLabAssistant={modalState.editingLabAssistant}
+          branches={branches}
           onClose={() => setModalState(null)}
           onSave={handleSaveLabAssistant}
         />
       )}
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   );
 }

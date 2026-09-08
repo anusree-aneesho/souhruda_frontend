@@ -25,7 +25,7 @@ export default function WelcomeHeader() {
 
         <button
          onClick={() => open("order")}
-          className="flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
+          className="flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors cursor-pointer"
         >
           <Plus size={16} />
           New Order

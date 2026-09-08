@@ -35,6 +35,7 @@ export default function TestsTable({ categoryName, tests, onAddTest, onEditTest,
                   <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">UNIT</th>
                   <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">RANGE</th>
                   <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">PRICE</th>
+                  <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">FOLLOW-UP</th>
                   <th></th>
                 </tr>
               </thead>

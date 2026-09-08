@@ -17,7 +17,7 @@ export default function ModalShell({ title, onClose, children, maxWidth = "max-w
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100"
           >
-            <X size={18} />
+            <X className="cursor-pointer" size={18} />
           </button>
         </div>
         {children}

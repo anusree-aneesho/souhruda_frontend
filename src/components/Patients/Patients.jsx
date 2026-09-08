@@ -22,6 +22,7 @@ function mapPatient(p) {
     name: p.full_name,
     age: p.age,
     gender: p.gender,
+    isPregnant: p.is_pregnant,
     contact: p.phone,
     email: p.email,
     address: p.address,
@@ -56,25 +57,26 @@ export default function Patients() {
   }, [search, loadPatients]);
 
   async function handleAddPatient(newPatientData) {
-    const [first_name, ...rest] = newPatientData.name.trim().split(" ");
-    const last_name = rest.join(" ") || null;
+  const [first_name, ...rest] = newPatientData.name.trim().split(" ");
+  const last_name = rest.join(" ") || null;
 
-    try {
-      await createPatientApi({
-        first_name,
-        last_name,
-        age: newPatientData.age,
-        gender: newPatientData.gender.toLowerCase(),
-        phone: newPatientData.contact,
-        email: newPatientData.email || null,
-        address: newPatientData.address || null,
-      });
-      setModalOpen(false);
-      loadPatients(search);
-    } catch (err) {
-      alert(err.message);
-    }
+  try {
+    await createPatientApi({
+      first_name,
+      last_name,
+      age: newPatientData.age,
+      gender: newPatientData.gender.toLowerCase(),
+      is_pregnant: newPatientData.gender === "Female" ? newPatientData.isPregnant : null,
+      phone: newPatientData.contact,
+      email: newPatientData.email || null,
+      address: newPatientData.address || null,
+    });
+    setModalOpen(false);
+    loadPatients(search);
+  } catch (err) {
+    alert(err.message);
   }
+}
 
   async function handleView(id) {
     try {
@@ -95,25 +97,26 @@ export default function Patients() {
   }
 
   async function handleSaveEdit(id, formData) {
-    const [first_name, ...rest] = formData.name.trim().split(" ");
-    const last_name = rest.join(" ") || null;
+  const [first_name, ...rest] = formData.name.trim().split(" ");
+  const last_name = rest.join(" ") || null;
 
-    try {
-      await updatePatientApi(id, {
-        first_name,
-        last_name,
-        age: formData.age,
-        gender: formData.gender.toLowerCase(),
-        phone: formData.contact,
-        email: formData.email || null,
-        address: formData.address || null,
-      });
-      setEditingPatient(null);
-      loadPatients(search);
-    } catch (err) {
-      alert(err.message);
-    }
+  try {
+    await updatePatientApi(id, {
+      first_name,
+      last_name,
+      age: formData.age,
+      gender: formData.gender.toLowerCase(),
+      is_pregnant: formData.gender === "Female" ? formData.isPregnant : null,
+      phone: formData.contact,
+      email: formData.email || null,
+      address: formData.address || null,
+    });
+    setEditingPatient(null);
+    loadPatients(search);
+  } catch (err) {
+    alert(err.message);
   }
+}
 
   function handleDelete(id) {
     const patient = patients.find((p) => p.id === id);

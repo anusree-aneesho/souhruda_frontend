@@ -5,6 +5,9 @@ import { DEMOGRAPHIC_GROUPS } from "../../../data/demographicGroups";
 export default function DemographicRangeModal({ test, onClose }) {
   const ranges = test?.demographicRanges || {};
 
+  const hasCriticalLow = test?.criticalLow !== null && test?.criticalLow !== undefined && test?.criticalLow !== "";
+  const hasCriticalHigh = test?.criticalHigh !== null && test?.criticalHigh !== undefined && test?.criticalHigh !== "";
+
   return (
     <ModalShell title={`${test?.name || "Test"} — Range by Category`} onClose={onClose} maxWidth="max-w-md">
       <div className="px-6 py-5 space-y-5">
@@ -13,6 +16,24 @@ export default function DemographicRangeModal({ test, onClose }) {
           <p className="text-sm text-gray-600 whitespace-pre-wrap">
             {test?.criteria ? test.criteria : <span className="text-gray-300">Not set</span>}
           </p>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 mb-2">Critical Range</h3>
+          <div className="divide-y divide-gray-100 border border-gray-100 rounded-lg overflow-hidden">
+            <div className="flex items-center justify-between gap-4 px-4 py-3">
+              <span className="text-sm font-medium text-gray-900">Critical Low</span>
+              <span className="text-sm text-red-600 text-right">
+                {hasCriticalLow ? test.criticalLow : <span className="text-gray-300">Not set</span>}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-4 px-4 py-3">
+              <span className="text-sm font-medium text-gray-900">Critical High</span>
+              <span className="text-sm text-red-600 text-right">
+                {hasCriticalHigh ? test.criticalHigh : <span className="text-gray-300">Not set</span>}
+              </span>
+            </div>
+          </div>
         </div>
 
         <div>

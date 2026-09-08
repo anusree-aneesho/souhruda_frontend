@@ -167,6 +167,19 @@ export function deleteTestCategory(id) {
   });
 }
 
+// ── Home Collection ──────────────────────────────
+
+export async function getHomeCollectionRequestsApi() {
+  return request("/home-collection-requests");
+}
+
+export async function createHomeCollectionRequestApi(payload) {
+  return request("/home-collection-requests", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 // ── Lab Test ───────────────────────────────────────────────
 
 export function getLabTests(categoryId = null) {
@@ -196,24 +209,6 @@ export function deleteLabTest(id) {
     method: "DELETE",
   });
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // ── Lab Assistants ──────────────────────────────────────────
 

@@ -143,7 +143,7 @@ export default function SettingsForm() {
       <button
         type="submit"
         disabled={saving}
-        className="rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors disabled:opacity-50"
+        className="rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors disabled:opacity-50 cursor-pointer"
       >
         {saving ? "Saving..." : "Save Settings"}
       </button>

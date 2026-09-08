@@ -38,7 +38,7 @@ export default function OrderDetail() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 ">
       <OrderDetailHeader
         patientName={patient.name}
         orderId={orderId}

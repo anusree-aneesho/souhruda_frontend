@@ -21,6 +21,7 @@ function mapPatient(p) {
     regNo: p.patient_number,
     name: p.full_name,
     age: p.age,
+    date_of_birth: p.date_of_birth,   // use same naming as modal
     gender: p.gender,
     isPregnant: p.is_pregnant,
     contact: p.phone,
@@ -62,14 +63,14 @@ export default function Patients() {
 
   try {
     await createPatientApi({
-      first_name,
-      last_name,
-      age: newPatientData.age,
-      gender: newPatientData.gender.toLowerCase(),
-      is_pregnant: newPatientData.gender === "Female" ? newPatientData.isPregnant : null,
-      phone: newPatientData.contact,
-      email: newPatientData.email || null,
-      address: newPatientData.address || null,
+           first_name,
+           last_name,
+           date_of_birth: newPatientData.date_of_birth,   // matches this modal's field name
+           gender: newPatientData.gender.toLowerCase(),
+           is_pregnant: newPatientData.gender === "Female" ? newPatientData.isPregnant : null,
+           phone: newPatientData.contact,
+           email: newPatientData.email || null,
+           address: newPatientData.address || null,
     });
     setModalOpen(false);
     loadPatients(search);
@@ -102,15 +103,15 @@ export default function Patients() {
 
   try {
     await updatePatientApi(id, {
-      first_name,
-      last_name,
-      age: formData.age,
-      gender: formData.gender.toLowerCase(),
-      is_pregnant: formData.gender === "Female" ? formData.isPregnant : null,
-      phone: formData.contact,
-      email: formData.email || null,
-      address: formData.address || null,
-    });
+  first_name,
+  last_name,
+  date_of_birth: formData.date_of_birth,   // fixed
+  gender: formData.gender.toLowerCase(),
+  is_pregnant: formData.gender === "Female" ? formData.isPregnant : null,
+  phone: formData.contact,
+  email: formData.email || null,
+  address: formData.address || null,
+});
     setEditingPatient(null);
     loadPatients(search);
   } catch (err) {

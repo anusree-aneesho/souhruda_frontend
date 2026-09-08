@@ -1,7 +1,7 @@
 import { useState } from "react";
 import ModalShell from "../../common/Modal/ModalShell";
 
-const emptyForm = { name: "", age: "", gender: "Male", contact: "", email: "", address: "", isPregnant: false };
+const emptyForm = { name: "", date_of_birth: "", gender: "Male", contact: "", email: "", address: "", isPregnant: false };
 
 export default function AddPatientModal({ onClose, onAdd }) {
   const [form, setForm] = useState(emptyForm);
@@ -11,13 +11,12 @@ export default function AddPatientModal({ onClose, onAdd }) {
   }
 
   function handleSubmit(e) {
-    e.preventDefault();
-    if (!form.name.trim() || !form.age || !form.contact.trim()) return;
-    onAdd({
-      ...form,
-      age: parseInt(form.age, 10),
-    });
-  }
+  e.preventDefault();
+  if (!form.name.trim() || !form.date_of_birth || !form.contact.trim()) return;
+  onAdd({
+    ...form,
+  });
+}
 
   return (
     <ModalShell title="Add Patient" onClose={onClose} maxWidth="max-w-md">
@@ -36,12 +35,12 @@ export default function AddPatientModal({ onClose, onAdd }) {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Age</label>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Date of Birth</label>
               <input
-                type="number"
-                value={form.age}
-                onChange={(e) => handleChange("age", e.target.value)}
-                placeholder="Years"
+                type="date"
+                value={form.date_of_birth}
+                onChange={(e) => handleChange("date_of_birth",e.target.value)}
+                // placeholder="Years"
                 className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
               />
             </div>

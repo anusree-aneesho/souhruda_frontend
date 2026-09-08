@@ -196,3 +196,34 @@ export function deleteLabTest(id) {
     method: "DELETE",
   });
 }
+
+
+
+
+
+
+//frontofficer
+
+export async function getFrontOfficersApi() {
+  return request("/front-officers");
+}
+
+export async function createFrontOfficerApi(data) {
+  return request("/front-officers", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateFrontOfficerApi(id, data) {
+  return request(`/front-officers/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteFrontOfficerApi(id) {
+  return request(`/front-officers/${id}`, {
+    method: "DELETE",
+  });
+}

@@ -20,7 +20,7 @@ export default function PatientViewModal({ patient, onClose }) {
         <ReadOnlyField label="Full Name" value={patient.name} />
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <ReadOnlyField label="Age" value={`${patient.age} Yrs`} />
+          <ReadOnlyField label="Date of Birth" value={patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : "—"} />
           <ReadOnlyField label="Gender" value={patient.gender} />
           <ReadOnlyField label="Contact" value={patient.contact} />
         </div>

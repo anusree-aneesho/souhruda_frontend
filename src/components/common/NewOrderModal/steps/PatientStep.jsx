@@ -164,31 +164,31 @@ export default function PatientStep({
       <div className="flex gap-2">
         <button
           onClick={() => onPatientTypeChange("existing")}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer ${
             patientType === "existing" ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-500"
           }`}
         >
           Existing patient
         </button>
         <button
-          onClick={() => onPatientTypeChange("new")}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-            patientType === "new" ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-500"
-          }`}
-        >
-          New patient
-        </button>
+  onClick={() => onPatientTypeChange("new")}
+  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer ${
+    patientType === "new" ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-500 "
+  }`}
+>
+  New patient
+</button>
       </div>
 
       {patientType === "existing" ? (
         <div>
-          <label className="block text-sm font-semibold text-gray-900 mb-1.5">Select Patient</label>
+          <label className="block text-sm font-semibold text-gray-900 mb-1.5 ">Select Patient</label>
           <PatientCombobox
             selectedPatient={selectedPatient}
             onSelectPatient={onSelectPatient}
           />
         </div>
-      ) : (
+) : (
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-1.5">Full Name</label>
@@ -202,13 +202,12 @@ export default function PatientStep({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Age</label>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Date of Birth</label>
               <input
-                type="number"
-                value={newPatientData.age}
-                onChange={(e) => onNewPatientChange("age", e.target.value)}
-                placeholder="Years"
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                type="date"
+                value={newPatientData.dateOfBirth}
+                onChange={(e) => onNewPatientChange("dateOfBirth", e.target.value)}
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 "
               />
             </div>
             <div>
@@ -232,6 +231,40 @@ export default function PatientStep({
                 className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
               />
             </div>
+          </div>
+
+          {newPatientData.gender === "Female" && (
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={newPatientData.isPregnant}
+                onChange={(e) => onNewPatientChange("isPregnant", e.target.checked)}
+                className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+              />
+              Currently pregnant
+            </label>
+          )}
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Email ID</label>
+            <input
+              type="email"
+              value={newPatientData.email}
+              onChange={(e) => onNewPatientChange("email", e.target.value)}
+              placeholder="patient@example.com"
+              className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Address</label>
+            <textarea
+              value={newPatientData.address}
+              onChange={(e) => onNewPatientChange("address", e.target.value)}
+              placeholder="House name, street, city, PIN"
+              rows={2}
+              className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+            />
           </div>
         </div>
       )}

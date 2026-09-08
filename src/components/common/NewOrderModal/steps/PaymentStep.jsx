@@ -49,16 +49,16 @@ export default function PaymentStep({ selectedTests, paymentMethod, onPaymentMet
 
       <div className="flex gap-2">
         {paymentMethods.map((method) => (
-          <button
-            key={method}
-            type="button"
-            onClick={() => onPaymentMethodChange(method)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              paymentMethod === method ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-            }`}
-          >
-            {method}
-          </button>
+<button
+  key={method}
+  type="button"
+  onClick={() => onPaymentMethodChange(method)}
+  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
+    paymentMethod === method ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+  }`}
+>
+  {method}
+</button>
         ))}
       </div>
 

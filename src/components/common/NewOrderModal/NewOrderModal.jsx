@@ -8,7 +8,7 @@ import SelectTestsStep from "./steps/SelectTestsStep";
 import ConfirmStep from "./steps/ConfirmStep";
 import AddressSlotStep from "./steps/AddressSlotStep";
 import PaymentStep from "./steps/PaymentStep";
-import { getPatientsApi, createHomeCollectionRequestApi } from "../../../api/api";
+import { getPatientsApi, createHomeCollectionRequestApi, createPatientApi } from "../../../api/api";
 import { useOrderModal } from "../../../Context/OrderModalContext";
 
 function mapPatient(p) {
@@ -27,7 +27,15 @@ function mapPatient(p) {
 // the backend .env. Replace with real Maps/geocoding once that's added.
 const LAB_FALLBACK = { lat: 11.2588, lng: 75.7804 };
 
-const emptyNewPatient = { name: "", age: "", gender: "Male", contact: "" };
+const emptyNewPatient = {
+  name: "",
+  dateOfBirth: "",
+  gender: "Male",
+  contact: "",
+  isPregnant: false,
+  email: "",
+  address: "",
+};
 
 // Haversine distance in km — client-side estimate only, for display.
 // The server recomputes the authoritative distance via PostGIS.
@@ -180,10 +188,6 @@ export default function NewOrderModal() {
   }
 
   async function handleConfirmBooking() {
-    if (patientType !== "existing" || !selectedPatient?.id) {
-      setBookingError("Home collection currently requires an existing patient.");
-      return;
-    }
     if (!pinnedLocation) {
       setBookingError("Please pin the collection location before confirming.");
       return;
@@ -193,8 +197,51 @@ export default function NewOrderModal() {
     setBookingError("");
 
     try {
+      let patientId = selectedPatient?.id;
+
+      // New patient: create them first (via the same /patients endpoint the
+      // main Patients page uses), then use the returned id for the booking.
+      if (patientType === "new") {
+        if (!newPatientData.name.trim()) {
+          setBookingError("Please enter the patient's name.");
+          setIsBooking(false);
+          return;
+        }
+
+        if (!newPatientData.dateOfBirth) {
+          setBookingError("Please enter the patient's date of birth.");
+          setIsBooking(false);
+          return;
+        }
+
+        const [firstName, ...rest] = newPatientData.name.trim().split(" ");
+        const lastName = rest.join(" ") || null;
+        const createdPatient = await createPatientApi({
+          first_name: firstName,
+          last_name: lastName,
+          date_of_birth: newPatientData.dateOfBirth,
+          gender: newPatientData.gender?.toLowerCase(),
+          phone: newPatientData.contact,
+          email: newPatientData.email || null,
+          address: newPatientData.address || null,
+          is_pregnant: newPatientData.gender === "Female" ? newPatientData.isPregnant : false,
+        });
+
+        
+
+        patientId = createdPatient.data.id;  // ← .data added
+
+        
+      }
+
+      if (!patientId) {
+        setBookingError("Please select or add a patient before confirming.");
+        setIsBooking(false);
+        return;
+      }
+
       const payload = {
-        patient_id: selectedPatient.id,
+        patient_id: patientId,
         tests: selectedTests.map((t) => t.id),
         address_line: address,
         latitude: pinnedLocation.lat,
@@ -213,11 +260,12 @@ export default function NewOrderModal() {
     }
   }
 
-  const isNextDisabled =
+   const isNextDisabled =
     (step === 1 && patientType === "existing" && !selectedPatient) ||
+    (step === 1 && patientType === "new" && (!newPatientData.name.trim() || !newPatientData.dateOfBirth)) ||
     (step === 2 && (selectedTests.length === 0 || !currentPatient)) ||
     (isHomeCollection && step === 3 && (!address.trim() || !preferredDate || !pinnedLocation));
-
+    
   if (!isOpen) return null;
 
   return (
@@ -279,13 +327,13 @@ export default function NewOrderModal() {
         </>
       )}
 
-      <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
+      <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 ">
         {step === 1 || (skipPatientStep && step === 2) ? (
-          <button onClick={resetAndClose} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          <button onClick={resetAndClose} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
             Cancel
           </button>
         ) : (
-          <button onClick={() => setStep((s) => s - 1)} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          <button onClick={() => setStep((s) => s - 1)} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
             ← Back
           </button>
         )}
@@ -294,18 +342,18 @@ export default function NewOrderModal() {
           <button
             onClick={() => setStep((s) => s + 1)}
             disabled={isNextDisabled}
-            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             {nextButtonLabels[step]}
           </button>
         ) : (
-          <button
-            onClick={isHomeCollection ? handleConfirmBooking : handleCreateOrder}
-            disabled={isHomeCollection && isBooking}
-            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60"
-          >
-            {isHomeCollection ? (isBooking ? "Booking…" : "Confirm Booking") : "Create Order"}
-          </button>
+     <button
+  onClick={isHomeCollection ? handleConfirmBooking : handleCreateOrder}
+  disabled={isHomeCollection && isBooking}
+  className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+>
+  {isHomeCollection ? (isBooking ? "Booking…" : "Confirm Booking") : "Create Order"}
+</button>
         )}
       </div>
     </ModalShell>

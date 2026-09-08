@@ -180,6 +180,28 @@ export async function createHomeCollectionRequestApi(payload) {
   });
 }
 
+export async function getHomeCollectionRequestApi(hcCode) {
+  return request(`/home-collection-requests/${hcCode}`);
+}
+
+export async function getNearbyTechniciansApi(hcCode) {
+  return request(`/home-collection-requests/${hcCode}/nearby-technicians`);
+}
+
+export async function assignTechnicianApi(hcCode, technicianId) {
+  return request(`/home-collection-requests/${hcCode}/assign-technician`, {
+    method: "POST",
+    body: JSON.stringify({ technician_id: technicianId }),
+  });
+}
+
+export async function updateHomeCollectionStatusApi(hcCode, status, otp = null) {
+  return request(`/home-collection-requests/${hcCode}/status`, {
+    method: "POST",
+    body: JSON.stringify(otp ? { status, otp } : { status }),
+  });
+}
+
 // ── Lab Test ───────────────────────────────────────────────
 
 export function getLabTests(categoryId = null) {

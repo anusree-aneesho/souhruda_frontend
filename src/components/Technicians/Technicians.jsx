@@ -21,6 +21,9 @@ function mapTechnicianFromApi(t) {
     email: t.email,
     phone: t.phone,
     zone: t.zone,
+    branch_id: t.branch_id,
+    latitude: t.latitude,
+    longitude: t.longitude,
     rating: t.rating,
     status: t.status,
   };
@@ -53,12 +56,14 @@ export default function Technicians() {
   async function handleSaveTechnician(formData) {
     const isEdit = Boolean(formData.id);
     const payload = {
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      zone: formData.zone || null,
-      status: formData.status,
-    };
+  name: formData.name,
+  email: formData.email,
+  phone: formData.phone,
+  branch_id: formData.branch_id,
+  status: formData.status,
+  latitude: formData.latitude,
+  longitude: formData.longitude,
+};
 
     try {
       const saved = mapTechnicianFromApi(

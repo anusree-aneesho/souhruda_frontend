@@ -1,12 +1,30 @@
 // src/components/Technicians/modals/CreateTechnicianModal.jsx
 import { useState, useEffect } from "react";
 import ModalShell from "../../common/Modal/ModalShell";
+import { getBranchesApi } from "../../../api/api";
 
-const emptyForm = { name: "", email: "", phone: "", zone: "", status: "Active" };
+const emptyForm = { name: "", email: "", phone: "", branch_id: "", status: "Active", latitude: "", longitude: "" };
 
 export default function CreateTechnicianModal({ editingTechnician, onClose, onSave }) {
   const [form, setForm] = useState(emptyForm);
+  const [branches, setBranches] = useState([]);
+  const [isLocating, setIsLocating] = useState(false);
   const isEditMode = Boolean(editingTechnician);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await getBranchesApi();
+        if (!cancelled) setBranches(res.data || []);
+      } catch (err) {
+        console.error("Failed to load branches:", err.message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (editingTechnician) {
@@ -14,8 +32,10 @@ export default function CreateTechnicianModal({ editingTechnician, onClose, onSa
         name: editingTechnician.name,
         email: editingTechnician.email,
         phone: editingTechnician.phone,
-        zone: editingTechnician.zone ?? "",
+        branch_id: editingTechnician.branch_id ?? "",
         status: editingTechnician.status,
+        latitude: editingTechnician.latitude ?? "",
+        longitude: editingTechnician.longitude ?? "",
       });
     } else {
       setForm(emptyForm);
@@ -26,9 +46,26 @@ export default function CreateTechnicianModal({ editingTechnician, onClose, onSa
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  function handleUseCurrentLocation() {
+    if (!navigator.geolocation) return;
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setForm((prev) => ({
+          ...prev,
+          latitude: pos.coords.latitude.toFixed(6),
+          longitude: pos.coords.longitude.toFixed(6),
+        }));
+        setIsLocating(false);
+      },
+      () => setIsLocating(false),
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }
+
   function handleSubmit(e) {
     e.preventDefault();
-    if (!form.name.trim() || !form.phone.trim()) return;
+    if (!form.name.trim() || !form.phone.trim() || !form.branch_id || form.latitude === "" || form.longitude === "") return;
     onSave({
       ...form,
       id: editingTechnician?.id,
@@ -73,14 +110,51 @@ export default function CreateTechnicianModal({ editingTechnician, onClose, onSa
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Zone</label>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Branch</label>
+              <select
+                value={form.branch_id}
+                onChange={(e) => handleChange("branch_id", e.target.value)}
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              >
+                <option value="">Select branch</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-sm font-semibold text-gray-900">Base Location</label>
+              <button
+                type="button"
+                onClick={handleUseCurrentLocation}
+                disabled={isLocating}
+                className="text-xs font-medium text-teal-600 hover:underline disabled:opacity-60"
+              >
+                {isLocating ? "Locating…" : "📍 Use current location"}
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <input
-                value={form.zone}
-                onChange={(e) => handleChange("zone", e.target.value)}
-                placeholder="e.g. Kozhikode"
+                type="number"
+                step="any"
+                value={form.latitude}
+                onChange={(e) => handleChange("latitude", e.target.value)}
+                placeholder="Latitude"
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              />
+              <input
+                type="number"
+                step="any"
+                value={form.longitude}
+                onChange={(e) => handleChange("longitude", e.target.value)}
+                placeholder="Longitude"
                 className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
               />
             </div>
+            <p className="text-xs text-gray-400 mt-1">Used to match this technician to nearby home collection requests.</p>
           </div>
 
           <div>

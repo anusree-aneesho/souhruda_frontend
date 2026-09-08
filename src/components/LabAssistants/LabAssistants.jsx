@@ -27,6 +27,44 @@ function mapFromApi(apiLabAssistant) {
   };
 }
 
+// Inline confirmation modal — no separate file needed.
+function RemoveLabAssistantModal({ labAssistant, isRemoving, onCancel, onConfirm }) {
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="text-base font-semibold text-gray-900">Remove Lab Assistant</h2>
+          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 cursor-pointer">
+            ✕
+          </button>
+        </div>
+
+        <div className="px-6 py-4">
+          <p className="text-sm text-gray-600">
+            Are you sure you want to remove Lab Assistant {labAssistant.name}?
+          </p>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isRemoving}
+            className="px-4 py-2.5 rounded-lg bg-red-600 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60 cursor-pointer"
+          >
+            {isRemoving ? "Removing…" : "Remove"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function LabAssistants() {
   const [labAssistants, setLabAssistants] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -34,6 +72,8 @@ export default function LabAssistants() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [modalState, setModalState] = useState(null);
+  const [removeTarget, setRemoveTarget] = useState(null);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   const { toast, showToast, hideToast } = useToast();
 
@@ -100,15 +140,19 @@ export default function LabAssistants() {
     }
   }
 
-  async function handleRemoveLabAssistant(member) {
-    if (!window.confirm(`Remove "${member.name}"? This can't be undone.`)) return;
+  async function handleRemoveLabAssistant() {
+    if (!removeTarget) return;
 
+    setIsRemoving(true);
     try {
-      await deleteLabAssistantApi(member.id);
-      setLabAssistants((prev) => prev.filter((la) => la.id !== member.id));
-      showToast(`${member.name} removed successfully`);
+      await deleteLabAssistantApi(removeTarget.id);
+      setLabAssistants((prev) => prev.filter((la) => la.id !== removeTarget.id));
+      showToast(`${removeTarget.name} removed successfully`);
+      setRemoveTarget(null);
     } catch (err) {
       showToast(err.message, "error");
+    } finally {
+      setIsRemoving(false);
     }
   }
 
@@ -128,7 +172,7 @@ export default function LabAssistants() {
               <LabAssistantsTable
                 labAssistants={filteredLabAssistants}
                 onEdit={(la) => setModalState({ editingLabAssistant: la })}
-                onRemove={handleRemoveLabAssistant}
+                onRemove={(la) => setRemoveTarget(la)}
               />
             </div>
             <div className="md:hidden space-y-3">
@@ -137,7 +181,7 @@ export default function LabAssistants() {
                   key={la.laId}
                   labAssistant={la}
                   onEdit={(item) => setModalState({ editingLabAssistant: item })}
-                  onRemove={handleRemoveLabAssistant}
+                  onRemove={(la) => setRemoveTarget(la)}
                 />
               ))}
             </div>
@@ -155,6 +199,15 @@ export default function LabAssistants() {
           branches={branches}
           onClose={() => setModalState(null)}
           onSave={handleSaveLabAssistant}
+        />
+      )}
+
+      {removeTarget && (
+        <RemoveLabAssistantModal
+          labAssistant={removeTarget}
+          isRemoving={isRemoving}
+          onCancel={() => setRemoveTarget(null)}
+          onConfirm={handleRemoveLabAssistant}
         />
       )}
 

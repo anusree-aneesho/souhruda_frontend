@@ -2,25 +2,27 @@
 import { useState, useEffect } from "react";
 import ModalShell from "../../common/Modal/ModalShell";
 
-const emptyForm = { name: "", email: "", phone: "", branch: "", status: "Active" };
+const emptyForm = { name: "", email: "", phone: "", branch_id: "", status: "Active" };
 
-export default function AddLabAssistantModal({ editingLabAssistant, onClose, onSave }) {
+export default function AddLabAssistantModal({ editingLabAssistant, branches, onClose, onSave }) {
   const [form, setForm] = useState(emptyForm);
   const isEditMode = Boolean(editingLabAssistant);
 
   useEffect(() => {
     if (editingLabAssistant) {
+      const matchedBranch = branches?.find((b) => b.name === editingLabAssistant.branch);
+
       setForm({
         name: editingLabAssistant.name,
         email: editingLabAssistant.email,
         phone: editingLabAssistant.phone,
-        branch: editingLabAssistant.branch,
+        branch_id: matchedBranch?.id ?? "",
         status: editingLabAssistant.status,
       });
     } else {
       setForm(emptyForm);
     }
-  }, [editingLabAssistant]);
+  }, [editingLabAssistant, branches]);
 
   function handleChange(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -28,10 +30,10 @@ export default function AddLabAssistantModal({ editingLabAssistant, onClose, onS
 
   function handleSubmit(e) {
     e.preventDefault();
-    if (!form.name.trim() || !form.phone.trim() || !form.branch.trim()) return;
+    if (!form.name.trim() || !form.phone.trim() || !form.branch_id) return;
     onSave({
       ...form,
-      laId: editingLabAssistant?.laId,
+      id: editingLabAssistant?.id,
     });
   }
 
@@ -57,8 +59,12 @@ export default function AddLabAssistantModal({ editingLabAssistant, onClose, onS
               value={form.email}
               onChange={(e) => handleChange("email", e.target.value)}
               placeholder="labassistant@lab.com"
-              className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              disabled={isEditMode}
+              className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 disabled:bg-gray-50 disabled:text-gray-400"
             />
+            {isEditMode && (
+              <p className="text-xs text-gray-400 mt-1">Email can't be changed after account creation.</p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -73,12 +79,18 @@ export default function AddLabAssistantModal({ editingLabAssistant, onClose, onS
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1.5">Branch</label>
-              <input
-                value={form.branch}
-                onChange={(e) => handleChange("branch", e.target.value)}
-                placeholder="Main Branch"
+              <select
+                value={form.branch_id}
+                onChange={(e) => handleChange("branch_id", e.target.value)}
                 className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
-              />
+              >
+                <option value="">Select branch</option>
+                {branches?.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -87,7 +99,7 @@ export default function AddLabAssistantModal({ editingLabAssistant, onClose, onS
             <select
               value={form.status}
               onChange={(e) => handleChange("status", e.target.value)}
-              className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 cursor-pointer"
             >
               <option>Active</option>
               <option>Inactive</option>

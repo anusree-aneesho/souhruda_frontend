@@ -47,7 +47,7 @@ export default function ActivityLogPage() {
         <h1 className="text-lg font-semibold text-gray-900">Activity Log</h1>
         <button
           onClick={() => navigate(-1)}
-          className="text-xs text-gray-500 hover:underline"
+          className="text-xs text-gray-500 hover:underline cursor-pointer"
         >
           ← Back
         </button>
@@ -85,7 +85,7 @@ export default function ActivityLogPage() {
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="text-sm px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+            className="text-sm px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 cursor-pointer"
           >
             ← Previous
           </button>
@@ -95,7 +95,7 @@ export default function ActivityLogPage() {
           <button
             onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))}
             disabled={page === meta.last_page}
-            className="text-sm px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+            className="text-sm px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 cursor-pointer"
           >
             Next →
           </button>

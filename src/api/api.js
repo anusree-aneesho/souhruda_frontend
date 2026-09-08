@@ -167,6 +167,19 @@ export function deleteTestCategory(id) {
   });
 }
 
+// ── Home Collection ──────────────────────────────
+
+export async function getHomeCollectionRequestsApi() {
+  return request("/home-collection-requests");
+}
+
+export async function createHomeCollectionRequestApi(payload) {
+  return request("/home-collection-requests", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 // ── Lab Test ───────────────────────────────────────────────
 
 export function getLabTests(categoryId = null) {
@@ -200,9 +213,7 @@ export function deleteLabTest(id) {
 
 
 
-
-
-//frontofficer
+// ── Front Officer ──────────────────────────────
 
 export async function getFrontOfficersApi() {
   return request("/front-officers");
@@ -226,4 +237,22 @@ export async function deleteFrontOfficerApi(id) {
   return request(`/front-officers/${id}`, {
     method: "DELETE",
   });
+}
+
+// ── Lab Assistants ──────────────────────────────────────────
+
+export async function getLabAssistantsApi() {
+  return request("/lab-assistants");
+}
+
+export async function createLabAssistantApi(data) {
+  return request("/lab-assistants", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function updateLabAssistantApi(id, data) {
+  return request(`/lab-assistants/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export async function deleteLabAssistantApi(id) {
+  return request(`/lab-assistants/${id}`, { method: "DELETE" });
 }

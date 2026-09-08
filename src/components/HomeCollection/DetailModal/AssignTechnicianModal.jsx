@@ -28,7 +28,7 @@ export default function AssignTechnicianModal({ onClose, onAssign }) {
                   </p>
                 </div>
               </div>
-              <button onClick={() => onAssign(tech)} className="px-4 py-1.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 shrink-0">
+              <button onClick={() => onAssign(tech)} className="px-4 py-1.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 shrink-0 cursor-pointer">
                 Assign
               </button>
             </div>
@@ -36,7 +36,7 @@ export default function AssignTechnicianModal({ onClose, onAssign }) {
         </div>
       </div>
       <div className="flex items-center justify-end px-6 py-4 border-t border-gray-100">
-        <button onClick={onClose} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+        <button onClick={onClose} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
           Cancel
         </button>
       </div>

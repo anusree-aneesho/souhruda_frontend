@@ -2,14 +2,16 @@
 import StatCard from "../common/StatCard";
 import { Clock, MapPin, FileText, CheckCircle } from "lucide-react";
 
-const stats = [
-  { label: "Requested", value: 1, icon: Clock, color: "gray" },
-  { label: "In Progress", value: 1, icon: MapPin, color: "amber" },
-  { label: "Report Ready", value: 1, icon: FileText, color: "blue" },
-  { label: "Sent to Patient", value: 0, icon: CheckCircle, color: "green" },
-];
+export default function HomeCollectionStats({ counts }) {
+  const c = counts || { requested: 0, inProgress: 0, reportReady: 0, sentToPatient: 0 };
 
-export default function HomeCollectionStats() {
+  const stats = [
+    { label: "Requested", value: c.requested, icon: Clock, color: "gray" },
+    { label: "In Progress", value: c.inProgress, icon: MapPin, color: "amber" },
+    { label: "Report Ready", value: c.reportReady, icon: FileText, color: "blue" },
+    { label: "Sent to Patient", value: c.sentToPatient, icon: CheckCircle, color: "green" },
+  ];
+
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       {stats.map((stat) => (

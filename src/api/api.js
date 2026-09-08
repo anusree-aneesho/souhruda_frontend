@@ -286,3 +286,10 @@ export async function resetPasswordApi({
     }),
   });
 }
+
+export async function forgotPasswordApi(email) {
+  return request("/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}

@@ -8,8 +8,14 @@ import SelectTestsStep from "./steps/SelectTestsStep";
 import ConfirmStep from "./steps/ConfirmStep";
 import AddressSlotStep from "./steps/AddressSlotStep";
 import PaymentStep from "./steps/PaymentStep";
-import { getPatientsApi, createHomeCollectionRequestApi } from "../../../api/api";
 import { useOrderModal } from "../../../Context/OrderModalContext";
+import {
+  getPatientsApi,
+  createPatientApi,
+  createHomeCollectionRequestApi,
+  createOrderApi,
+} from "../../../api/api";
+
 
 function mapPatient(p) {
   return {
@@ -57,6 +63,8 @@ export default function NewOrderModal() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [selectedTests, setSelectedTests] = useState([]);
   const [paymentDone, setPaymentDone] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
   useEffect(() => {
     if (isOpen && skipPatientStep) {
@@ -108,6 +116,8 @@ export default function NewOrderModal() {
     setPaymentMethod("UPI");
     setIsBooking(false);
     setBookingError("");
+    setIsSubmitting(false);
+    setSubmitError(null);
     close();
   }
 
@@ -168,15 +178,48 @@ export default function NewOrderModal() {
       ? selectedPatient
       : { name: newPatientData.name || "New Patient", age: newPatientData.age || "-", gender: newPatientData.gender, regNo: "NEW" };
 
-  function handleCreateOrder() {
-    const newOrderId = Math.floor(Math.random() * 900 + 28344); // TODO: replace with real API response
-    const orderedAt = new Date().toLocaleString("en-GB", {
-      day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
-    });
-    resetAndClose();
-    navigate(`/lab-orders/${newOrderId}`, {
-      state: { patient: currentPatient, tests: selectedTests, orderedAt, paymentDone },
-    });
+  async function handleCreateOrder() {
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      let patientId = selectedPatient?.id;
+
+      // New patient: create them first, then use the returned id.
+      if (patientType === "new") {
+        const [firstName, ...rest] = newPatientData.name.trim().split(" ");
+        const lastName = rest.join(" ") || null;
+
+        const res = await createPatientApi({
+          first_name: firstName,
+          last_name: lastName,
+          age: newPatientData.age || null,
+          gender: newPatientData.gender.toLowerCase(),
+          phone: newPatientData.contact || null,
+        });
+        patientId = res.data.id;
+      }
+
+      const payload = {
+        patient_id: patientId,
+        tests: selectedTests.map((t) => ({
+          lab_test_id: t.id,
+          price: t.price,
+        })),
+        payment_received: paymentDone,
+      };
+
+      const res = await createOrderApi(payload);
+      const order = res.data;
+
+      resetAndClose();
+      navigate(`/lab-orders/${order.order_no}`, {
+        state: { patient: currentPatient, tests: selectedTests, orderedAt: order.ordered_at, paymentDone },
+      });
+    } catch (err) {
+      setSubmitError(err.message);
+      setIsSubmitting(false);
+    }
   }
 
   async function handleConfirmBooking() {
@@ -280,6 +323,10 @@ export default function NewOrderModal() {
       )}
 
       <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
+        {submitError && (
+          <p className="text-sm text-red-500 mr-auto">{submitError}</p>
+        )}
+
         {step === 1 || (skipPatientStep && step === 2) ? (
           <button onClick={resetAndClose} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
             Cancel
@@ -301,10 +348,12 @@ export default function NewOrderModal() {
         ) : (
           <button
             onClick={isHomeCollection ? handleConfirmBooking : handleCreateOrder}
-            disabled={isHomeCollection && isBooking}
+            disabled={isHomeCollection ? isBooking : isSubmitting}
             className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60"
           >
-            {isHomeCollection ? (isBooking ? "Booking…" : "Confirm Booking") : "Create Order"}
+            {isHomeCollection
+              ? (isBooking ? "Booking…" : "Confirm Booking")
+              : (isSubmitting ? "Creating…" : "Create Order")}
           </button>
         )}
       </div>

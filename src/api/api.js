@@ -236,7 +236,7 @@ export async function deleteFrontOfficerApi(id) {
   });
 }
 
-// ── Lab Assistants ──────────────────────────────────────────
+// ── Lab Assistants ─────────────────────────────
 
 export async function getLabAssistantsApi() {
   return request("/lab-assistants");
@@ -262,7 +262,7 @@ export async function deleteLabAssistantApi(id) {
   });
 }
 
-// ── Reset Password ──────────────────────────────────────────
+// ── Reset Password ─────────────────────────────
 
 export async function requestProfilePasswordResetApi() {
   return request("/profile/reset-password", {
@@ -291,5 +291,47 @@ export async function forgotPasswordApi(email) {
   return request("/forgot-password", {
     method: "POST",
     body: JSON.stringify({ email }),
+  });
+}
+
+// ── Orders ──────────────────────────────────────
+
+export async function createOrderApi(payload) {
+  return request("/orders", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getOrdersApi(params = {}) {
+  const query = new URLSearchParams();
+
+  if (params.status && params.status !== "All") {
+    query.set("status", params.status);
+  }
+
+  if (params.q) {
+    query.set("q", params.q);
+  }
+
+  const qs = query.toString();
+  return request(`/orders${qs ? `?${qs}` : ""}`);
+}
+
+export async function getOrderApi(id) {
+  return request(`/orders/${id}`);
+}
+
+export async function saveOrderResultsApi(orderId, results) {
+  return request(`/orders/${orderId}/results`, {
+    method: "PATCH",
+    body: JSON.stringify({ results }),
+  });
+}
+
+export async function completeOrderApi(orderId, results) {
+  return request(`/orders/${orderId}/complete`, {
+    method: "PATCH",
+    body: JSON.stringify({ results }),
   });
 }

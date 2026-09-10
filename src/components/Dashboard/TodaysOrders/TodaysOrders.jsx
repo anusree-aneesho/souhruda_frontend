@@ -1,18 +1,54 @@
 // src/components/Dashboard/TodaysOrders/TodaysOrders.jsx
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import OrdersTableRow from "./OrdersTableRow";
+import { getTodaysOrdersApi } from "../../../api/api";
 
-const orders = [
-  { order: "28342", patient: "Suma Raj", tests: 2, status: "Completed", time: "9:35 AM" },
-  { order: "28341", patient: "Damodharan", tests: 1, status: "Completed", time: "9:20 AM" },
-  { order: "28340", patient: "Omana", tests: 1, status: "Completed", time: "9:05 AM" },
-  { order: "28339", patient: "Damodharan", tests: 3, status: "Pending", time: "8:52 AM" },
-  { order: "28338", patient: "Karunakaran", tests: 2, status: "Completed", time: "7:38 AM" },
-  { order: "28337", patient: "Damodharan", tests: 1, status: "Completed", time: "7:28 AM" },
-  { order: "28336", patient: "Omana", tests: 4, status: "Completed", time: "7:15 AM" },
-];
+function capitalize(str) {
+  return str ? str.charAt(0).toUpperCase() + str.slice(1) : str;
+}
+
+function mapOrder(o) {
+  return {
+    order: o.order_no,
+    patient: [o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" "),
+    tests: o.items_count ?? o.items?.length ?? 0,
+    status: capitalize(o.status),
+    time: o.ordered_at
+      ? new Date(o.ordered_at).toLocaleTimeString("en-US", {
+          hour: "numeric", minute: "2-digit",
+        })
+      : "",
+  };
+}
 
 export default function TodaysOrders() {
+  const [orders, setOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getTodaysOrdersApi()
+      .then((res) => {
+        if (!cancelled) setOrders((res.data || []).map(mapOrder));
+      })
+      .catch(() => {
+        if (!cancelled) setOrders([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (isLoading || orders.length === 0) {
+    return null;
+  }
+
   return (
     <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
       <div className="flex items-center justify-between mb-3">

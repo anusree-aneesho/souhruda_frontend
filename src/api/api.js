@@ -352,6 +352,10 @@ export async function getOrdersApi(params = {}) {
   return request(`/orders${qs ? `?${qs}` : ""}`);
 }
 
+export async function getTodaysOrdersApi() {
+  return request("/orders?today=1");
+}
+
 export async function getOrderApi(id) {
   return request(`/orders/${id}`);
 }

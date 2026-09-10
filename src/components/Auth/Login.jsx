@@ -51,9 +51,9 @@ export default function Login() {
     <AuthLayout>
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900">Sign in</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Enter your front officer credentials to access the dashboard.
-        </p>
+        {/* <p className="text-sm text-gray-500 mt-1">
+          Sign in with your authorized credentials to continue.
+        </p> */}
       </div>
 
       {sessionMessage && (
@@ -65,13 +65,14 @@ export default function Login() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-semibold text-gray-900 mb-1.5">
-            Front Officer ID or Email
+            Email
           </label>
           <input
             autoFocus
+            type="email"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
-            placeholder="FO-001 or frontofficer@lab.com"
+            placeholder="Enter your email address"
             className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
           />
         </div>
@@ -93,7 +94,7 @@ export default function Login() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
+            placeholder="Your password"
             className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
           />
         </div>
@@ -115,11 +116,9 @@ export default function Login() {
       </form>
 
       <div className="mt-6 pt-5 border-t border-gray-100">
-        <p className="text-xs text-gray-400 leading-relaxed">
-          Demo build — try <span className="font-medium text-gray-500">FO-001</span> or{" "}
-          <span className="font-medium text-gray-500">frontofficer@lab.com</span> with any password.
-          Front Officer records live in <code className="text-gray-500">src/data/staff.js</code> for
-          now; a real backend will replace this with proper authentication.
+        <p className="text-xs text-gray-400 leading-relaxed text-center">
+          Authorized personnel only. For account or access assistance,
+          please contact your system administrator.
         </p>
       </div>
 

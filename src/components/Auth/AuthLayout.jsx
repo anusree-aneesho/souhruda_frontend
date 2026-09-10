@@ -10,7 +10,7 @@ export default function AuthLayout({ children }) {
           </div>
           <div>
             <p className="font-bold text-base leading-tight">SOUHRUDA</p>
-            <p className="text-[11px] tracking-wide text-teal-100">LAB OS · DEMO</p>
+            <p className="text-[11px] tracking-wide text-teal-100">LAB OS</p>
           </div>
         </div>
 
@@ -37,7 +37,7 @@ export default function AuthLayout({ children }) {
             </div>
             <div>
               <p className="font-bold text-sm text-gray-900 leading-tight">SOUHRUDA</p>
-              <p className="text-[10px] tracking-wide text-gray-400">LAB OS · DEMO</p>
+              <p className="text-[10px] tracking-wide text-gray-400">LAB OS</p>
             </div>
           </div>
 

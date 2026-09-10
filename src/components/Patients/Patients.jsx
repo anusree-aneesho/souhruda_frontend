@@ -27,7 +27,7 @@ function mapPatient(p) {
     contact: p.phone,
     email: p.email,
     address: p.address,
-    orders: 0,
+    orders: p.orders_count, // real count now, was hardcoded 0
   };
 }
 

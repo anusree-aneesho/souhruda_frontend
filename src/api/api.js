@@ -15,6 +15,18 @@ async function request(endpoint, options = {}) {
 
   const data = await response.json().catch(() => ({}));
 
+  if (response.status === 401 && token) {
+    // Session expired (or token invalid) — clear it and redirect with a message
+    localStorage.removeItem("souhruda_auth_token");
+    localStorage.removeItem("souhruda_auth_user");
+    sessionStorage.setItem(
+      "souhruda_session_message",
+      data.message || "Your session has expired. Please log in again."
+    );
+    window.location.href = "/login";
+    return new Promise(() => {}); // halt further processing; we're navigating away
+  }
+
   if (!response.ok) {
     throw new Error(
       data.message ||
@@ -338,6 +350,10 @@ export async function getOrdersApi(params = {}) {
 
   const qs = query.toString();
   return request(`/orders${qs ? `?${qs}` : ""}`);
+}
+
+export async function getTodaysOrdersApi() {
+  return request("/orders?today=1");
 }
 
 export async function getOrderApi(id) {

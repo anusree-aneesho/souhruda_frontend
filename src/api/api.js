@@ -213,7 +213,11 @@ export async function updateHomeCollectionStatusApi(hcCode, status, otp = null) 
     body: JSON.stringify(otp ? { status, otp } : { status }),
   });
 }
-
+export async function resolveHomeCollectionOrderApi(hcCode) {
+  return request(`/home-collection-requests/${hcCode}/order`, {
+    method: "POST",
+  });
+}
 // ── Lab Test ───────────────────────────────────────────────
 
 export function getLabTests(categoryId = null) {

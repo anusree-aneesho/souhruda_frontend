@@ -27,6 +27,22 @@ function mapPatient(p) {
   };
 }
 
+function ageFromDOB(dob) {
+  if (!dob) return "-";
+  const birthDate = new Date(dob);
+  if (isNaN(birthDate.getTime())) return "-";
+
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+
+  return age;
+}
+
 const LAB_FALLBACK = { lat: 11.2588, lng: 75.7804 };
 
 const emptyNewPatient = {
@@ -78,11 +94,13 @@ export default function NewOrderModal() {
   const [patientType, setPatientType] = useState("existing");
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [newPatientData, setNewPatientData] = useState(emptyNewPatient);
+  const [createdPatient, setCreatedPatient] = useState(null); // holds the freshly-created patient (from step 1)
   const [activeCategory, setActiveCategory] = useState(null);
   const [selectedTests, setSelectedTests] = useState([]);
   const [paymentDone, setPaymentDone] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [isCreatingPatient, setIsCreatingPatient] = useState(false);
 
   useEffect(() => {
     if (isOpen && skipPatientStep) {
@@ -122,6 +140,7 @@ export default function NewOrderModal() {
     setPatientType("existing");
     setSelectedPatient(null);
     setNewPatientData(emptyNewPatient);
+    setCreatedPatient(null);
     setActiveCategory(null);
     setSelectedTests([]);
     setPaymentDone(false);
@@ -135,6 +154,7 @@ export default function NewOrderModal() {
     setBookingError("");
     setIsSubmitting(false);
     setSubmitError(null);
+    setIsCreatingPatient(false);
     close();
   }
 
@@ -187,32 +207,60 @@ export default function NewOrderModal() {
     ? { 1: "Next: Select Tests →", 2: "Next: Address & Slot →", 3: "Next: Payment →" }
     : { 1: "Next: Select Tests →", 2: "Next: Confirm →" };
 
+  // Once a new patient has been created (step 1 → 2), treat them the same as an existing one for display/order purposes
   const currentPatient =
     patientType === "existing"
       ? selectedPatient
-      : { name: newPatientData.name || "New Patient", age: newPatientData.age || "-", gender: newPatientData.gender, regNo: "NEW" };
+      : createdPatient
+      ? createdPatient
+      : {
+          name: newPatientData.name || "New Patient",
+          age: ageFromDOB(newPatientData.dateOfBirth),
+          gender: newPatientData.gender,
+          regNo: "NEW",
+        };
+
+  // Handles the "Next" button specifically for step 1 → creates the patient in the DB before moving on
+  async function handleNext() {
+    if (step === 1 && patientType === "new" && !createdPatient) {
+      if (!newPatientData.name.trim()) {
+        setSubmitError("Please enter the patient's name.");
+        return;
+      }
+      if (!newPatientData.dateOfBirth) {
+        setSubmitError("Please enter the patient's date of birth.");
+        return;
+      }
+
+      setIsCreatingPatient(true);
+      setSubmitError(null);
+
+      try {
+        const res = await createPatientApi(buildNewPatientPayload(newPatientData));
+        setCreatedPatient(mapPatient(res.data));
+        setStep((s) => s + 1);
+      } catch (err) {
+        setSubmitError(err.message || "Couldn't save the patient. Please try again.");
+      } finally {
+        setIsCreatingPatient(false);
+      }
+      return;
+    }
+
+    setStep((s) => s + 1);
+  }
 
   async function handleCreateOrder() {
     setIsSubmitting(true);
     setSubmitError(null);
 
     try {
-      let patientId = selectedPatient?.id;
+      const patientId = patientType === "new" ? createdPatient?.id : selectedPatient?.id;
 
-      if (patientType === "new") {
-        if (!newPatientData.name.trim()) {
-          setSubmitError("Please enter the patient's name.");
-          setIsSubmitting(false);
-          return;
-        }
-        if (!newPatientData.dateOfBirth) {
-          setSubmitError("Please enter the patient's date of birth.");
-          setIsSubmitting(false);
-          return;
-        }
-
-        const res = await createPatientApi(buildNewPatientPayload(newPatientData));
-        patientId = res.data.id;
+      if (!patientId) {
+        setSubmitError("No patient selected. Please go back and select or add a patient.");
+        setIsSubmitting(false);
+        return;
       }
 
       const payload = {
@@ -247,24 +295,7 @@ export default function NewOrderModal() {
     setBookingError("");
 
     try {
-      let patientId = selectedPatient?.id;
-
-      if (patientType === "new") {
-        if (!newPatientData.name.trim()) {
-          setBookingError("Please enter the patient's name.");
-          setIsBooking(false);
-          return;
-        }
-
-        if (!newPatientData.dateOfBirth) {
-          setBookingError("Please enter the patient's date of birth.");
-          setIsBooking(false);
-          return;
-        }
-
-        const createdPatient = await createPatientApi(buildNewPatientPayload(newPatientData));
-        patientId = createdPatient.data.id;
-      }
+      const patientId = patientType === "new" ? createdPatient?.id : selectedPatient?.id;
 
       if (!patientId) {
         setBookingError("Please select or add a patient before confirming.");
@@ -295,6 +326,7 @@ export default function NewOrderModal() {
   const isNextDisabled =
     (step === 1 && patientType === "existing" && !selectedPatient) ||
     (step === 1 && patientType === "new" && (!newPatientData.name.trim() || !newPatientData.dateOfBirth)) ||
+    (step === 1 && isCreatingPatient) ||
     (step === 2 && (selectedTests.length === 0 || !currentPatient)) ||
     (isHomeCollection && step === 3 && (!address.trim() || !preferredDate || !pinnedLocation));
 
@@ -376,11 +408,11 @@ export default function NewOrderModal() {
 
         {step < totalSteps ? (
           <button
-            onClick={() => setStep((s) => s + 1)}
+            onClick={handleNext}
             disabled={isNextDisabled}
             className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
-            {nextButtonLabels[step]}
+            {step === 1 && isCreatingPatient ? "Saving patient…" : nextButtonLabels[step]}
           </button>
         ) : (
           <button

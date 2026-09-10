@@ -16,7 +16,6 @@ import {
   createOrderApi,
 } from "../../../api/api";
 
-
 function mapPatient(p) {
   return {
     id: p.id,
@@ -28,15 +27,18 @@ function mapPatient(p) {
   };
 }
 
-// Fallback origin (the lab's own location) used only if device GPS is
-// unavailable or denied — keep in sync with LAB_LATITUDE/LAB_LONGITUDE in
-// the backend .env. Replace with real Maps/geocoding once that's added.
 const LAB_FALLBACK = { lat: 11.2588, lng: 75.7804 };
 
-const emptyNewPatient = { name: "", age: "", gender: "Male", contact: "" };
+const emptyNewPatient = {
+  name: "",
+  dateOfBirth: "",
+  gender: "Male",
+  contact: "",
+  isPregnant: false,
+  email: "",
+  address: "",
+};
 
-// Haversine distance in km — client-side estimate only, for display.
-// The server recomputes the authoritative distance via PostGIS.
 function haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -47,6 +49,22 @@ function haversineKm(lat1, lon1, lat2, lon2) {
       Math.cos((lat2 * Math.PI) / 180) *
       Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function buildNewPatientPayload(newPatientData) {
+  const [firstName, ...rest] = newPatientData.name.trim().split(" ");
+  const lastName = rest.join(" ") || null;
+
+  return {
+    first_name: firstName,
+    last_name: lastName,
+    date_of_birth: newPatientData.dateOfBirth,
+    gender: newPatientData.gender?.toLowerCase(),
+    phone: newPatientData.contact || null,
+    email: newPatientData.email || null,
+    address: newPatientData.address || null,
+    is_pregnant: newPatientData.gender === "Female" ? newPatientData.isPregnant : false,
+  };
 }
 
 export default function NewOrderModal() {
@@ -90,7 +108,6 @@ export default function NewOrderModal() {
     }
   }, [isOpen, skipPatientStep, presetPatientRegNo]);
 
-  // Home collection only
   const [address, setAddress] = useState("");
   const [pinnedLocation, setPinnedLocation] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
@@ -127,9 +144,6 @@ export default function NewOrderModal() {
     );
   }
 
-  // Uses the device's own GPS via the browser Geolocation API — no Maps API
-  // key needed. Falls back to the lab's fixed location if permission is
-  // denied or the device has no GPS, so booking can still proceed.
   function handlePinLocation() {
     if (!navigator.geolocation) {
       setPinnedLocation({ lat: LAB_FALLBACK.lat, lng: LAB_FALLBACK.lng, distanceKm: null });
@@ -185,18 +199,19 @@ export default function NewOrderModal() {
     try {
       let patientId = selectedPatient?.id;
 
-      // New patient: create them first, then use the returned id.
       if (patientType === "new") {
-        const [firstName, ...rest] = newPatientData.name.trim().split(" ");
-        const lastName = rest.join(" ") || null;
+        if (!newPatientData.name.trim()) {
+          setSubmitError("Please enter the patient's name.");
+          setIsSubmitting(false);
+          return;
+        }
+        if (!newPatientData.dateOfBirth) {
+          setSubmitError("Please enter the patient's date of birth.");
+          setIsSubmitting(false);
+          return;
+        }
 
-        const res = await createPatientApi({
-          first_name: firstName,
-          last_name: lastName,
-          age: newPatientData.age || null,
-          gender: newPatientData.gender.toLowerCase(),
-          phone: newPatientData.contact || null,
-        });
+        const res = await createPatientApi(buildNewPatientPayload(newPatientData));
         patientId = res.data.id;
       }
 
@@ -223,10 +238,6 @@ export default function NewOrderModal() {
   }
 
   async function handleConfirmBooking() {
-    if (patientType !== "existing" || !selectedPatient?.id) {
-      setBookingError("Home collection currently requires an existing patient.");
-      return;
-    }
     if (!pinnedLocation) {
       setBookingError("Please pin the collection location before confirming.");
       return;
@@ -236,8 +247,33 @@ export default function NewOrderModal() {
     setBookingError("");
 
     try {
+      let patientId = selectedPatient?.id;
+
+      if (patientType === "new") {
+        if (!newPatientData.name.trim()) {
+          setBookingError("Please enter the patient's name.");
+          setIsBooking(false);
+          return;
+        }
+
+        if (!newPatientData.dateOfBirth) {
+          setBookingError("Please enter the patient's date of birth.");
+          setIsBooking(false);
+          return;
+        }
+
+        const createdPatient = await createPatientApi(buildNewPatientPayload(newPatientData));
+        patientId = createdPatient.data.id;
+      }
+
+      if (!patientId) {
+        setBookingError("Please select or add a patient before confirming.");
+        setIsBooking(false);
+        return;
+      }
+
       const payload = {
-        patient_id: selectedPatient.id,
+        patient_id: patientId,
         tests: selectedTests.map((t) => t.id),
         address_line: address,
         latitude: pinnedLocation.lat,
@@ -258,6 +294,7 @@ export default function NewOrderModal() {
 
   const isNextDisabled =
     (step === 1 && patientType === "existing" && !selectedPatient) ||
+    (step === 1 && patientType === "new" && (!newPatientData.name.trim() || !newPatientData.dateOfBirth)) ||
     (step === 2 && (selectedTests.length === 0 || !currentPatient)) ||
     (isHomeCollection && step === 3 && (!address.trim() || !preferredDate || !pinnedLocation));
 
@@ -328,11 +365,11 @@ export default function NewOrderModal() {
         )}
 
         {step === 1 || (skipPatientStep && step === 2) ? (
-          <button onClick={resetAndClose} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          <button onClick={resetAndClose} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
             Cancel
           </button>
         ) : (
-          <button onClick={() => setStep((s) => s - 1)} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          <button onClick={() => setStep((s) => s - 1)} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
             ← Back
           </button>
         )}
@@ -341,7 +378,7 @@ export default function NewOrderModal() {
           <button
             onClick={() => setStep((s) => s + 1)}
             disabled={isNextDisabled}
-            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             {nextButtonLabels[step]}
           </button>
@@ -349,7 +386,7 @@ export default function NewOrderModal() {
           <button
             onClick={isHomeCollection ? handleConfirmBooking : handleCreateOrder}
             disabled={isHomeCollection ? isBooking : isSubmitting}
-            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60"
+            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
           >
             {isHomeCollection
               ? (isBooking ? "Booking…" : "Confirm Booking")

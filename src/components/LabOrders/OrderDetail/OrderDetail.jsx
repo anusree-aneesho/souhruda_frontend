@@ -4,8 +4,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import OrderDetailHeader from "./OrderDetailHeader";
 import ResultsTable from "./ResultsTable";
 import ResultInsights from "./ResultInsights";
-import { getOrderApi, saveOrderResultsApi, completeOrderApi } from "../../../api/api";
-// import { calculateFlag } from "../../../utils/calculateFlag";
+import { getOrderApi, saveOrderResultsApi, completeOrderApi, deleteOrderApi } from "../../../api/api";
+import { calculateFlag } from "../../../utils/calculateFlag";
 
 function mapOrder(o) {
   return {
@@ -18,9 +18,9 @@ function mapOrder(o) {
     tests: (o.items || []).map((item) => {
       const lt = item.lab_test;
       const range =
-        lt?.range_text ||
-        (lt?.range_low != null && lt?.range_high != null
-          ? `${lt.range_low} - ${lt.range_high}`
+        item.resolved_range_text ||
+        (item.resolved_range_low != null && item.resolved_range_high != null
+          ? `${item.resolved_range_low} - ${item.resolved_range_high}`
           : "-");
 
       return {
@@ -28,6 +28,8 @@ function mapOrder(o) {
         name: lt?.name ?? "-",
         unit: lt?.unit ?? "",
         range,
+        rangeLow: item.resolved_range_low != null ? Number(item.resolved_range_low) : null,
+        rangeHigh: item.resolved_range_high != null ? Number(item.resolved_range_high) : null,
         price: Number(item.price_at_order),
         result: item.result_value ?? "",
       };
@@ -77,14 +79,9 @@ export default function OrderDetail() {
   const orderedAt = order?.orderedAt || "-";
   const paymentDone = Boolean(order?.paymentDone);
 
-  // const flags = useMemo(
-  //   () => Object.fromEntries(tests.map((t) => [t.id, calculateFlag(t.range, results[t.id])])),
-  //   [tests, results]
-  // );
-
   const flags = useMemo(
-    () => Object.fromEntries(tests.map((t) => [t.id, ""])),
-    [tests]
+    () => Object.fromEntries(tests.map((t) => [t.id, calculateFlag(t.range, results[t.id])])),
+    [tests, results]
   );
 
   function handleResultChange(id, value) {
@@ -135,6 +132,18 @@ export default function OrderDetail() {
     }
   }
 
+  async function handleDelete() {
+    const confirmed = window.confirm("Delete this order? This cannot be undone from here.");
+    if (!confirmed) return;
+
+    try {
+      await deleteOrderApi(orderId);
+      navigate("/lab-orders");
+    } catch (err) {
+      setSaveError(err.message);
+    }
+  }
+
   return (
     <div className="space-y-6 ">
       <OrderDetailHeader
@@ -144,7 +153,7 @@ export default function OrderDetail() {
         age={patient.age}
         gender={patient.gender}
         orderedAt={orderedAt}
-        onDelete={() => navigate("/lab-orders")}
+        onDelete={handleDelete}
       />
       <ResultsTable
         tests={tests}

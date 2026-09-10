@@ -9,6 +9,7 @@ import {
   createFrontOfficerApi,
   updateFrontOfficerApi,
   deleteFrontOfficerApi,
+  getBranchesApi,
 } from "../../api/api";
 
 function mapStaff(f) {
@@ -18,13 +19,15 @@ function mapStaff(f) {
     name: f.name,
     email: f.email,
     phone: f.phone,
-    branch: f.branch,
+    branch: f.branch,       // display name (from FrontOfficerResource)
+    branch_id: f.branch_id, // needed to pre-select dropdown on edit
     status: f.status,
   };
 }
 
 export default function Staff() {
   const [staff, setStaff] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [modalState, setModalState] = useState(null);
@@ -41,9 +44,19 @@ export default function Staff() {
     }
   }, []);
 
+  const loadBranches = useCallback(async () => {
+    try {
+      const res = await getBranchesApi();
+      setBranches(res.data);
+    } catch (err) {
+      console.error("Failed to load branches:", err.message);
+    }
+  }, []);
+
   useEffect(() => {
     loadStaff();
-  }, [loadStaff]);
+    loadBranches();
+  }, [loadStaff, loadBranches]);
 
   const filteredStaff = staff.filter(
     (s) =>
@@ -55,22 +68,21 @@ export default function Staff() {
 
   async function handleSaveStaff(formData) {
     try {
-      if (formData.staffId) {
-        // Editing — find the real database id
-        const existing = staff.find((s) => s.staffId === formData.staffId);
-       await updateFrontOfficerApi(existing.id, {
-         name: formData.name,
-         phone: formData.phone,
-         branch: formData.branch,
-         status: formData.status, // send "Active"/"Inactive" directly, matching backend
+      if (formData.id) {
+        // Editing existing front officer
+        await updateFrontOfficerApi(formData.id, {
+          name: formData.name,
+          phone: formData.phone,
+          branch_id: formData.branch_id,
+          status: formData.status,
         });
       } else {
-        // Creating new
+        // Creating new front officer
         await createFrontOfficerApi({
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
-          branch: formData.branch,
+          branch_id: formData.branch_id,
         });
       }
       setModalState(null);
@@ -128,7 +140,8 @@ export default function Staff() {
 
       {modalState && (
         <AddStaffModal
-          editingStaff={modalState.editingStaff}
+          editingFrontOfficer={modalState.editingStaff}
+          branches={branches}
           onClose={() => setModalState(null)}
           onSave={handleSaveStaff}
         />

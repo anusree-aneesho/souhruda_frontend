@@ -2,18 +2,43 @@
 import { useState, useEffect } from "react";
 import StatCard from "../common/StatCard";
 import { FileText, Clock, MapPin, IndianRupee } from "lucide-react";
-import { getTodaysOrdersApi, getOrdersApi } from "../../api/api";
+import { getOrdersApi, getHomeCollectionRequestsApi } from "../../api/api";
+
+// Local (browser) calendar date as YYYY-MM-DD — NOT toISOString(), which
+// gives UTC's date and can be a day off from IST near midnight.
+function todayLocalDate() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function toLocalDateString(dateInput) {
+  if (!dateInput) return null;
+  const d = new Date(dateInput);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 export default function DashboardStats() {
   const [todaysOrders, setTodaysOrders] = useState([]);
   const [pendingTotal, setPendingTotal] = useState(0);
+  const [homeCollectionStat, setHomeCollectionStat] = useState({
+    value: "—",
+    sublabel: "loading…",
+  });
 
   useEffect(() => {
     let cancelled = false;
+    const today = todayLocalDate();
 
-    getTodaysOrdersApi()
+    // No backend endpoint filters orders by date, so pull the (paginated,
+    // 20-per-page, most-recent-first) list and filter client-side. Fine at
+    // current volume — if the lab regularly does 20+ orders/day, this will
+    // undercount and needs a real ?date= filter added to OrderController.
+    getOrdersApi()
       .then((res) => {
-        if (!cancelled) setTodaysOrders(res.data || []);
+        const rows = res.data || [];
+        if (!cancelled) {
+          setTodaysOrders(rows.filter((o) => toLocalDateString(o.ordered_at) === today));
+        }
       })
       .catch(() => {
         if (!cancelled) setTodaysOrders([]);
@@ -25,6 +50,20 @@ export default function DashboardStats() {
       })
       .catch(() => {
         if (!cancelled) setPendingTotal(0);
+      });
+
+    getHomeCollectionRequestsApi()
+      .then((rows) => {
+        if (cancelled) return;
+        const todaysRows = (rows || []).filter((r) => r.slot_date === today);
+        const awaitingAssignment = todaysRows.filter((r) => r.status === "requested").length;
+        setHomeCollectionStat({
+          value: todaysRows.length,
+          sublabel: `${awaitingAssignment} awaiting assignment`,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setHomeCollectionStat({ value: "—", sublabel: "couldn't load" });
       });
 
     return () => {
@@ -52,8 +91,8 @@ export default function DashboardStats() {
     },
     {
       label: "Home Collections",
-      value: 3,
-      sublabel: "1 awaiting assignment",
+      value: homeCollectionStat.value,
+      sublabel: homeCollectionStat.sublabel,
       icon: MapPin,
       color: "blue",
     },

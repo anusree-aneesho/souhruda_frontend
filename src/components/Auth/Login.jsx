@@ -1,5 +1,5 @@
 // src/components/Auth/Login.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { LogIn } from "lucide-react";
 import AuthLayout from "./AuthLayout";
@@ -12,11 +12,20 @@ export default function Login() {
   const location = useLocation();
   const redirectTo = location.state?.from?.pathname || "/";
 
-  const [identifier, setIdentifier] = useState("");  
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isForgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [sessionMessage, setSessionMessage] = useState("");
+
+  useEffect(() => {
+    const msg = sessionStorage.getItem("souhruda_session_message");
+    if (msg) {
+      setSessionMessage(msg);
+      sessionStorage.removeItem("souhruda_session_message");
+    }
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -46,6 +55,12 @@ export default function Login() {
           Enter your front officer credentials to access the dashboard.
         </p>
       </div>
+
+      {sessionMessage && (
+        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
+          {sessionMessage}
+        </p>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>

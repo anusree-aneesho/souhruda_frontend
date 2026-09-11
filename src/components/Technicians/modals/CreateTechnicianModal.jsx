@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import ModalShell from "../../common/Modal/ModalShell";
 import { getBranchesApi } from "../../../api/api";
 
-const emptyForm = { name: "", email: "", phone: "", branch_id: "", status: "Active", latitude: "", longitude: "" };
+const emptyForm = { name: "", email: "", phone: "", branch_id: "", status: "Active", rating: "5.0", latitude: "", longitude: "" };
 
 export default function CreateTechnicianModal({ editingTechnician, onClose, onSave }) {
   const [form, setForm] = useState(emptyForm);
@@ -34,6 +34,7 @@ export default function CreateTechnicianModal({ editingTechnician, onClose, onSa
         phone: editingTechnician.phone,
         branch_id: editingTechnician.branch_id ?? "",
         status: editingTechnician.status,
+        rating: String(editingTechnician.rating ?? "5.0"),
         latitude: editingTechnician.latitude ?? "",
         longitude: editingTechnician.longitude ?? "",
       });
@@ -68,6 +69,7 @@ export default function CreateTechnicianModal({ editingTechnician, onClose, onSa
     if (!form.name.trim() || !form.phone.trim() || !form.branch_id || form.latitude === "" || form.longitude === "") return;
     onSave({
       ...form,
+      rating: parseFloat(form.rating) || 5.0,
       id: editingTechnician?.id,
       techId: editingTechnician?.techId,
     });
@@ -168,6 +170,22 @@ export default function CreateTechnicianModal({ editingTechnician, onClose, onSa
               <option>Inactive</option>
             </select>
           </div>
+
+          {isEditMode && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Rating</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="5"
+                value={form.rating}
+                onChange={(e) => handleChange("rating", e.target.value)}
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">New technicians start at 5.0 — adjust here only to correct or override.</p>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">

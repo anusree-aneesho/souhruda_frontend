@@ -72,6 +72,19 @@ export function AuthProvider({ children }) {
     restoreSession();
   }, []);
 
+  // Periodically verify the session is still valid (catches inactivity timeout)
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(() => {
+      getMeApi().catch(() => {
+        // 401 handling (message + redirect) is now done centrally in api.js
+      });
+    }, 5 * 60 * 1000); // check every 5 minutes
+
+    return () => clearInterval(interval);
+  }, [user]);
+
   async function login(email, password) {
     try {
       const data = await loginApi(email.trim(), password);

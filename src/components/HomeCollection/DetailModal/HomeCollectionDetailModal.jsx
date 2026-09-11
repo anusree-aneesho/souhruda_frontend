@@ -8,11 +8,7 @@ import TestsList from "./TestsList";
 import TrackingMap from "./TrackingMap";
 import AssignTechnicianModal from "./AssignTechnicianModal";
 import { useHomeCollectionModal } from "../../../Context/HomeCollectionModalContext";
-import { getHomeCollectionRequestApi, updateHomeCollectionStatusApi } from "../../../api/api";
-
-function generateOtp() {
-  return String(Math.floor(1000 + Math.random() * 9000));
-}
+import { getHomeCollectionRequestApi, updateHomeCollectionStatusApi, resolveHomeCollectionOrderApi } from "../../../api/api";
 
 function formatStatus(status) {
   return (status || "")
@@ -45,7 +41,8 @@ function mapDetail(r) {
     collectionCharge: r.collection_charge || 0,
     sampleBarcode: r.barcode,
     technician: r.technician ? { ...r.technician, location: r.technician.zone, otp: r.debug_otp } : null,
-    linkedOrderId: null,
+    otpReady: r.otp_ready ?? false,
+    linkedOrderId: r.order_no || null,
     tests: r.tests || [],
   };
 }
@@ -95,10 +92,6 @@ export default function HomeCollectionDetailModal() {
 
   if (!activeId) return null;
 
-  function updateHc(patch) {
-    setLocalHc({ ...hc, ...patch });
-  }
-
   function handleAssign(updated) {
   setBaseHc(mapDetail(updated));
   setLocalHc(null);
@@ -130,22 +123,29 @@ export default function HomeCollectionDetailModal() {
   }
 }
 
-  function handleMarkProcessing() {
-    updateHc({ status: "Processing" });
+  async function handleMarkProcessing() {
+    try {
+      const updated = await updateHomeCollectionStatusApi(hc.id, "processing");
+      setBaseHc(mapDetail(updated));
+      setLocalHc(null);
+    } catch (err) {
+      alert(err.message || "Couldn't mark this as processing.");
+    }
   }
 
-  function handleEnterResults() {
-    const orderId = hc.linkedOrderId || String(Math.floor(Math.random() * 900 + 28344));
-    close();
-    navigate(`/lab-orders/${orderId}`, {
-      state: {
-        patient: hc.patient,
-        tests: hc.tests,
-        orderedAt: new Date().toLocaleString("en-GB", {
-          day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
-        }),
-      },
-    });
+    async function handleEnterResults() {
+    try {
+      // The linked order is auto-created server-side as soon as the sample is
+      // marked collected, so hc.linkedOrderId is normally already set here.
+      // resolveOrder is just a fallback (e.g. older collections from before
+      // auto-create existed) — never invent an id, or /lab-orders/:orderId
+      // 404s on a row that doesn't exist.
+      const orderId = hc.linkedOrderId || (await resolveHomeCollectionOrderApi(hc.id)).order_no;
+      close();
+      navigate(`/lab-orders/${orderId}`);
+    } catch (err) {
+      alert(err.message || "Couldn't open the lab order for this collection.");
+    }
   }
 
   function handleOpenOrder() {
@@ -153,9 +153,15 @@ export default function HomeCollectionDetailModal() {
     navigate(`/lab-orders/${hc.linkedOrderId}`);
   }
 
-  function handleSendWhatsApp() {
-    updateHc({ status: "Sent" });
-    alert(`Report sent to ${hc.patient.name} via WhatsApp.`);
+  async function handleSendWhatsApp() {
+    try {
+      const updated = await updateHomeCollectionStatusApi(hc.id, "sent");
+      setBaseHc(mapDetail(updated));
+      setLocalHc(null);
+      alert(`Report sent to ${hc.patient.name} via WhatsApp.`);
+    } catch (err) {
+      alert(err.message || "Couldn't send the report.");
+    }
   }
 
   return (
@@ -221,6 +227,11 @@ export default function HomeCollectionDetailModal() {
 
               {hc.status === "En Route" && (
                 <>
+                  {!hc.otpReady && (
+                    <p className="text-xs text-amber-600 w-full sm:w-auto sm:mr-2">
+                      OTP hasn't been generated for this collection yet — it's created automatically on the morning of the slot date.
+                    </p>
+                  )}
                   <input
                     value={otpInput}
                     onChange={(e) => setOtpInput(e.target.value)}

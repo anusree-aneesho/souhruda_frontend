@@ -4,7 +4,6 @@ import TechniciansHeader from "./TechniciansHeader";
 import TechniciansSearch from "./TechniciansSearch";
 import TechniciansTable from "./TechniciansTable/TechniciansTable";
 import TechnicianCard from "./TechniciansTable/TechnicianCard";
-import AddTechnicianModal from "./modals/AddTechnicianModal";
 import CreateTechnicianModal from "./modals/CreateTechnicianModal";
 import {
   getTechniciansApi,
@@ -26,6 +25,8 @@ function mapTechnicianFromApi(t) {
     longitude: t.longitude,
     rating: t.rating,
     status: t.status,
+    assignedJobs: t.assignedJobs ?? 0,
+    currentStatus: t.currentStatus,
   };
 }
 
@@ -64,6 +65,12 @@ export default function Technicians() {
   latitude: formData.latitude,
   longitude: formData.longitude,
 };
+
+    // Rating is only editable (and only sent) on update — new technicians
+    // default to 5.0 server-side, and StoreTechnicianRequest doesn't accept it.
+    if (isEdit) {
+      payload.rating = formData.rating;
+    }
 
     try {
       const saved = mapTechnicianFromApi(
@@ -137,7 +144,7 @@ export default function Technicians() {
       </div>
 
       {modalState && (
-        <AddTechnicianModal
+        <CreateTechnicianModal
           editingTechnician={modalState.editingTechnician}
           onClose={() => setModalState(null)}
           onSave={handleSaveTechnician}

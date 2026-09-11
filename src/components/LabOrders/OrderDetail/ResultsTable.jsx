@@ -8,7 +8,7 @@ export default function ResultsTable({ tests, results, flags, onResultChange, on
     <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-4">
         <h3 className="font-semibold text-sm text-gray-900">Enter Results</h3>
-        <p className="text-xs text-gray-400">Flags calculate automatically from the normal range set in Test Master</p>
+        {/* <p className="text-xs text-gray-400">Flags calculate automatically from the normal range set in Test Master</p> */}
       </div>
 
       <div className="overflow-x-auto">

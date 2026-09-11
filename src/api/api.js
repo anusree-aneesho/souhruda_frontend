@@ -1,4 +1,3 @@
-```javascript
 const API_BASE_URL = "http://localhost:8000/api/v1";
 
 async function request(endpoint, options = {}) {
@@ -208,23 +207,17 @@ export async function assignTechnicianApi(hcCode, technicianId) {
   });
 }
 
-export async function updateHomeCollectionStatusApi(
-  hcCode,
-  status,
-  otp = null
-) {
+export async function updateHomeCollectionStatusApi(hcCode, status, otp = null) {
   return request(`/home-collection-requests/${hcCode}/status`, {
     method: "POST",
     body: JSON.stringify(otp ? { status, otp } : { status }),
   });
 }
-
 export async function resolveHomeCollectionOrderApi(hcCode) {
   return request(`/home-collection-requests/${hcCode}/order`, {
     method: "POST",
   });
 }
-
 // ── Lab Test ───────────────────────────────────────────────
 
 export function getLabTests(categoryId = null) {

@@ -1,10 +1,12 @@
 // src/components/HomeCollection/HomeCollection.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import HomeCollectionHeader from "./HomeCollectionHeader";
 import HomeCollectionStats from "./HomeCollectionStats";
 import HomeCollectionTable from "./HomeCollectionTable/HomeCollectionTable";
 import HomeCollectionCard from "./HomeCollectionTable/HomeCollectionCard";
 import { getHomeCollectionRequestsApi } from "../../api/api";
+import { useHomeCollectionModal } from "../../Context/HomeCollectionModalContext";
 
 // Backend enum -> display label, e.g. "en_route" -> "En Route"
 function formatStatus(status) {
@@ -62,25 +64,51 @@ export default function HomeCollection() {
   const [rawRequests, setRawRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { activeId } = useHomeCollectionModal();
+  const prevActiveIdRef = useRef(null);
+
+  const load = useCallback(async () => {
+    try {
+      const data = await getHomeCollectionRequestsApi();
+      setRawRequests(Array.isArray(data) ? data : data.data || []);
+    } catch (err) {
+      setError(err.message || "Couldn't load home collection requests.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    load();
+  }, [load]);
 
-    (async () => {
-      try {
-        const data = await getHomeCollectionRequestsApi();
-        if (!cancelled) setRawRequests(Array.isArray(data) ? data : data.data || []);
-      } catch (err) {
-        if (!cancelled) setError(err.message || "Couldn't load home collection requests.");
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    })();
+  // NewOrderModal navigates back here with { justBooked: created } right
+  // after a successful booking (same route, so React Router won't remount
+  // this component on its own) — refetch so the new request shows up
+  // without the user having to manually reload the page.
+  useEffect(() => {
+    if (location.state?.justBooked) {
+      load();
+      // Clear the state so a later back-navigation or manual refresh to
+      // this page doesn't keep re-triggering a refetch on stale state.
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, navigate, load]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // The detail modal (Assign Technician, Confirm Collected, Mark
+  // Processing, Send WhatsApp, etc.) lives globally via
+  // HomeCollectionModalContext, not inside this page — so it has no way to
+  // tell this list "something changed." Instead, refetch whenever the modal
+  // transitions from open to closed, which covers every action inside it
+  // in one place rather than wiring a refresh into each button.
+  useEffect(() => {
+    if (prevActiveIdRef.current && !activeId) {
+      load();
+    }
+    prevActiveIdRef.current = activeId;
+  }, [activeId, load]);
 
   const requests = rawRequests.map(mapRequest);
   const counts = computeCounts(rawRequests);

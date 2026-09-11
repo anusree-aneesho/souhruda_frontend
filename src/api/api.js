@@ -363,3 +363,48 @@ export async function deleteOrderApi(orderId) {
     method: "DELETE",
   });
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+export async function getOrderReportUrlApi(orderId, letterhead = true) {
+  return request(`/orders/${orderId}/report.pdf?letterhead=${letterhead ? 1 : 0}`);
+}
+
+export async function getOrderBillUrlApi(orderId) {
+  return request(`/orders/${orderId}/bill.pdf`);
+}

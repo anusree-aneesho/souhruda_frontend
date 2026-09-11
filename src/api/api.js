@@ -384,47 +384,26 @@ export async function deleteOrderApi(orderId) {
   });
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// ── Order Reports ──────────────────────────────────────
 
 export async function getOrderReportUrlApi(orderId, letterhead = true) {
-  return request(`/orders/${orderId}/report.pdf?letterhead=${letterhead ? 1 : 0}`);
+  return request(
+    `/orders/${orderId}/report.pdf?letterhead=${letterhead ? 1 : 0}`
+  );
 }
 
 export async function getOrderBillUrlApi(orderId) {
   return request(`/orders/${orderId}/bill.pdf`);
+}
+
+// ── FollowUp ──────────────────────────────────────
+
+export async function getFollowUpRemindersApi() {
+  return request("/follow-up-reminders");
+}
+
+export async function markFollowUpReminderDoneApi(id) {
+  return request(`/follow-up-reminders/${id}/done`, {
+    method: "PATCH",
+  });
 }

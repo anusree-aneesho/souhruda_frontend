@@ -117,7 +117,7 @@ export default function Technicians() {
         {loading ? (
           <p className="text-sm text-gray-400 text-center py-6">Loading technicians...</p>
         ) : (
-          <>
+          <>  
             <div className="hidden md:block">
               <TechniciansTable
                 technicians={filteredTechnicians}

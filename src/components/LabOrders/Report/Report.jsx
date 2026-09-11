@@ -11,6 +11,7 @@ import BillModal from "./BillModal";
 import WhatsAppSentModal from "./WhatsAppSentModal";
 import { findOrderById } from "../../../data/labOrders";
 import { calculateFlag } from "../../../utils/calculateFlag";
+import { getOrderReportUrlApi } from "../../../api/api";
 
 export default function Report() {
   const { orderId } = useParams();
@@ -18,6 +19,8 @@ export default function Report() {
   const [letterheadOn, setLetterheadOn] = useState(true);
   const [isBillOpen, setBillOpen] = useState(false);
   const [isWhatsAppOpen, setWhatsAppOpen] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
 
   const existingOrder = findOrderById(orderId);
   const order = existingOrder || (state ? { orderId, ...state } : null);
@@ -57,46 +60,82 @@ export default function Report() {
     console.log("Schedule reminder for", test.name);
   }
 
+  // orderId here is the order's order_no (matches the route param and the
+  // backend's Order::getRouteKeyName() = 'order_no'). getOrderReportUrlApi
+  // returns { url } — a signed, expiring S3/local-disk download link.
+  async function handleDownloadPdf() {
+    setDownloadingPdf(true);
+    setDownloadError("");
+    try {
+      const data = await getOrderReportUrlApi(orderId, letterheadOn);
+      window.open(data.url, "_blank");
+    } catch (err) {
+      console.error("Download PDF failed:", err.message);
+      setDownloadError(err.message || "Couldn't prepare the report. Please try again.");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <ReportHeader
-        orderId={orderId}
-        letterheadOn={letterheadOn}
-        onLetterheadToggle={setLetterheadOn}
-        onPrint={handlePrint}
-        onBillClick={() => setBillOpen(true)}
-        onWhatsAppClick={() => setWhatsAppOpen(true)}
-      />
+      {/* no-print: buttons/nav should never appear on the printed page */}
+      <div className="no-print">
+        <ReportHeader
+          orderId={orderId}
+          letterheadOn={letterheadOn}
+          onLetterheadToggle={setLetterheadOn}
+          onPrint={handlePrint}
+          onBillClick={() => setBillOpen(true)}
+          onWhatsAppClick={() => setWhatsAppOpen(true)}
+          onDownloadClick={handleDownloadPdf}
+          downloadingPdf={downloadingPdf}
+        />
+      </div>
 
-      <div>
+      {downloadError && (
+        <p className="text-sm text-red-600 no-print">{downloadError}</p>
+      )}
+
+      {/* Screen-only heading — the PDF/print output doesn't include this. */}
+      <div className="no-print">
         <h1 className="text-2xl font-bold text-gray-900">Report — {patient.name}</h1>
         <p className="text-sm text-gray-500 mt-1">Order #{orderId} · {reportDate}</p>
       </div>
 
-      <div className="bg-white rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-        {letterheadOn && <ReportLetterhead />}
+      {/* print-target only applies when the Bill modal is closed — so the
+          Report and the Bill never both try to print at the same time. */}
+      <div className={isBillOpen ? "" : "print-target"}>
+        <div className="bg-white rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+          {letterheadOn && <ReportLetterhead />}
 
-        <PatientInfoBar patient={patient} orderId={orderId} reportDate={reportDate} />
-        <AISummary tests={testsWithResults} flags={flags} />
+          <PatientInfoBar patient={patient} orderId={orderId} reportDate={reportDate} />
+          <div className="no-print">
+  <AISummary tests={testsWithResults} flags={flags} />
+</div>
 
-        {Object.entries(testsByCategory).map(([category, categoryTests]) => (
-          <ReportCategorySection
-            key={category}
-            category={category}
-            tests={categoryTests}
-            flags={flags}
-          />
-        ))}
+          {Object.entries(testsByCategory).map(([category, categoryTests]) => (
+            <ReportCategorySection
+              key={category}
+              category={category}
+              tests={categoryTests}
+              flags={flags}
+            />
+          ))}
 
-        <p className="text-center text-xs text-gray-400 mt-6">** End of report **</p>
+          <p className="text-center text-xs text-gray-400 mt-6">** End of report **</p>
+        </div>
       </div>
 
-      <FollowUpSuggestions
-        tests={testsWithResults}
-        flags={flags}
-        reportDate={reportDate}
-        onSchedule={handleScheduleReminder}
-      />
+      {/* no-print: internal staff tool, not part of the patient-facing report */}
+      <div className="no-print">
+        <FollowUpSuggestions
+          tests={testsWithResults}
+          flags={flags}
+          reportDate={reportDate}
+          onSchedule={handleScheduleReminder}
+        />
+      </div>
 
       {isBillOpen && (
         <BillModal

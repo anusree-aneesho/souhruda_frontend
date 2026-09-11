@@ -8,8 +8,8 @@ import {
 } from "lucide-react";
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { label: "Lab Orders", icon: ClipboardList, path: "/lab-orders", badge: 1 },
-  { label: "Home Collection", icon: MapPin, path: "/home-collection", badge: 1 },
+  { label: "Lab Orders", icon: ClipboardList, path: "/lab-orders"},
+  { label: "Home Collection", icon: MapPin, path: "/home-collection"},
   { label: "Front Officer", icon: UserCog, path: "/staff" },
   { label: "Technicians", icon: Wrench, path: "/technicians" },
   { label: "Lab Assistant", icon: Beaker, path: "/lab-assistants" },

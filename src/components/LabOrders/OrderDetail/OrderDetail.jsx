@@ -23,16 +23,17 @@ function mapOrder(o) {
           ? `${item.resolved_range_low} - ${item.resolved_range_high}`
           : "-");
 
-      return {
-        id: item.id,
-        name: lt?.name ?? "-",
-        unit: lt?.unit ?? "",
-        range,
-        rangeLow: item.resolved_range_low != null ? Number(item.resolved_range_low) : null,
-        rangeHigh: item.resolved_range_high != null ? Number(item.resolved_range_high) : null,
-        price: Number(item.price_at_order),
-        result: item.result_value ?? "",
-      };
+    return {
+  id: item.id,
+  name: lt?.name ?? "-",
+  unit: lt?.unit ?? "",
+  category: lt?.category?.name ?? "General",
+  range,
+  rangeLow: item.resolved_range_low != null ? Number(item.resolved_range_low) : null,
+  rangeHigh: item.resolved_range_high != null ? Number(item.resolved_range_high) : null,
+  price: Number(item.price_at_order),
+  result: item.result_value ?? "",
+};
     }),
     orderedAt: o.ordered_at,
     paymentDone: Boolean(o.payment_received),

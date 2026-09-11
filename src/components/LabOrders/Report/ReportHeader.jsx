@@ -15,8 +15,8 @@ export default function ReportHeader({
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <Link to={`/lab-orders/${orderId}`} className="text-sm text-teal-600 font-medium hover:underline">
-          ← Back to order
+        <Link to="/lab-orders" className="text-sm text-teal-600 font-medium hover:underline">
+          ← Back to orders
         </Link>
       </div>
 

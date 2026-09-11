@@ -1,5 +1,5 @@
 // src/components/Technicians/Technicians.jsx
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import TechniciansHeader from "./TechniciansHeader";
 import TechniciansSearch from "./TechniciansSearch";
 import TechniciansTable from "./TechniciansTable/TechniciansTable";
@@ -37,12 +37,15 @@ export default function Technicians() {
   const [modalState, setModalState] = useState(null); // null | { editingTechnician: null | technician }
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  useEffect(() => {
-    getTechniciansApi()
+  const loadTechnicians = useCallback(() => {
+    return getTechniciansApi()
       .then((data) => setTechnicians(data.map(mapTechnicianFromApi)))
-      .catch((err) => console.error("Failed to load technicians", err))
-      .finally(() => setLoading(false));
+      .catch((err) => console.error("Failed to load technicians", err));
   }, []);
+
+  useEffect(() => {
+    loadTechnicians().finally(() => setLoading(false));
+  }, [loadTechnicians]);
 
   const filteredTechnicians = useMemo(() => {
     return technicians.filter(
@@ -73,15 +76,16 @@ export default function Technicians() {
     }
 
     try {
-      const saved = mapTechnicianFromApi(
-        isEdit
-          ? await updateTechnicianApi(formData.id, payload)
-          : await createTechnicianApi(payload)
-      );
+      if (isEdit) {
+        await updateTechnicianApi(formData.id, payload);
+      } else {
+        await createTechnicianApi(payload);
+      }
 
-      setTechnicians((prev) =>
-        isEdit ? prev.map((t) => (t.id === saved.id ? saved : t)) : [...prev, saved]
-      );
+      // Refetch rather than patch local state — guarantees the same order
+      // (newest first) and computed fields (assignedJobs, currentStatus)
+      // a real page reload would show, instead of drifting out of sync.
+      await loadTechnicians();
     } catch (err) {
       console.error("Failed to save technician", err);
       alert(err.message || "Failed to save technician. Please check the form and try again.");
@@ -117,7 +121,7 @@ export default function Technicians() {
         {loading ? (
           <p className="text-sm text-gray-400 text-center py-6">Loading technicians...</p>
         ) : (
-          <>
+          <>  
             <div className="hidden md:block">
               <TechniciansTable
                 technicians={filteredTechnicians}

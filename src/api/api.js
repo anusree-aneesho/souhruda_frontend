@@ -1,3 +1,4 @@
+```javascript
 const API_BASE_URL = "http://localhost:8000/api/v1";
 
 async function request(endpoint, options = {}) {
@@ -207,17 +208,23 @@ export async function assignTechnicianApi(hcCode, technicianId) {
   });
 }
 
-export async function updateHomeCollectionStatusApi(hcCode, status, otp = null) {
+export async function updateHomeCollectionStatusApi(
+  hcCode,
+  status,
+  otp = null
+) {
   return request(`/home-collection-requests/${hcCode}/status`, {
     method: "POST",
     body: JSON.stringify(otp ? { status, otp } : { status }),
   });
 }
+
 export async function resolveHomeCollectionOrderApi(hcCode) {
   return request(`/home-collection-requests/${hcCode}/order`, {
     method: "POST",
   });
 }
+
 // ── Lab Test ───────────────────────────────────────────────
 
 export function getLabTests(categoryId = null) {
@@ -384,10 +391,26 @@ export async function deleteOrderApi(orderId) {
   });
 }
 
+// ── Order Reports ──────────────────────────────────────
+
 export async function getOrderReportUrlApi(orderId, letterhead = true) {
-  return request(`/orders/${orderId}/report.pdf?letterhead=${letterhead ? 1 : 0}`);
+  return request(
+    `/orders/${orderId}/report.pdf?letterhead=${letterhead ? 1 : 0}`
+  );
 }
 
 export async function getOrderBillUrlApi(orderId) {
   return request(`/orders/${orderId}/bill.pdf`);
+}
+
+// ── FollowUp ──────────────────────────────────────
+
+export async function getFollowUpRemindersApi() {
+  return request("/follow-up-reminders");
+}
+
+export async function markFollowUpReminderDoneApi(id) {
+  return request(`/follow-up-reminders/${id}/done`, {
+    method: "PATCH",
+  });
 }

@@ -397,32 +397,38 @@ export default function NewOrderModal() {
         )}
 
         {step === 1 || (skipPatientStep && step === 2) ? (
-          <button onClick={resetAndClose} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
+          <button
+            onClick={resetAndClose}
+            disabled={isSubmitting}
+            className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             Cancel
           </button>
         ) : (
-          <button onClick={() => setStep((s) => s - 1)} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
+          <button
+            onClick={() => setStep((s) => s - 1)}
+            disabled={isSubmitting}
+            className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             ← Back
           </button>
         )}
 
         {step < totalSteps ? (
           <button
-            onClick={handleNext}
-            disabled={isNextDisabled}
-            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            onClick={() => setStep((s) => s + 1)}
+            disabled={isNextDisabled || isSubmitting}
+            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {step === 1 && isCreatingPatient ? "Saving patient…" : nextButtonLabels[step]}
+            {nextButtonLabels[step]}
           </button>
         ) : (
           <button
             onClick={isHomeCollection ? handleConfirmBooking : handleCreateOrder}
-            disabled={isHomeCollection ? isBooking : isSubmitting}
-            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+            disabled={isSubmitting}
+            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40"
           >
-            {isHomeCollection
-              ? (isBooking ? "Booking…" : "Confirm Booking")
-              : (isSubmitting ? "Creating…" : "Create Order")}
+            {isSubmitting ? "Creating…" : isHomeCollection ? "Confirm Booking" : "Create Order"}
           </button>
         )}
       </div>

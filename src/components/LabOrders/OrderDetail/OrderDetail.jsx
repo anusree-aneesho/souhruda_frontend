@@ -48,7 +48,7 @@ export default function OrderDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [results, setResults] = useState({});
-  const [isSaving, setIsSaving] = useState(false);
+  const [savingAction, setSavingAction] = useState(null); 
   const [saveError, setSaveError] = useState(null);
 
   useEffect(() => {
@@ -60,6 +60,21 @@ export default function OrderDetail() {
       .then((res) => {
         if (cancelled) return;
         const mapped = mapOrder(res.data);
+
+        if (res.data.status === "completed") {
+          navigate(`/lab-orders/${orderId}/report`, {
+            replace: true,
+            state: {
+              patient: mapped.patient,
+              tests: mapped.tests,
+              orderedAt: mapped.orderedAt,
+              results: Object.fromEntries(mapped.tests.map((t) => [t.id, t.result || ""])),
+              paymentDone: mapped.paymentDone,
+            },
+          });
+          return;
+        }
+
         setOrder(mapped);
         setResults(Object.fromEntries(mapped.tests.map((t) => [t.id, t.result || ""])));
       })
@@ -90,7 +105,7 @@ export default function OrderDetail() {
   }
 
   async function handleMarkCompleted() {
-    setIsSaving(true);
+    setSavingAction("complete");
     setSaveError(null);
 
     try {
@@ -103,7 +118,7 @@ export default function OrderDetail() {
       navigate(`/lab-orders/${orderId}/report`, { state: { patient, tests, orderedAt, results, paymentDone } });
     } catch (err) {
       setSaveError(err.message);
-      setIsSaving(false);
+      setSavingAction(null);
     }
   }
 
@@ -116,7 +131,7 @@ export default function OrderDetail() {
   }
 
   async function handleSaveClose() {
-    setIsSaving(true);
+    setSavingAction("close");
     setSaveError(null);
 
     try {
@@ -129,7 +144,7 @@ export default function OrderDetail() {
       navigate("/lab-orders");
     } catch (err) {
       setSaveError(err.message);
-      setIsSaving(false);
+      setSavingAction(null);
     }
   }
 
@@ -163,6 +178,7 @@ export default function OrderDetail() {
         onResultChange={handleResultChange}
         onSaveClose={handleSaveClose}
         onMarkCompleted={handleMarkCompleted}
+        savingAction={savingAction}
       />
       <ResultInsights tests={tests} flags={flags} />
     </div>

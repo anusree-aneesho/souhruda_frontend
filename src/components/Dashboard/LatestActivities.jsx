@@ -35,7 +35,10 @@ export default function LatestActivities() {
           date: formatDate(log.created_at),
           text: log.description,
           type: mapSubjectType(log.subject_type),
-          targetId: log.subject_id,
+          // subject_reference is the human-facing key (order_no, hc_code)
+          // that routes actually use — subject_id is just the internal
+          // database id and doesn't match any route parameter.
+          targetId: log.subject_reference ?? log.subject_id,
         }));
 
         setActivities(mapped);

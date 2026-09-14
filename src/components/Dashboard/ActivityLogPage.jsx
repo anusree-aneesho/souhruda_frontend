@@ -1,17 +1,22 @@
 // src/components/Dashboard/ActivityLogPage.jsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import ActivityItem from "./ActivityItem";
 import { getActivityLogsApi } from "../../api/api";
 
-function formatDateTime(isoString) {
+function formatDate(isoString) {
   const d = new Date(isoString);
-  return d.toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+}
+
+// Same mapping used in LatestActivities.jsx — keep these in sync.
+// The backend's subject_type ("order", "patient", "home_collection_request")
+// needs to map onto the values ActivityItem's click-handler understands.
+function mapSubjectType(subjectType) {
+  if (subjectType === "order") return "order";
+  if (subjectType === "home_collection_request") return "homeCollection";
+  if (subjectType === "patient") return "patient";
+  return null;
 }
 
 export default function ActivityLogPage() {
@@ -29,7 +34,20 @@ export default function ActivityLogPage() {
       setError(null);
       try {
         const result = await getActivityLogsApi(20, page);
-        setLogs(result.data);
+
+        const mapped = result.data.map((log) => ({
+          id: log.id,
+          date: formatDate(log.created_at),
+          text: log.description,
+          userName: log.user_name,
+          type: mapSubjectType(log.subject_type),
+          // subject_reference is the human-facing key (order_no, hc_code)
+          // that routes actually use — subject_id is just the internal
+          // database id and doesn't match any route parameter.
+          targetId: log.subject_reference ?? log.subject_id,
+        }));
+
+        setLogs(mapped);
         setMeta(result.meta);
       } catch (err) {
         setError(err.message);
@@ -53,7 +71,7 @@ export default function ActivityLogPage() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+      <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] px-1">
         {loading && <p className="text-sm text-gray-400 p-5">Loading...</p>}
         {error && <p className="text-sm text-red-500 p-5">Failed to load activity log.</p>}
         {!loading && !error && logs.length === 0 && (
@@ -61,20 +79,16 @@ export default function ActivityLogPage() {
         )}
 
         {!loading && !error && logs.length > 0 && (
-          <div className="divide-y divide-gray-100">
+          <div>
             {logs.map((log) => (
-              <div key={log.id} className="flex items-start gap-3 p-4">
-                <span className="text-xs text-gray-400 w-40 shrink-0 mt-0.5">
-                  {formatDateTime(log.created_at)}
-                </span>
-                <span className="text-gray-300 mt-0.5">→</span>
-                <div className="flex-1">
-                  <p className="text-sm text-gray-800">{log.description}</p>
-                  {log.user_name && (
-                    <p className="text-xs text-gray-400 mt-0.5">by {log.user_name}</p>
-                  )}
-                </div>
-              </div>
+              <ActivityItem
+                key={log.id}
+                date={log.date}
+                text={log.text}
+                type={log.type}
+                targetId={log.targetId}
+                isLatest={false}
+              />
             ))}
           </div>
         )}

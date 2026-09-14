@@ -7,6 +7,9 @@ import AddPatientModal from "./modals/AddPatientModal";
 import EditPatientModal from "./modals/EditPatientModal";
 import PatientViewModal from "./modals/PatientViewModal";
 import ConfirmModal from "../Patients/modals/ConfirmModal";
+import AlertModal from "../common/Modal/AlertModal";
+import Toast from "../common/Toast/Toast";
+import { useToast } from "../common/Toast/useToast";
 import {
   getPatientsApi,
   getPatientApi,
@@ -21,13 +24,13 @@ function mapPatient(p) {
     regNo: p.patient_number,
     name: p.full_name,
     age: p.age,
-    date_of_birth: p.date_of_birth,   // use same naming as modal
+    date_of_birth: p.date_of_birth,
     gender: p.gender,
     isPregnant: p.is_pregnant,
     contact: p.phone,
     email: p.email,
     address: p.address,
-    orders: p.orders_count, // real count now, was hardcoded 0
+    orders: p.orders_count,
   };
 }
 
@@ -39,6 +42,9 @@ export default function Patients() {
   const [viewingPatient, setViewingPatient] = useState(null);
   const [editingPatient, setEditingPatient] = useState(null);
   const [deletingPatient, setDeletingPatient] = useState(null);
+  const [alertMessage, setAlertMessage] = useState(null);
+
+  const { toast, showToast, hideToast } = useToast();
 
   const loadPatients = useCallback(async (query = "") => {
     setLoading(true);
@@ -58,33 +64,39 @@ export default function Patients() {
   }, [search, loadPatients]);
 
   async function handleAddPatient(newPatientData) {
-  const [first_name, ...rest] = newPatientData.name.trim().split(" ");
-  const last_name = rest.join(" ") || null;
+    const [first_name, ...rest] = newPatientData.name.trim().split(" ");
+    const last_name = rest.join(" ") || null;
 
-  try {
-    await createPatientApi({
-           first_name,
-           last_name,
-           date_of_birth: newPatientData.date_of_birth,   // matches this modal's field name
-           gender: newPatientData.gender.toLowerCase(),
-           is_pregnant: newPatientData.gender === "Female" ? newPatientData.isPregnant : null,
-           phone: newPatientData.contact,
-           email: newPatientData.email || null,
-           address: newPatientData.address || null,
-    });
-    setModalOpen(false);
-    loadPatients(search);
-  } catch (err) {
-    alert(err.message);
+    try {
+      await createPatientApi({
+        first_name,
+        last_name,
+        date_of_birth: newPatientData.date_of_birth,
+        gender: newPatientData.gender.toLowerCase(),
+        is_pregnant: newPatientData.gender === "Female" ? newPatientData.isPregnant : null,
+        phone: newPatientData.contact,
+        email: newPatientData.email || null,
+        address: newPatientData.address || null,
+      });
+      showToast("Patient added successfully");
+      setModalOpen(false);
+      loadPatients(search);
+    } catch (err) {
+      if (err.message.toLowerCase().includes("already exists")) {
+        setModalOpen(false);
+        setAlertMessage(err.message);
+      } else {
+        showToast(err.message, "error");
+      }
+    }
   }
-}
 
   async function handleView(id) {
     try {
       const res = await getPatientApi(id);
       setViewingPatient(mapPatient(res.data));
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, "error");
     }
   }
 
@@ -93,31 +105,37 @@ export default function Patients() {
       const res = await getPatientApi(id);
       setEditingPatient(mapPatient(res.data));
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, "error");
     }
   }
 
   async function handleSaveEdit(id, formData) {
-  const [first_name, ...rest] = formData.name.trim().split(" ");
-  const last_name = rest.join(" ") || null;
+    const [first_name, ...rest] = formData.name.trim().split(" ");
+    const last_name = rest.join(" ") || null;
 
-  try {
-    await updatePatientApi(id, {
-  first_name,
-  last_name,
-  date_of_birth: formData.date_of_birth,   // fixed
-  gender: formData.gender.toLowerCase(),
-  is_pregnant: formData.gender === "Female" ? formData.isPregnant : null,
-  phone: formData.contact,
-  email: formData.email || null,
-  address: formData.address || null,
-});
-    setEditingPatient(null);
-    loadPatients(search);
-  } catch (err) {
-    alert(err.message);
+    try {
+      await updatePatientApi(id, {
+        first_name,
+        last_name,
+        date_of_birth: formData.date_of_birth,
+        gender: formData.gender.toLowerCase(),
+        is_pregnant: formData.gender === "Female" ? formData.isPregnant : null,
+        phone: formData.contact,
+        email: formData.email || null,
+        address: formData.address || null,
+      });
+      showToast("Patient updated successfully");
+      setEditingPatient(null);
+      loadPatients(search);
+    } catch (err) {
+      if (err.message.toLowerCase().includes("already exists")) {
+        setEditingPatient(null);
+        setAlertMessage(err.message);
+      } else {
+        showToast(err.message, "error");
+      }
+    }
   }
-}
 
   function handleDelete(id) {
     const patient = patients.find((p) => p.id === id);
@@ -127,10 +145,11 @@ export default function Patients() {
   async function confirmDelete() {
     try {
       await deletePatientApi(deletingPatient.id);
+      showToast("Patient removed successfully");
       setDeletingPatient(null);
       loadPatients(search);
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, "error");
     }
   }
 
@@ -196,6 +215,18 @@ export default function Patients() {
           onConfirm={confirmDelete}
           onClose={() => setDeletingPatient(null)}
         />
+      )}
+
+      {alertMessage && (
+        <AlertModal
+          title="Patient Already Exists"
+          message={alertMessage}
+          onClose={() => setAlertMessage(null)}
+        />
+      )}
+
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={hideToast} />
       )}
     </div>
   );

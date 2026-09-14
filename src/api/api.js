@@ -85,10 +85,11 @@ export async function deleteTechnicianApi(id) {
 
 // ── Patients ───────────────────────────────────────────────
 
-export async function getPatientsApi(query = "") {
-  return request(
-    `/patients${query ? `?q=${encodeURIComponent(query)}` : ""}`
-  );
+export async function getPatientsApi(query = "", page = 1) {       //<-paginate
+  const params = new URLSearchParams();
+  if (query) params.append("q", query);
+  params.append("page", page);
+  return request(`/patients?${params.toString()}`);
 }
 
 export async function getPatientApi(id) {

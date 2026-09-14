@@ -7,6 +7,7 @@ import RequestInfoBar from "./RequestInfoBar";
 import TestsList from "./TestsList";
 import TrackingMap from "./TrackingMap";
 import AssignTechnicianModal from "./AssignTechnicianModal";
+import PrintLabelModal from "./PrintLabelModal";
 import { useHomeCollectionModal } from "../../../Context/HomeCollectionModalContext";
 import { getHomeCollectionRequestApi, updateHomeCollectionStatusApi, resolveHomeCollectionOrderApi } from "../../../api/api";
 
@@ -42,6 +43,7 @@ function mapDetail(r) {
     sampleBarcode: r.barcode,
     technician: r.technician ? { ...r.technician, location: r.technician.zone, otp: r.debug_otp } : null,
     otpReady: r.otp_ready ?? false,
+    otpLocked: r.otp_locked ?? false,
     linkedOrderId: r.order_no || null,
     tests: r.tests || [],
   };
@@ -56,6 +58,7 @@ export default function HomeCollectionDetailModal() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [isAssignOpen, setAssignOpen] = useState(false);
+  const [isLabelOpen, setLabelOpen] = useState(false);
   const [otpInput, setOtpInput] = useState("");
 
   useEffect(() => {
@@ -181,6 +184,17 @@ export default function HomeCollectionDetailModal() {
                 <p className="text-sm text-gray-500">No technician assigned yet.</p>
               )}
 
+              {hc.sampleBarcode && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setLabelOpen(true)}
+                    className="text-xs font-medium text-teal-600 hover:underline"
+                  >
+                    🖨️ Print sample label
+                  </button>
+                </div>
+              )}
+
               {hc.technician && (
                 <div className="flex items-center gap-3 border border-gray-100 rounded-lg px-4 py-3">
                   <span className="h-9 w-9 rounded-full bg-gray-100 flex items-center justify-center text-lg">🧑</span>
@@ -232,13 +246,23 @@ export default function HomeCollectionDetailModal() {
                       OTP hasn't been generated for this collection yet — it's created automatically on the morning of the slot date.
                     </p>
                   )}
+                  {hc.otpLocked && (
+                    <p className="text-xs text-red-600 w-full sm:w-auto sm:mr-2">
+                      Too many incorrect attempts — OTP entry is temporarily locked. Try again shortly.
+                    </p>
+                  )}
                   <input
                     value={otpInput}
                     onChange={(e) => setOtpInput(e.target.value)}
                     placeholder="Enter OTP from patient"
-                    className="flex-1 w-full sm:w-auto rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                    disabled={hc.otpLocked}
+                    className="flex-1 w-full sm:w-auto rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 disabled:bg-gray-50 disabled:text-gray-400"
                   />
-                  <button onClick={handleConfirmCollected} className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 whitespace-nowrap">
+                  <button
+                    onClick={handleConfirmCollected}
+                    disabled={hc.otpLocked}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 whitespace-nowrap disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
                     Confirm Sample Collected
                   </button>
                 </>
@@ -271,6 +295,11 @@ export default function HomeCollectionDetailModal() {
     onClose={() => setAssignOpen(false)}
     onAssign={handleAssign}
   />
-)}    </>
+)}
+
+{isLabelOpen && hc && (
+  <PrintLabelModal hc={hc} onClose={() => setLabelOpen(false)} />
+)}
+    </>
   );
 }

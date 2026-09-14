@@ -1,10 +1,12 @@
 // src/components/HomeCollection/HomeCollection.jsx
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Search } from "lucide-react";
 import HomeCollectionHeader from "./HomeCollectionHeader";
 import HomeCollectionStats from "./HomeCollectionStats";
 import HomeCollectionTable from "./HomeCollectionTable/HomeCollectionTable";
 import HomeCollectionCard from "./HomeCollectionTable/HomeCollectionCard";
+import Pagination from "../common/Pagination";
 import { getHomeCollectionRequestsApi } from "../../api/api";
 import { useHomeCollectionModal } from "../../Context/HomeCollectionModalContext";
 
@@ -30,6 +32,11 @@ function formatDate(dateStr) {
     day: "2-digit", month: "short", year: "numeric",
   });
 }
+
+// Backend already returns requests newest-first (`->latest()`), so no
+// re-sorting is needed here — just cap and paginate what comes in.
+const MAX_DISPLAYED = 50;
+const PAGE_SIZE = 8;
 
 function mapRequest(r) {
   return {
@@ -64,6 +71,8 @@ export default function HomeCollection() {
   const [rawRequests, setRawRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const location = useLocation();
   const navigate = useNavigate();
   const { activeId } = useHomeCollectionModal();
@@ -113,10 +122,44 @@ export default function HomeCollection() {
   const requests = rawRequests.map(mapRequest);
   const counts = computeCounts(rawRequests);
 
+  const term = search.trim().toLowerCase();
+  const filteredRequests = term
+    ? requests.filter((r) =>
+        [r.requestId, r.patient, r.technician]
+          .filter(Boolean)
+          .some((field) => field.toLowerCase().includes(term))
+      )
+    : requests;
+
+  // Newest-first, capped to the latest 50, 8 per page.
+  const displayedRequests = filteredRequests.slice(0, MAX_DISPLAYED);
+  const totalPages = Math.max(1, Math.ceil(displayedRequests.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageRequests = displayedRequests.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE
+  );
+
+  // Any time the search term changes, start back at page 1 — otherwise a
+  // narrower result set can leave the user stranded on a now-empty page.
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
   return (
     <div className="space-y-6">
       <HomeCollectionHeader />
       <HomeCollectionStats counts={counts} />
+
+      <div className="relative w-full sm:w-80">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by patient, request ID, or technician..."
+          className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:bg-white transition-colors"
+        />
+      </div>
 
       <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-4">
         {isLoading && <p className="text-sm text-gray-400">Loading home collection requests…</p>}
@@ -124,16 +167,27 @@ export default function HomeCollection() {
         {!isLoading && !error && requests.length === 0 && (
           <p className="text-sm text-gray-400">No home collection requests yet.</p>
         )}
+        {!isLoading && !error && requests.length > 0 && filteredRequests.length === 0 && (
+          <p className="text-sm text-gray-400">No requests match "{search}".</p>
+        )}
 
-        {!isLoading && !error && requests.length > 0 && (
+        {!isLoading && !error && pageRequests.length > 0 && (
           <>
             <div className="hidden md:block">
-              <HomeCollectionTable requests={requests} />
+              <HomeCollectionTable requests={pageRequests} />
             </div>
             <div className="md:hidden space-y-3">
-              {requests.map((req) => (
+              {pageRequests.map((req) => (
                 <HomeCollectionCard key={req.requestId} {...req} />
               ))}
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+              <p className="text-xs text-gray-400">
+                Showing {(safePage - 1) * PAGE_SIZE + 1}–
+                {Math.min(safePage * PAGE_SIZE, displayedRequests.length)} of {displayedRequests.length}
+              </p>
+              <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} />
             </div>
           </>
         )}

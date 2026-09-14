@@ -145,6 +145,19 @@ export async function createBranchApi(branchData) {
   });
 }
 
+export async function updateBranchApi(id, branchData) {
+  return request(`/branches/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(branchData),
+  });
+}
+
+export async function deleteBranchApi(id) {
+  return request(`/branches/${id}`, {
+    method: "DELETE",
+  });
+}
+
 // ── Activity Log ───────────────────────────────────────────
 
 export async function getActivityLogsApi(perPage = 5, page = 1) {

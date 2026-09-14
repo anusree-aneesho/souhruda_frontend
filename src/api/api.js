@@ -85,10 +85,11 @@ export async function deleteTechnicianApi(id) {
 
 // ── Patients ───────────────────────────────────────────────
 
-export async function getPatientsApi(query = "") {
-  return request(
-    `/patients${query ? `?q=${encodeURIComponent(query)}` : ""}`
-  );
+export async function getPatientsApi(query = "", page = 1) {       //<-paginate
+  const params = new URLSearchParams();
+  if (query) params.append("q", query);
+  params.append("page", page);
+  return request(`/patients?${params.toString()}`);
 }
 
 export async function getPatientApi(id) {
@@ -356,14 +357,9 @@ export async function createOrderApi(payload) {
 
 export async function getOrdersApi(params = {}) {
   const query = new URLSearchParams();
-
-  if (params.status && params.status !== "All") {
-    query.set("status", params.status);
-  }
-
-  if (params.q) {
-    query.set("q", params.q);
-  }
+  if (params.status && params.status !== "All") query.set("status", params.status);
+  if (params.q) query.set("q", params.q);
+  if (params.page) query.set("page", params.page);
 
   const qs = query.toString();
   return request(`/orders${qs ? `?${qs}` : ""}`);

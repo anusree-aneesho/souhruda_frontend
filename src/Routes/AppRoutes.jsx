@@ -17,6 +17,10 @@ import OrderDetail from "../components/LabOrders/OrderDetail/OrderDetail";
 import Report from "../components/LabOrders/Report/Report";
 import ActivityLogPage from "../components/Dashboard/ActivityLogPage";
 import ResetPassword from "../components/Auth/ResetPassword";
+import { Navigate } from "react-router-dom";
+import GstSettings from "../components/SettingPage/GstSettings";
+import StaffManagement from "../components/SettingPage/StaffManagement";
+import Stock from "../components/SettingPage/Stock";
 
 export default function AppRoutes() {
   return (
@@ -35,10 +39,14 @@ export default function AppRoutes() {
           <Route path="/test-master" element={<TestMaster />} />
           <Route path="/patients" element={<Patients />} />
           <Route path="/follow-ups" element={<FollowUps />} />
-          <Route path="/settings" element={<Settings />} />
           <Route path="/lab-orders/:orderId" element={<OrderDetail />} />
           <Route path="/lab-orders/:orderId/report" element={<Report />} />
           <Route path="/activity-logs" element={<ActivityLogPage />} />
+          <Route path="/settings" element={<Navigate to="/settings/lab-settings" replace />} />
+          <Route path="/settings/lab-settings" element={<Settings />} />
+          <Route path="/settings/gst" element={<GstSettings />} />
+          <Route path="/settings/staff-management" element={<StaffManagement />} />
+          <Route path="/settings/stock" element={<Stock />} />
         </Route>
       </Route>
     </Routes>

@@ -7,6 +7,9 @@ import AddPatientModal from "./modals/AddPatientModal";
 import EditPatientModal from "./modals/EditPatientModal";
 import PatientViewModal from "./modals/PatientViewModal";
 import ConfirmModal from "../Patients/modals/ConfirmModal";
+import AlertModal from "../common/Modal/AlertModal";
+import Toast from "../common/Toast/Toast";
+import { useToast } from "../common/Toast/useToast";
 import {
   getPatientsApi,
   getPatientApi,
@@ -21,13 +24,13 @@ function mapPatient(p) {
     regNo: p.patient_number,
     name: p.full_name,
     age: p.age,
-    date_of_birth: p.date_of_birth,   // use same naming as modal
+    date_of_birth: p.date_of_birth,
     gender: p.gender,
     isPregnant: p.is_pregnant,
     contact: p.phone,
     email: p.email,
     address: p.address,
-    orders: p.orders_count, // real count now, was hardcoded 0
+    orders: p.orders_count,
   };
 }
 
@@ -39,52 +42,68 @@ export default function Patients() {
   const [viewingPatient, setViewingPatient] = useState(null);
   const [editingPatient, setEditingPatient] = useState(null);
   const [deletingPatient, setDeletingPatient] = useState(null);
+  const [alertMessage, setAlertMessage] = useState(null);
+  //paginate
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [totalPatients, setTotalPatients] = useState(0);
 
-  const loadPatients = useCallback(async (query = "") => {
-    setLoading(true);
-    try {
-      const res = await getPatientsApi(query);
-      setPatients(res.data.map(mapPatient));
+  const { toast, showToast, hideToast } = useToast();
+
+  const loadPatients = useCallback(async (query = "", page = 1) => {
+  setLoading(true);
+  try {
+     const res = await getPatientsApi(query, page);
+     setPatients(res.data.map(mapPatient));
+     setCurrentPage(res.meta.current_page);
+     setLastPage(res.meta.last_page);
+     setTotalPatients(res.meta.total);
     } catch (err) {
-      console.error("Failed to load patients:", err.message);
+     console.error("Failed to load patients:", err.message);
     } finally {
-      setLoading(false);
+    setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => loadPatients(search), 300);
+    const timer = setTimeout(() => loadPatients(search, 1), 300);
     return () => clearTimeout(timer);
   }, [search, loadPatients]);
 
   async function handleAddPatient(newPatientData) {
-  const [first_name, ...rest] = newPatientData.name.trim().split(" ");
-  const last_name = rest.join(" ") || null;
+    const [first_name, ...rest] = newPatientData.name.trim().split(" ");
+    const last_name = rest.join(" ") || null;
 
-  try {
-    await createPatientApi({
-           first_name,
-           last_name,
-           date_of_birth: newPatientData.date_of_birth,   // matches this modal's field name
-           gender: newPatientData.gender.toLowerCase(),
-           is_pregnant: newPatientData.gender === "Female" ? newPatientData.isPregnant : null,
-           phone: newPatientData.contact,
-           email: newPatientData.email || null,
-           address: newPatientData.address || null,
-    });
-    setModalOpen(false);
-    loadPatients(search);
-  } catch (err) {
-    alert(err.message);
+    try {
+      await createPatientApi({
+        first_name,
+        last_name,
+        date_of_birth: newPatientData.date_of_birth,
+        gender: newPatientData.gender.toLowerCase(),
+        is_pregnant: newPatientData.gender === "Female" ? newPatientData.isPregnant : null,
+        phone: newPatientData.contact,
+        email: newPatientData.email || null,
+        address: newPatientData.address || null,
+      });
+      showToast("Patient added successfully");
+      setModalOpen(false);
+      loadPatients(search);
+    } catch (err) {
+      if (err.message.toLowerCase().includes("already exists")) {
+        setModalOpen(false);
+        setAlertMessage(err.message);
+      } else {
+        showToast(err.message, "error");
+      }
+    }
   }
-}
 
   async function handleView(id) {
     try {
       const res = await getPatientApi(id);
       setViewingPatient(mapPatient(res.data));
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, "error");
     }
   }
 
@@ -93,31 +112,37 @@ export default function Patients() {
       const res = await getPatientApi(id);
       setEditingPatient(mapPatient(res.data));
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, "error");
     }
   }
 
   async function handleSaveEdit(id, formData) {
-  const [first_name, ...rest] = formData.name.trim().split(" ");
-  const last_name = rest.join(" ") || null;
+    const [first_name, ...rest] = formData.name.trim().split(" ");
+    const last_name = rest.join(" ") || null;
 
-  try {
-    await updatePatientApi(id, {
-  first_name,
-  last_name,
-  date_of_birth: formData.date_of_birth,   // fixed
-  gender: formData.gender.toLowerCase(),
-  is_pregnant: formData.gender === "Female" ? formData.isPregnant : null,
-  phone: formData.contact,
-  email: formData.email || null,
-  address: formData.address || null,
-});
-    setEditingPatient(null);
-    loadPatients(search);
-  } catch (err) {
-    alert(err.message);
+    try {
+      await updatePatientApi(id, {
+        first_name,
+        last_name,
+        date_of_birth: formData.date_of_birth,
+        gender: formData.gender.toLowerCase(),
+        is_pregnant: formData.gender === "Female" ? formData.isPregnant : null,
+        phone: formData.contact,
+        email: formData.email || null,
+        address: formData.address || null,
+      });
+      showToast("Patient updated successfully");
+      setEditingPatient(null);
+      loadPatients(search);
+    } catch (err) {
+      if (err.message.toLowerCase().includes("already exists")) {
+        setEditingPatient(null);
+        setAlertMessage(err.message);
+      } else {
+        showToast(err.message, "error");
+      }
+    }
   }
-}
 
   function handleDelete(id) {
     const patient = patients.find((p) => p.id === id);
@@ -127,11 +152,16 @@ export default function Patients() {
   async function confirmDelete() {
     try {
       await deletePatientApi(deletingPatient.id);
+      showToast("Patient removed successfully");
       setDeletingPatient(null);
       loadPatients(search);
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, "error");
     }
+  }
+
+  function handlePageChange(newPage) {
+      loadPatients(search, newPage);
   }
 
   return (
@@ -169,6 +199,30 @@ export default function Patients() {
             )}
           </>
         )}
+        
+        {!loading && patients.length > 0 && lastPage > 1 && (
+          <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+            <p className="text-sm text-gray-500">
+              Showing page {currentPage} of {lastPage} ({totalPatients} total)
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === lastPage}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {isModalOpen && (
@@ -196,6 +250,18 @@ export default function Patients() {
           onConfirm={confirmDelete}
           onClose={() => setDeletingPatient(null)}
         />
+      )}
+
+      {alertMessage && (
+        <AlertModal
+          title="Patient Already Exists"
+          message={alertMessage}
+          onClose={() => setAlertMessage(null)}
+        />
+      )}
+
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={hideToast} />
       )}
     </div>
   );

@@ -1,4 +1,6 @@
 // src/components/HomeCollection/DetailModal/RequestInfoBar.jsx
+import Barcode from "../../common/Barcode";
+
 export default function RequestInfoBar({ hc }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50 rounded-lg p-4">
@@ -27,8 +29,8 @@ export default function RequestInfoBar({ hc }) {
         <p className="text-sm font-semibold text-gray-900">₹{hc.collectionCharge.toFixed(2)}</p>
       </div>
       <div>
-        <p className="text-xs text-gray-400 tracking-wide">SAMPLE BARCODE</p>
-        <p className="text-sm font-semibold text-gray-900">{hc.sampleBarcode || "Generated on assignment"}</p>
+        <p className="text-xs text-gray-400 tracking-wide mb-1">SAMPLE BARCODE</p>
+        <Barcode value={hc.sampleBarcode} height={32} fontSize={10} />
       </div>
     </div>
   );

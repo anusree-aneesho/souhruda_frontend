@@ -65,6 +65,36 @@ function RemoveLabAssistantModal({ labAssistant, isRemoving, onCancel, onConfirm
   );
 }
 
+// Inline pagination control — no separate file needed.
+// Styled to match the Previous / Page X of Y / Next pattern used on the Activity Log page.
+function LabAssistantsPagination({ currentPage, totalPages, onPageChange }) {
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="flex items-center justify-between pt-2">
+      <button
+        onClick={() => onPageChange((p) => Math.max(1, p - 1))}
+        disabled={currentPage === 1}
+        className="text-sm px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 cursor-pointer"
+      >
+        ← Previous
+      </button>
+      <span className="text-xs text-gray-400">
+        Page {currentPage} of {totalPages}
+      </span>
+      <button
+        onClick={() => onPageChange((p) => Math.min(totalPages, p + 1))}
+        disabled={currentPage === totalPages}
+        className="text-sm px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 cursor-pointer"
+      >
+        Next →
+      </button>
+    </div>
+  );
+}
+
+const ITEMS_PER_PAGE = 10;
+
 export default function LabAssistants() {
   const [labAssistants, setLabAssistants] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -74,6 +104,7 @@ export default function LabAssistants() {
   const [modalState, setModalState] = useState(null);
   const [removeTarget, setRemoveTarget] = useState(null);
   const [isRemoving, setIsRemoving] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { toast, showToast, hideToast } = useToast();
 
@@ -106,6 +137,23 @@ export default function LabAssistants() {
         (la.branch ?? "").toLowerCase().includes(search.toLowerCase())
     );
   }, [labAssistants, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredLabAssistants.length / ITEMS_PER_PAGE));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedLabAssistants = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredLabAssistants.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredLabAssistants, currentPage]);
 
   async function handleSaveLabAssistant(formData) {
     try {
@@ -170,13 +218,13 @@ export default function LabAssistants() {
           <>
             <div className="hidden md:block">
               <LabAssistantsTable
-                labAssistants={filteredLabAssistants}
+                labAssistants={paginatedLabAssistants}
                 onEdit={(la) => setModalState({ editingLabAssistant: la })}
                 onRemove={(la) => setRemoveTarget(la)}
               />
             </div>
             <div className="md:hidden space-y-3">
-              {filteredLabAssistants.map((la) => (
+              {paginatedLabAssistants.map((la) => (
                 <LabAssistantCard
                   key={la.laId}
                   labAssistant={la}
@@ -188,6 +236,14 @@ export default function LabAssistants() {
 
             {filteredLabAssistants.length === 0 && (
               <p className="text-sm text-gray-400 text-center py-6">No lab assistants found.</p>
+            )}
+
+            {filteredLabAssistants.length > 0 && (
+              <LabAssistantsPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
             )}
           </>
         )}

@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect } from "react";
 import StaffHeader from "./StaffHeader";
 import StaffSearch from "./StaffSearch";
 import StaffTable from "./StaffTable/StaffTable";
 import StaffCard from "./StaffTable/StaffCard";
 import AddStaffModal from "./modals/AddStaffModal";
+import Toast from "../common/Toast/Toast";
+import { useToast } from "../common/Toast/useToast";
 import {
   getFrontOfficersApi,
   createFrontOfficerApi,
@@ -19,86 +21,183 @@ function mapStaff(f) {
     name: f.name,
     email: f.email,
     phone: f.phone,
-    branch: f.branch,       // display name (from FrontOfficerResource)
-    branch_id: f.branch_id, // needed to pre-select dropdown on edit
+    branch: f.branch,
+    branch_id: f.branch_id,
     status: f.status,
   };
 }
+
+// Inline confirmation modal — no separate file needed.
+function RemoveStaffModal({ staff, isRemoving, onCancel, onConfirm }) {
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="text-base font-semibold text-gray-900">Remove Front Officer</h2>
+          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 cursor-pointer">
+            ✕
+          </button>
+        </div>
+
+        <div className="px-6 py-4">
+          <p className="text-sm text-gray-600">
+            Are you sure you want to remove Front Officer {staff.name}?
+          </p>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isRemoving}
+            className="px-4 py-2.5 rounded-lg bg-red-600 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60 cursor-pointer"
+          >
+            {isRemoving ? "Removing…" : "Remove"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Inline pagination control — no separate file needed.
+function StaffPagination({ currentPage, totalPages, onPageChange }) {
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="flex items-center justify-between pt-2">
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:text-gray-300 disabled:cursor-not-allowed cursor-pointer"
+      >
+        ← Previous
+      </button>
+
+      <span className="text-sm text-gray-500">
+        Page {currentPage} of {totalPages}
+      </span>
+
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+      >
+        Next →
+      </button>
+    </div>
+  );
+}
+
+const ITEMS_PER_PAGE = 10;
 
 export default function Staff() {
   const [staff, setStaff] = useState([]);
   const [branches, setBranches] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [modalState, setModalState] = useState(null);
+  const [removeTarget, setRemoveTarget] = useState(null);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const loadStaff = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await getFrontOfficersApi();
-      setStaff(res.data.map(mapStaff));
-    } catch (err) {
-      console.error("Failed to load front officers:", err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const loadBranches = useCallback(async () => {
-    try {
-      const res = await getBranchesApi();
-      setBranches(res.data);
-    } catch (err) {
-      console.error("Failed to load branches:", err.message);
-    }
-  }, []);
+  const { toast, showToast, hideToast } = useToast();
 
   useEffect(() => {
-    loadStaff();
-    loadBranches();
-  }, [loadStaff, loadBranches]);
+    async function loadData() {
+      try {
+        const [staffResult, branchesResult] = await Promise.all([
+          getFrontOfficersApi(),
+          getBranchesApi(),
+        ]);
 
-  const filteredStaff = staff.filter(
-    (s) =>
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.staffId.toLowerCase().includes(search.toLowerCase()) ||
-      s.phone.includes(search) ||
-      (s.branch || "").toLowerCase().includes(search.toLowerCase())
-  );
+        setStaff(staffResult.data.map(mapStaff));
+        setBranches(branchesResult.data ?? branchesResult);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
+
+  const filteredStaff = useMemo(() => {
+    return staff.filter(
+      (s) =>
+        s.name.toLowerCase().includes(search.toLowerCase()) ||
+        s.staffId.toLowerCase().includes(search.toLowerCase()) ||
+        (s.phone ?? "").includes(search) ||
+        (s.branch ?? "").toLowerCase().includes(search.toLowerCase())
+    );
+  }, [staff, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredStaff.length / ITEMS_PER_PAGE));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedStaff = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredStaff.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredStaff, currentPage]);
 
   async function handleSaveStaff(formData) {
     try {
       if (formData.id) {
-        // Editing existing front officer
         await updateFrontOfficerApi(formData.id, {
           name: formData.name,
           phone: formData.phone,
           branch_id: formData.branch_id,
           status: formData.status,
         });
+        showToast(`${formData.name} updated successfully`);
       } else {
-        // Creating new front officer
         await createFrontOfficerApi({
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
           branch_id: formData.branch_id,
         });
+        showToast(`${formData.name} added successfully`);
       }
       setModalState(null);
-      loadStaff();
+
+      // Reload the full list to reflect the change
+      const res = await getFrontOfficersApi();
+      setStaff(res.data.map(mapStaff));
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, "error");
     }
   }
 
-  async function handleRemoveStaff(member) {
-    if (!window.confirm(`Remove "${member.name}"? This can't be undone.`)) return;
+  async function handleRemoveStaff() {
+    if (!removeTarget) return;
+
+    setIsRemoving(true);
     try {
-      await deleteFrontOfficerApi(member.id);
-      loadStaff();
+      await deleteFrontOfficerApi(removeTarget.id);
+      setStaff((prev) => prev.filter((s) => s.id !== removeTarget.id));
+      showToast(`${removeTarget.name} removed successfully`);
+      setRemoveTarget(null);
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, "error");
+    } finally {
+      setIsRemoving(false);
     }
   }
 
@@ -109,30 +208,39 @@ export default function Staff() {
       <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-5">
         <StaffSearch value={search} onChange={setSearch} />
 
-        {loading ? (
-          <p className="text-sm text-gray-400 text-center py-6">Loading...</p>
-        ) : (
+        {loading && <p className="text-sm text-gray-400 text-center py-6">Loading...</p>}
+        {error && <p className="text-sm text-red-500 text-center py-6">Failed to load front officers.</p>}
+
+        {!loading && !error && (
           <>
             <div className="hidden md:block">
               <StaffTable
-                staff={filteredStaff}
+                staff={paginatedStaff}
                 onEdit={(s) => setModalState({ editingStaff: s })}
-                onRemove={handleRemoveStaff}
+                onRemove={(s) => setRemoveTarget(s)}
               />
             </div>
             <div className="md:hidden space-y-3">
-              {filteredStaff.map((s) => (
+              {paginatedStaff.map((s) => (
                 <StaffCard
                   key={s.staffId}
                   staff={s}
-                  onEdit={(st) => setModalState({ editingStaff: st })}
-                  onRemove={handleRemoveStaff}
+                  onEdit={(item) => setModalState({ editingStaff: item })}
+                  onRemove={(s) => setRemoveTarget(s)}
                 />
               ))}
             </div>
 
             {filteredStaff.length === 0 && (
               <p className="text-sm text-gray-400 text-center py-6">No front officers found.</p>
+            )}
+
+            {filteredStaff.length > 0 && (
+              <StaffPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
             )}
           </>
         )}
@@ -146,6 +254,17 @@ export default function Staff() {
           onSave={handleSaveStaff}
         />
       )}
+
+      {removeTarget && (
+        <RemoveStaffModal
+          staff={removeTarget}
+          isRemoving={isRemoving}
+          onCancel={() => setRemoveTarget(null)}
+          onConfirm={handleRemoveStaff}
+        />
+      )}
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   );
 }

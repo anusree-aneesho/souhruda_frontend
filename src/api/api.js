@@ -344,14 +344,9 @@ export async function createOrderApi(payload) {
 
 export async function getOrdersApi(params = {}) {
   const query = new URLSearchParams();
-
-  if (params.status && params.status !== "All") {
-    query.set("status", params.status);
-  }
-
-  if (params.q) {
-    query.set("q", params.q);
-  }
+  if (params.status && params.status !== "All") query.set("status", params.status);
+  if (params.q) query.set("q", params.q);
+  if (params.page) query.set("page", params.page);
 
   const qs = query.toString();
   return request(`/orders${qs ? `?${qs}` : ""}`);

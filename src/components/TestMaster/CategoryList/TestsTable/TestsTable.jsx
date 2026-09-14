@@ -1,12 +1,23 @@
 // src/components/TestMaster/TestsTable/TestsTable.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import TestRow from "./TestRow";
 import TestCard from "./TestCard";
 import DemographicRangeModal from "../../modals/DemographicRangeModal";
 
+const PAGE_SIZE = 12;
+
 export default function TestsTable({ categoryName, tests, onAddTest, onEditTest, onRemoveTest }) {
   const [viewingTest, setViewingTest] = useState(null);
+  const [page, setPage] = useState(1);
+
+  // Reset to page 1 whenever the selected category changes.
+  useEffect(() => {
+    setPage(1);
+  }, [categoryName]);
+
+  const lastPage = Math.max(1, Math.ceil(tests.length / PAGE_SIZE));
+  const pageTests = tests.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
@@ -40,7 +51,7 @@ export default function TestsTable({ categoryName, tests, onAddTest, onEditTest,
                 </tr>
               </thead>
               <tbody>
-                {tests.map((test) => (
+                {pageTests.map((test) => (
                   <TestRow
                     key={test.id}
                     test={test}
@@ -54,7 +65,7 @@ export default function TestsTable({ categoryName, tests, onAddTest, onEditTest,
           </div>
 
           <div className="md:hidden space-y-3">
-            {tests.map((test) => (
+            {pageTests.map((test) => (
               <TestCard
                 key={test.id}
                 test={test}
@@ -64,6 +75,30 @@ export default function TestsTable({ categoryName, tests, onAddTest, onEditTest,
               />
             ))}
           </div>
+
+          {lastPage > 1 && (
+            <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-100">
+              <p className="text-sm text-gray-500">
+                Page {page} of {lastPage} · {tests.length} tests
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  ← Prev
+                </button>
+                <button
+                  onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
+                  disabled={page >= lastPage}
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
 

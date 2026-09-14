@@ -32,15 +32,22 @@ export default function LabOrders() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
     setLoadError(null);
 
-    getOrdersApi({ status: activeTab, q: search })
+    getOrdersApi({ status: activeTab, q: search, page })
       .then((res) => {
-        if (!cancelled) setOrders((res.data || []).map(mapOrder));
+        if (!cancelled) {
+          setOrders((res.data || []).map(mapOrder));
+          setLastPage(res.last_page ?? 1);
+          setTotal(res.total ?? 0);
+        }
       })
       .catch((err) => {
         if (!cancelled) setLoadError(err.message);
@@ -52,6 +59,11 @@ export default function LabOrders() {
     return () => {
       cancelled = true;
     };
+  }, [activeTab, search, page]);
+
+  // Reset to page 1 whenever the filter or search changes.
+  useEffect(() => {
+    setPage(1);
   }, [activeTab, search]);
 
   const filteredOrders = useMemo(() => orders, [orders]);
@@ -76,7 +88,6 @@ export default function LabOrders() {
           <p className="text-sm text-gray-400 text-center py-6">Loading orders…</p>
         ) : (
           <>
-            {/* Desktop: table. Mobile: stacked cards */}
             <div className="hidden md:block">
               <LabOrdersTable orders={filteredOrders} />
             </div>
@@ -88,6 +99,30 @@ export default function LabOrders() {
 
             {filteredOrders.length === 0 && (
               <p className="text-sm text-gray-400 text-center py-6">No orders found.</p>
+            )}
+
+            {filteredOrders.length > 0 && (
+              <div className="flex items-center justify-between pt-2">
+                <p className="text-sm text-gray-500">
+                  Page {page} of {lastPage} · {total} orders
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1}
+                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    ← Prev
+                  </button>
+                  <button
+                    onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
+                    disabled={page >= lastPage}
+                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
             )}
           </>
         )}

@@ -43,23 +43,30 @@ export default function Patients() {
   const [editingPatient, setEditingPatient] = useState(null);
   const [deletingPatient, setDeletingPatient] = useState(null);
   const [alertMessage, setAlertMessage] = useState(null);
+  //paginate
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [totalPatients, setTotalPatients] = useState(0);
 
   const { toast, showToast, hideToast } = useToast();
 
-  const loadPatients = useCallback(async (query = "") => {
-    setLoading(true);
-    try {
-      const res = await getPatientsApi(query);
-      setPatients(res.data.map(mapPatient));
+  const loadPatients = useCallback(async (query = "", page = 1) => {
+  setLoading(true);
+  try {
+     const res = await getPatientsApi(query, page);
+     setPatients(res.data.map(mapPatient));
+     setCurrentPage(res.meta.current_page);
+     setLastPage(res.meta.last_page);
+     setTotalPatients(res.meta.total);
     } catch (err) {
-      console.error("Failed to load patients:", err.message);
+     console.error("Failed to load patients:", err.message);
     } finally {
-      setLoading(false);
+    setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => loadPatients(search), 300);
+    const timer = setTimeout(() => loadPatients(search, 1), 300);
     return () => clearTimeout(timer);
   }, [search, loadPatients]);
 
@@ -153,6 +160,10 @@ export default function Patients() {
     }
   }
 
+  function handlePageChange(newPage) {
+      loadPatients(search, newPage);
+  }
+
   return (
     <div className="space-y-6">
       <PatientsHeader onAddPatient={() => setModalOpen(true)} />
@@ -187,6 +198,30 @@ export default function Patients() {
               <p className="text-sm text-gray-400 text-center py-6">No patients found.</p>
             )}
           </>
+        )}
+        
+        {!loading && patients.length > 0 && lastPage > 1 && (
+          <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+            <p className="text-sm text-gray-500">
+              Showing page {currentPage} of {lastPage} ({totalPatients} total)
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === lastPage}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         )}
       </div>
 

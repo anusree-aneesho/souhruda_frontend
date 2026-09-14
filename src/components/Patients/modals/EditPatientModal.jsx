@@ -3,23 +3,42 @@ import ModalShell from "../../common/Modal/ModalShell";
 
 export default function EditPatientModal({ patient, onClose, onSave }) {
   const [form, setForm] = useState({
-  name: patient.name,
-  date_of_birth: patient.date_of_birth || "",
-  gender: patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1),
-  contact: patient.contact,
-  email: patient.email || "",
-  address: patient.address || "",
-  isPregnant: patient.isPregnant || false,
-});
+    name: patient.name,
+    date_of_birth: patient.date_of_birth || "",
+    gender: patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1),
+    contact: patient.contact,
+    email: patient.email || "",
+    address: patient.address || "",
+    isPregnant: patient.isPregnant || false,
+  });
+  const [errors, setErrors] = useState({});
 
   function handleChange(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: null }));
+    }
+  }
+
+  function validate() {
+    const newErrors = {};
+    if (!form.name.trim()) newErrors.name = "Full name is required.";
+    if (!form.date_of_birth) newErrors.date_of_birth = "Date of birth is required.";
+    if (!form.gender) newErrors.gender = "Please select a gender.";
+    if (!form.contact.trim()) newErrors.contact = "Contact number is required.";
+    if (!form.email.trim()) newErrors.email = "Email is required.";
+    if (!form.address.trim()) newErrors.address = "Address is required.";
+    return newErrors;
   }
 
   function handleSubmit(e) {
-  e.preventDefault();
-  if (!form.name.trim() || !form.date_of_birth || !form.contact.trim()) return;
-  onSave(patient.id, { ...form });
+    e.preventDefault();
+    const newErrors = validate();
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    onSave(patient.id, { ...form });
   }
 
   return (
@@ -32,8 +51,13 @@ export default function EditPatientModal({ patient, onClose, onSave }) {
               autoFocus
               value={form.name}
               onChange={(e) => handleChange("name", e.target.value)}
-              className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
+                errors.name
+                  ? "border-red-400 focus:border-red-500 focus:ring-red-500"
+                  : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+              }`}
             />
+            {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -42,29 +66,44 @@ export default function EditPatientModal({ patient, onClose, onSave }) {
               <input
                 type="date"
                 value={form.date_of_birth}
-                onChange={(e) => handleChange("date_of_birth",e.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                onChange={(e) => handleChange("date_of_birth", e.target.value)}
+                className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
+                  errors.date_of_birth
+                    ? "border-red-400 focus:border-red-500 focus:ring-red-500"
+                    : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+                }`}
               />
+              {errors.date_of_birth && <p className="text-xs text-red-500 mt-1">{errors.date_of_birth}</p>}
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1.5">Gender</label>
               <select
                 value={form.gender}
                 onChange={(e) => handleChange("gender", e.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
+                  errors.gender
+                    ? "border-red-400 focus:border-red-500 focus:ring-red-500"
+                    : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+                }`}
               >
                 <option>Male</option>
                 <option>Female</option>
                 <option>Other</option>
               </select>
+              {errors.gender && <p className="text-xs text-red-500 mt-1">{errors.gender}</p>}
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1.5">Contact</label>
               <input
                 value={form.contact}
                 onChange={(e) => handleChange("contact", e.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
+                  errors.contact
+                    ? "border-red-400 focus:border-red-500 focus:ring-red-500"
+                    : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+                }`}
               />
+              {errors.contact && <p className="text-xs text-red-500 mt-1">{errors.contact}</p>}
             </div>
           </div>
 
@@ -89,8 +128,13 @@ export default function EditPatientModal({ patient, onClose, onSave }) {
               type="email"
               value={form.email}
               onChange={(e) => handleChange("email", e.target.value)}
-              className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
+                errors.email
+                  ? "border-red-400 focus:border-red-500 focus:ring-red-500"
+                  : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+              }`}
             />
+            {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
           </div>
 
           <div>
@@ -99,8 +143,13 @@ export default function EditPatientModal({ patient, onClose, onSave }) {
               value={form.address}
               onChange={(e) => handleChange("address", e.target.value)}
               rows={2}
-              className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 resize-none"
+              className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 resize-none ${
+                errors.address
+                  ? "border-red-400 focus:border-red-500 focus:ring-red-500"
+                  : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+              }`}
             />
+            {errors.address && <p className="text-xs text-red-500 mt-1">{errors.address}</p>}
           </div>
         </div>
 

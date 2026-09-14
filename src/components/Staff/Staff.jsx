@@ -65,6 +65,37 @@ function RemoveStaffModal({ staff, isRemoving, onCancel, onConfirm }) {
   );
 }
 
+// Inline pagination control — no separate file needed.
+function StaffPagination({ currentPage, totalPages, onPageChange }) {
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="flex items-center justify-between pt-2">
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:text-gray-300 disabled:cursor-not-allowed cursor-pointer"
+      >
+        ← Previous
+      </button>
+
+      <span className="text-sm text-gray-500">
+        Page {currentPage} of {totalPages}
+      </span>
+
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+      >
+        Next →
+      </button>
+    </div>
+  );
+}
+
+const ITEMS_PER_PAGE = 10;
+
 export default function Staff() {
   const [staff, setStaff] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -74,6 +105,7 @@ export default function Staff() {
   const [modalState, setModalState] = useState(null);
   const [removeTarget, setRemoveTarget] = useState(null);
   const [isRemoving, setIsRemoving] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { toast, showToast, hideToast } = useToast();
 
@@ -106,6 +138,23 @@ export default function Staff() {
         (s.branch ?? "").toLowerCase().includes(search.toLowerCase())
     );
   }, [staff, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredStaff.length / ITEMS_PER_PAGE));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedStaff = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredStaff.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredStaff, currentPage]);
 
   async function handleSaveStaff(formData) {
     try {
@@ -166,13 +215,13 @@ export default function Staff() {
           <>
             <div className="hidden md:block">
               <StaffTable
-                staff={filteredStaff}
+                staff={paginatedStaff}
                 onEdit={(s) => setModalState({ editingStaff: s })}
                 onRemove={(s) => setRemoveTarget(s)}
               />
             </div>
             <div className="md:hidden space-y-3">
-              {filteredStaff.map((s) => (
+              {paginatedStaff.map((s) => (
                 <StaffCard
                   key={s.staffId}
                   staff={s}
@@ -184,6 +233,14 @@ export default function Staff() {
 
             {filteredStaff.length === 0 && (
               <p className="text-sm text-gray-400 text-center py-6">No front officers found.</p>
+            )}
+
+            {filteredStaff.length > 0 && (
+              <StaffPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
             )}
           </>
         )}

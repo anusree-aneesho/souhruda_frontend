@@ -418,12 +418,21 @@ export async function getOrderBillUrlApi(orderId) {
 
 // ── FollowUp ──────────────────────────────────────
 
-export async function getFollowUpRemindersApi() {
-  return request("/follow-up-reminders");
+export async function getFollowUpRemindersApi(page = 1) {
+  return request(`/follow-up-reminders?page=${page}`);
 }
 
 export async function markFollowUpReminderDoneApi(id) {
   return request(`/follow-up-reminders/${id}/done`, {
     method: "PATCH",
+  });
+}
+
+// ── Staff Management ──────────────────────────────────────
+
+export async function addStaffApi(payload) {
+  return request("/staff-members", {
+    method: "POST",
+    body: JSON.stringify(payload),
   });
 }

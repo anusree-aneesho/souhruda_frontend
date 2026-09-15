@@ -14,7 +14,7 @@ const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
   { label: "Lab Orders", icon: ClipboardList, path: "/lab-orders"},
   { label: "Home Collection", icon: MapPin, path: "/home-collection"},
-  { label: "Front Officer", icon: UserCog, path: "/staff" },
+  { label: "Front Office", icon: UserCog, path: "/staff" },
   { label: "Technicians", icon: Wrench, path: "/technicians" },
   { label: "Lab Assistant", icon: Beaker, path: "/lab-assistants" },
   { label: "Test Master", icon: FlaskConical, path: "/test-master" },

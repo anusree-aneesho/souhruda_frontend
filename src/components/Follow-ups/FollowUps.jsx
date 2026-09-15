@@ -24,13 +24,21 @@ function mapReminder(r) {
 export default function FollowUps() {
   const [followUps, setFollowUps] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setIsLoading(true);
 
-    getFollowUpRemindersApi()
+    getFollowUpRemindersApi(page)
       .then((res) => {
-        if (!cancelled) setFollowUps((res.data || []).map(mapReminder));
+        if (!cancelled) {
+          setFollowUps((res.data || []).map(mapReminder));
+          setLastPage(res.last_page ?? 1);
+          setTotal(res.total ?? 0);
+        }
       })
       .catch(() => {
         if (!cancelled) setFollowUps([]);
@@ -42,7 +50,7 @@ export default function FollowUps() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [page]);
 
   return (
     <div className="space-y-6">
@@ -51,7 +59,33 @@ export default function FollowUps() {
       {isLoading ? (
         <p className="text-sm text-gray-400 text-center py-6">Loading follow-ups...</p>
       ) : (
-        <FollowUpsTable followUps={followUps} />
+        <>
+          <FollowUpsTable followUps={followUps} />
+
+          {followUps.length > 0 && lastPage > 1 && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-500">
+                Page {page} of {lastPage} · {total} follow-ups
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  ← Prev
+                </button>
+                <button
+                  onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
+                  disabled={page >= lastPage}
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

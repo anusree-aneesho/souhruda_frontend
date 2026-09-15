@@ -220,6 +220,7 @@ export default function PatientStep({
                 type="date"
                 value={newPatientData.dateOfBirth}
                 onChange={(e) => onNewPatientChange("dateOfBirth", e.target.value)}
+                max={new Date().toISOString().split("T")[0]}
                 className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 "
               />
             </div>

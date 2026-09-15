@@ -158,6 +158,7 @@ export default function PatientStep({
   patientType, onPatientTypeChange,
   selectedPatient, onSelectPatient,
   newPatientData, onNewPatientChange,
+  onEditSelectedPatient, isLoadingPatientToEdit,
 }) {
   return (
     <div className="px-6 py-5 space-y-5">
@@ -182,7 +183,19 @@ export default function PatientStep({
 
       {patientType === "existing" ? (
         <div>
-          <label className="block text-sm font-semibold text-gray-900 mb-1.5 ">Select Patient</label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-sm font-semibold text-gray-900">Select Patient</label>
+            {selectedPatient && (
+              <button
+                type="button"
+                onClick={onEditSelectedPatient}
+                disabled={isLoadingPatientToEdit}
+                className="text-xs font-medium text-teal-600 hover:text-teal-700 disabled:opacity-50 cursor-pointer"
+              >
+                {isLoadingPatientToEdit ? "Loading..." : "Edit patient"}
+              </button>
+            )}
+          </div>
           <PatientCombobox
             selectedPatient={selectedPatient}
             onSelectPatient={onSelectPatient}

@@ -9,12 +9,16 @@ import ConfirmStep from "./steps/ConfirmStep";
 import AddressSlotStep from "./steps/AddressSlotStep";
 import PaymentStep from "./steps/PaymentStep";
 import { useOrderModal } from "../../../Context/OrderModalContext";
+import EditPatientModal from "../../Patients/modals/EditPatientModal";
 import {
   getPatientsApi,
+  getPatientApi,
   createPatientApi,
+  updatePatientApi,
   createHomeCollectionRequestApi,
   createOrderApi,
 } from "../../../api/api";
+
 
 function mapPatient(p) {
   return {
@@ -24,6 +28,20 @@ function mapPatient(p) {
     age: p.age,
     gender: p.gender,
     contact: p.phone,
+  };
+}
+
+function mapPatientForEdit(p) {
+  return {
+    id: p.id,
+    regNo: p.patient_number,
+    name: p.full_name,
+    date_of_birth: p.date_of_birth,
+    gender: p.gender,
+    isPregnant: p.is_pregnant,
+    contact: p.phone,
+    email: p.email,
+    address: p.address,
   };
 }
 
@@ -102,6 +120,47 @@ export default function NewOrderModal() {
   const [submitError, setSubmitError] = useState(null);
   const [isCreatingPatient, setIsCreatingPatient] = useState(false);
 
+  const [editingPatient, setEditingPatient] = useState(null);
+  const [isLoadingPatientToEdit, setIsLoadingPatientToEdit] = useState(false);
+
+  async function handleEditSelectedPatient() {
+    if (!selectedPatient?.id) return;
+    setIsLoadingPatientToEdit(true);
+    try {
+      const res = await getPatientApi(selectedPatient.id);
+      setEditingPatient(mapPatientForEdit(res.data));
+    } catch (err) {
+      setSubmitError(err.message || "Couldn't load patient details.");
+    } finally {
+      setIsLoadingPatientToEdit(false);
+    }
+  }
+
+  async function handleSaveEditedPatient(id, formData) {
+    const [first_name, ...rest] = formData.name.trim().split(" ");
+    const last_name = rest.join(" ") || null;
+
+    try {
+      await updatePatientApi(id, {
+        first_name,
+        last_name,
+        date_of_birth: formData.date_of_birth,
+        gender: formData.gender.toLowerCase(),
+        is_pregnant: formData.gender === "Female" ? formData.isPregnant : null,
+        phone: formData.contact,
+        email: formData.email || null,
+        address: formData.address || null,
+      });
+
+      const res = await getPatientApi(id);
+      setSelectedPatient(mapPatient(res.data));
+      setEditingPatient(null);
+    } catch (err) {
+      setSubmitError(err.message || "Couldn't update the patient. Please try again.");
+      setEditingPatient(null);
+    }
+  }
+
   useEffect(() => {
     if (isOpen && skipPatientStep) {
       setPatientType("existing");
@@ -155,6 +214,7 @@ export default function NewOrderModal() {
     setIsSubmitting(false);
     setSubmitError(null);
     setIsCreatingPatient(false);
+    setEditingPatient(null);
     close();
   }
 
@@ -207,7 +267,6 @@ export default function NewOrderModal() {
     ? { 1: "Next: Select Tests →", 2: "Next: Address & Slot →", 3: "Next: Payment →" }
     : { 1: "Next: Select Tests →", 2: "Next: Confirm →" };
 
-  // Once a new patient has been created (step 1 → 2), treat them the same as an existing one for display/order purposes
   const currentPatient =
     patientType === "existing"
       ? selectedPatient
@@ -220,7 +279,6 @@ export default function NewOrderModal() {
           regNo: "NEW",
         };
 
-  // Handles the "Next" button specifically for step 1 → creates the patient in the DB before moving on
   async function handleNext() {
     if (step === 1 && patientType === "new" && !createdPatient) {
       if (!newPatientData.name.trim()) {
@@ -333,105 +391,117 @@ export default function NewOrderModal() {
   if (!isOpen) return null;
 
   return (
-    <ModalShell title={stepTitles[step]} onClose={resetAndClose} maxWidth="max-w-xl">
-      <StepProgressBar currentStep={step} totalSteps={totalSteps} />
+    <>
+      <ModalShell title={stepTitles[step]} onClose={resetAndClose} maxWidth="max-w-xl">
+        <StepProgressBar currentStep={step} totalSteps={totalSteps} />
 
-      {step === 1 && (
-        <PatientStep
-          patientType={patientType}
-          onPatientTypeChange={setPatientType}
-          selectedPatient={selectedPatient}
-          onSelectPatient={setSelectedPatient}
-          newPatientData={newPatientData}
-          onNewPatientChange={(field, value) => setNewPatientData((prev) => ({ ...prev, [field]: value }))}
-        />
-      )}
-
-      {step === 2 && (
-        <SelectTestsStep
-          activeCategory={activeCategory}
-          onCategoryChange={setActiveCategory}
-          selectedTests={selectedTests}
-          onToggleTest={toggleTest}
-        />
-      )}
-
-      {step === 3 && isHomeCollection && (
-        <AddressSlotStep
-          address={address}
-          onAddressChange={setAddress}
-          pinnedLocation={pinnedLocation}
-          onPinLocation={handlePinLocation}
-          isLocating={isLocating}
-          preferredDate={preferredDate}
-          onPreferredDateChange={setPreferredDate}
-          timeSlot={timeSlot}
-          onTimeSlotChange={setTimeSlot}
-        />
-      )}
-      {step === 3 && !isHomeCollection && (
-        <ConfirmStep
-          patient={currentPatient}
-          selectedTests={selectedTests}
-          paymentDone={paymentDone}
-          onPaymentDoneChange={setPaymentDone}
-        />
-      )}
-
-      {step === 4 && isHomeCollection && (
-        <>
-          <PaymentStep
-            selectedTests={selectedTests}
-            paymentMethod={paymentMethod}
-            onPaymentMethodChange={setPaymentMethod}
+        {step === 1 && (
+          <PatientStep
+            patientType={patientType}
+            onPatientTypeChange={setPatientType}
+            selectedPatient={selectedPatient}
+            onSelectPatient={setSelectedPatient}
+            newPatientData={newPatientData}
+            onNewPatientChange={(field, value) => setNewPatientData((prev) => ({ ...prev, [field]: value }))}
+            onEditSelectedPatient={handleEditSelectedPatient}
+            isLoadingPatientToEdit={isLoadingPatientToEdit}
           />
-          {bookingError && (
-            <p className="px-6 text-sm text-red-600">{bookingError}</p>
+        )}
+
+        {step === 2 && (
+          <SelectTestsStep
+            activeCategory={activeCategory}
+            onCategoryChange={setActiveCategory}
+            selectedTests={selectedTests}
+            onToggleTest={toggleTest}
+          />
+        )}
+
+        {step === 3 && isHomeCollection && (
+          <AddressSlotStep
+            address={address}
+            onAddressChange={setAddress}
+            pinnedLocation={pinnedLocation}
+            onPinLocation={handlePinLocation}
+            isLocating={isLocating}
+            preferredDate={preferredDate}
+            onPreferredDateChange={setPreferredDate}
+            timeSlot={timeSlot}
+            onTimeSlotChange={setTimeSlot}
+          />
+        )}
+        {step === 3 && !isHomeCollection && (
+          <ConfirmStep
+            patient={currentPatient}
+            selectedTests={selectedTests}
+            paymentDone={paymentDone}
+            onPaymentDoneChange={setPaymentDone}
+          />
+        )}
+
+        {step === 4 && isHomeCollection && (
+          <>
+            <PaymentStep
+              selectedTests={selectedTests}
+              paymentMethod={paymentMethod}
+              onPaymentMethodChange={setPaymentMethod}
+            />
+            {bookingError && (
+              <p className="px-6 text-sm text-red-600">{bookingError}</p>
+            )}
+          </>
+        )}
+
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
+          {submitError && (
+            <p className="text-sm text-red-500 mr-auto">{submitError}</p>
           )}
-        </>
+
+          {step === 1 || (skipPatientStep && step === 2) ? (
+            <button
+              onClick={resetAndClose}
+              disabled={isSubmitting}
+              className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cancel
+            </button>
+          ) : (
+            <button
+              onClick={() => setStep((s) => s - 1)}
+              disabled={isSubmitting}
+              className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              ← Back
+            </button>
+          )}
+
+          {step < totalSteps ? (
+            <button
+              onClick={handleNext}
+              disabled={isNextDisabled || isSubmitting || isCreatingPatient}
+              className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+            {isCreatingPatient ? "Saving patient…" : nextButtonLabels[step]}
+            </button>
+          ) : (
+            <button
+              onClick={isHomeCollection ? handleConfirmBooking : handleCreateOrder}
+              disabled={isSubmitting}
+              className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40"
+            >
+              {isSubmitting ? "Creating…" : isHomeCollection ? "Confirm Booking" : "Create Order"}
+            </button>
+          )}
+        </div>
+      </ModalShell>
+
+      {editingPatient && (
+        <EditPatientModal
+          patient={editingPatient}
+          onClose={() => setEditingPatient(null)}
+          onSave={handleSaveEditedPatient}
+        />
       )}
-
-      <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
-        {submitError && (
-          <p className="text-sm text-red-500 mr-auto">{submitError}</p>
-        )}
-
-        {step === 1 || (skipPatientStep && step === 2) ? (
-          <button
-            onClick={resetAndClose}
-            disabled={isSubmitting}
-            className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Cancel
-          </button>
-        ) : (
-          <button
-            onClick={() => setStep((s) => s - 1)}
-            disabled={isSubmitting}
-            className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            ← Back
-          </button>
-        )}
-
-        {step < totalSteps ? (
-          <button
-            onClick={handleNext}
-            disabled={isNextDisabled || isSubmitting || isCreatingPatient}
-            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-          {isCreatingPatient ? "Saving patient…" : nextButtonLabels[step]}
-          </button>
-        ) : (
-          <button
-            onClick={isHomeCollection ? handleConfirmBooking : handleCreateOrder}
-            disabled={isSubmitting}
-            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40"
-          >
-            {isSubmitting ? "Creating…" : isHomeCollection ? "Confirm Booking" : "Create Order"}
-          </button>
-        )}
-      </div>
-    </ModalShell>
+    </>
   );
 }

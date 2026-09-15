@@ -159,6 +159,17 @@ export async function deleteBranchApi(id) {
   });
 }
 
+export async function getGstSettingsApi() {
+  return request("/settings/gst");
+}
+
+export async function updateGstSettingsApi(gstData) {
+  return request("/settings/gst", {
+    method: "PUT",
+    body: JSON.stringify(gstData),
+  });
+}
+
 // ── Activity Log ───────────────────────────────────────────
 
 export async function getActivityLogsApi(perPage = 5, page = 1) {

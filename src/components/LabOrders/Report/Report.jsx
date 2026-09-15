@@ -11,7 +11,7 @@ import BillModal from "./BillModal";
 import WhatsAppSentModal from "./WhatsAppSentModal";
 import { findOrderById } from "../../../data/labOrders";
 import { calculateFlag } from "../../../utils/calculateFlag";
-import { getOrderReportUrlApi } from "../../../api/api";
+import { getOrderReportUrlApi, getSettingsApi } from "../../../api/api";
 
 export default function Report() {
   const { orderId } = useParams();
@@ -21,6 +21,7 @@ export default function Report() {
   const [isWhatsAppOpen, setWhatsAppOpen] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadError, setDownloadError] = useState("");
+  const [labInfo, setLabInfo] = useState(null);
 
   const existingOrder = findOrderById(orderId);
   const order = existingOrder || (state ? { orderId, ...state } : null);
@@ -33,6 +34,15 @@ export default function Report() {
     setPaymentDone(Boolean(order?.paymentDone));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
+
+  // Fetch live Lab Settings once — used by both the letterhead and the
+  // footer disclaimer, so it's fetched here rather than duplicated in
+  // ReportLetterhead.
+  useEffect(() => {
+    getSettingsApi()
+      .then((res) => setLabInfo(res.data))
+      .catch((err) => console.error("Failed to load lab settings:", err.message));
+  }, []);
 
   const patient = order?.patient || { name: "Unknown", age: "-", gender: "-", regNo: "-" };
   const tests = order?.tests || [];
@@ -107,12 +117,12 @@ export default function Report() {
           Report and the Bill never both try to print at the same time. */}
       <div className={isBillOpen ? "" : "print-target"}>
         <div className="bg-white rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-          {letterheadOn && <ReportLetterhead />}
+          {letterheadOn && <ReportLetterhead labInfo={labInfo} />}
 
           <PatientInfoBar patient={patient} orderId={orderId} reportDate={reportDate} />
           <div className="no-print">
-  <AISummary tests={testsWithResults} flags={flags} />
-</div>
+            <AISummary tests={testsWithResults} flags={flags} />
+          </div>
 
           {Object.entries(testsByCategory).map(([category, categoryTests]) => (
             <ReportCategorySection
@@ -123,7 +133,10 @@ export default function Report() {
             />
           ))}
 
-          <p className="text-center text-xs text-gray-400 mt-6">** End of report **</p>
+          <div className="text-center text-xs text-gray-400 mt-6">
+            {labInfo?.footer_note && <p className="mb-1">{labInfo.footer_note}</p>}
+            <p>** End of report **</p>
+          </div>
         </div>
       </div>
 

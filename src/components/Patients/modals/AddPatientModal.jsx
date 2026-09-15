@@ -55,13 +55,14 @@ export default function AddPatientModal({ onClose, onAdd }) {
             {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1.5">Date of Birth</label>
               <input
                 type="date"
                 value={form.date_of_birth}
                 onChange={(e) => handleChange("date_of_birth", e.target.value)}
+                max={new Date().toISOString().split("T")[0]}
                 className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
                   errors.date_of_birth
                     ? "border-red-400 focus:border-red-500 focus:ring-red-500"

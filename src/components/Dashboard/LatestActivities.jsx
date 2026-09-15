@@ -60,7 +60,7 @@ export default function LatestActivities() {
           onClick={() => navigate("/activity-logs")}
           className="text-xs font-medium text-teal-600 hover:underline cursor-pointer"
         >
-          View all
+          View all →
         </button>
       </div>
 

@@ -67,6 +67,7 @@ export default function EditPatientModal({ patient, onClose, onSave }) {
                 type="date"
                 value={form.date_of_birth}
                 onChange={(e) => handleChange("date_of_birth", e.target.value)}
+                max={new Date().toISOString().split("T")[0]}
                 className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
                   errors.date_of_birth
                     ? "border-red-400 focus:border-red-500 focus:ring-red-500"

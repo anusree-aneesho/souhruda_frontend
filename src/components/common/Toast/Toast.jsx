@@ -12,7 +12,7 @@ export default function Toast({ message, type = "success", onClose }) {
 
   return (
     <div
-      className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-lg px-4 py-3 shadow-lg text-sm font-medium text-white ${
+      className={`fixed bottom-6 left-6 z-50 flex items-center gap-2 rounded-lg px-4 py-3 shadow-lg text-sm font-medium text-white max-w-sm ${
         isSuccess ? "bg-teal-600" : "bg-red-500"
       }`}
     >

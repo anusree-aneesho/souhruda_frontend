@@ -101,7 +101,7 @@ export default function LabOrders() {
               <p className="text-sm text-gray-400 text-center py-6">No orders found.</p>
             )}
 
-            {filteredOrders.length > 0 && (
+            {filteredOrders.length > 0 && lastPage > 1 && (
               <div className="flex items-center justify-between pt-2">
                 <p className="text-sm text-gray-500">
                   Page {page} of {lastPage} · {total} orders

@@ -3,23 +3,75 @@ import { useState, useEffect } from "react";
 import ModalShell from "../../common/Modal/ModalShell";
 import { getBranchesApi } from "../../../api/api";
 
-const ROLES = ["Front Officer", "Technician", "Lab Assistant" , "Accountant"];
+const ROLES = ["Front Office", "Technician", "Lab Assistant"];
+
+const NAME_REGEX = /^[A-Za-z\s]+$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_REGEX = /^\d{10}$/;
 
 const emptyForm = {
   name: "",
   email: "",
   phone: "",
   branch_id: "",
-  role: "Front Officer",
+  role: "Front Office",
   status: "Active",
   latitude: "",
   longitude: "",
 };
 
+function validate(form, isTechnician) {
+  const errors = {};
+
+  if (!form.name.trim()) {
+    errors.name = "Name is required.";
+  } else if (!NAME_REGEX.test(form.name.trim())) {
+    errors.name = "Only letters and spaces are allowed.";
+  } else if (form.name.trim().length < 3) {
+    errors.name = "Name must be at least 3 characters.";
+  }
+
+  if (!form.email.trim()) {
+    errors.email = "Email is required.";
+  } else if (!EMAIL_REGEX.test(form.email.trim())) {
+    errors.email = "Enter a valid email address.";
+  }
+
+  if (!form.phone.trim()) {
+    errors.phone = "Phone is required.";
+  } else if (!PHONE_REGEX.test(form.phone.trim())) {
+    errors.phone = "Enter exactly 10 digits, numbers only.";
+  }
+
+  if (!form.branch_id) {
+    errors.branch_id = "Select a branch.";
+  }
+
+  if (isTechnician) {
+    const lat = Number(form.latitude);
+    const lng = Number(form.longitude);
+
+    if (form.latitude === "" || Number.isNaN(lat)) {
+      errors.latitude = "Latitude is required.";
+    } else if (lat < -90 || lat > 90) {
+      errors.latitude = "Must be between -90 and 90.";
+    }
+
+    if (form.longitude === "" || Number.isNaN(lng)) {
+      errors.longitude = "Longitude is required.";
+    } else if (lng < -180 || lng > 180) {
+      errors.longitude = "Must be between -180 and 180.";
+    }
+  }
+
+  return errors;
+}
+
 export default function AddStaffModal({ editingStaff, onClose, onSave }) {
   const [form, setForm] = useState(emptyForm);
   const [branches, setBranches] = useState([]);
   const [isLocating, setIsLocating] = useState(false);
+  const [errors, setErrors] = useState({});
   const isEditMode = Boolean(editingStaff);
   const isTechnician = form.role === "Technician";
 
@@ -45,7 +97,7 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
         email: editingStaff.email,
         phone: editingStaff.phone,
         branch_id: editingStaff.branch_id ?? "",
-        role: editingStaff.role ?? "Front Officer",
+        role: editingStaff.role ?? "Front Office",
         status: editingStaff.status ?? "Active",
         latitude: editingStaff.latitude ?? "",
         longitude: editingStaff.longitude ?? "",
@@ -53,10 +105,12 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
     } else {
       setForm(emptyForm);
     }
+    setErrors({});
   }, [editingStaff]);
 
   function handleChange(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => ({ ...prev, [field]: undefined }));
   }
 
   function handleUseCurrentLocation() {
@@ -69,6 +123,7 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
           latitude: pos.coords.latitude.toFixed(6),
           longitude: pos.coords.longitude.toFixed(6),
         }));
+        setErrors((prev) => ({ ...prev, latitude: undefined, longitude: undefined }));
         setIsLocating(false);
       },
       () => setIsLocating(false),
@@ -78,15 +133,15 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
 
   function handleSubmit(e) {
     e.preventDefault();
-    if (!form.name.trim() || !form.phone.trim() || !form.branch_id) return;
-    if (isTechnician && (form.latitude === "" || form.longitude === "")) return;
+
+    const validationErrors = validate(form, isTechnician);
+    setErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
 
     onSave({
       ...form,
       id: editingStaff?.id,
       staffId: editingStaff?.staffId,
-      // Base location is only meaningful for technicians — don't submit stale values
-      // left over from switching roles mid-form.
       latitude: isTechnician ? form.latitude : null,
       longitude: isTechnician ? form.longitude : null,
     });
@@ -94,7 +149,7 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
 
   return (
     <ModalShell title={isEditMode ? "Edit Staff" : "Add Staff"} onClose={onClose} maxWidth="max-w-md">
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <div className="px-6 py-5 space-y-4">
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-1.5">Full Name</label>
@@ -103,8 +158,11 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
               value={form.name}
               onChange={(e) => handleChange("name", e.target.value)}
               placeholder="Staff name"
-              className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
+                errors.name ? "border-red-300 focus:border-red-400 focus:ring-red-400" : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+              }`}
             />
+            {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
           </div>
 
           <div>
@@ -114,8 +172,11 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
               value={form.email}
               onChange={(e) => handleChange("email", e.target.value)}
               placeholder="staff@lab.com"
-              className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
+                errors.email ? "border-red-300 focus:border-red-400 focus:ring-red-400" : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+              }`}
             />
+            {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -123,23 +184,30 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
               <label className="block text-sm font-semibold text-gray-900 mb-1.5">Phone</label>
               <input
                 value={form.phone}
-                onChange={(e) => handleChange("phone", e.target.value)}
+                onChange={(e) => handleChange("phone", e.target.value.replace(/[^\d]/g, "").slice(0, 10))}
                 placeholder="10-digit number"
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                inputMode="numeric"
+                className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
+                  errors.phone ? "border-red-300 focus:border-red-400 focus:ring-red-400" : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+                }`}
               />
+              {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1.5">Branch</label>
               <select
                 value={form.branch_id}
                 onChange={(e) => handleChange("branch_id", e.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
+                  errors.branch_id ? "border-red-300 focus:border-red-400 focus:ring-red-400" : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+                }`}
               >
                 <option value="">Select branch</option>
                 {branches.map((b) => (
                   <option key={b.id} value={b.id}>{b.name}</option>
                 ))}
               </select>
+              {errors.branch_id && <p className="text-xs text-red-500 mt-1">{errors.branch_id}</p>}
             </div>
           </div>
 
@@ -157,22 +225,32 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
                 </button>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <input
-                  type="number"
-                  step="any"
-                  value={form.latitude}
-                  onChange={(e) => handleChange("latitude", e.target.value)}
-                  placeholder="Latitude"
-                  className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
-                />
-                <input
-                  type="number"
-                  step="any"
-                  value={form.longitude}
-                  onChange={(e) => handleChange("longitude", e.target.value)}
-                  placeholder="Longitude"
-                  className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
-                />
+                <div>
+                  <input
+                    type="number"
+                    step="any"
+                    value={form.latitude}
+                    onChange={(e) => handleChange("latitude", e.target.value)}
+                    placeholder="Latitude"
+                    className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
+                      errors.latitude ? "border-red-300 focus:border-red-400 focus:ring-red-400" : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+                    }`}
+                  />
+                  {errors.latitude && <p className="text-xs text-red-500 mt-1">{errors.latitude}</p>}
+                </div>
+                <div>
+                  <input
+                    type="number"
+                    step="any"
+                    value={form.longitude}
+                    onChange={(e) => handleChange("longitude", e.target.value)}
+                    placeholder="Longitude"
+                    className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
+                      errors.longitude ? "border-red-300 focus:border-red-400 focus:ring-red-400" : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+                    }`}
+                  />
+                  {errors.longitude && <p className="text-xs text-red-500 mt-1">{errors.longitude}</p>}
+                </div>
               </div>
               <p className="text-xs text-gray-400 mt-1">Used to match this technician to nearby home collection requests.</p>
             </div>

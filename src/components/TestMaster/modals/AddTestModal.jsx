@@ -20,8 +20,83 @@ const emptyForm = {
   demographicRanges: { ...emptyDemographicRanges },
 };
 
+// A range entry must be one of: "70-100" (range), "<200" (max), ">40" (min),
+// or free text like "Negative" (qualitative) — matches how the backend's
+// range parser interprets range_raw.
+const RANGE_FORMAT_REGEX = /^(-?\d+(\.\d+)?\s*-\s*-?\d+(\.\d+)?|[<>]\s*-?\d+(\.\d+)?|[A-Za-z][A-Za-z\s]*)$/;
+
+function validate(form) {
+  const errors = {};
+  const demographicErrors = {};
+
+  if (!form.category) {
+    errors.category = "Select a category.";
+  }
+
+  if (!form.name.trim()) {
+    errors.name = "Test name is required.";
+  } else if (form.name.trim().length > 150) {
+    errors.name = "Must be 150 characters or fewer.";
+  }
+
+  if (form.unit && form.unit.length > 30) {
+    errors.unit = "Must be 30 characters or fewer.";
+  }
+
+  if (form.price === "" || form.price === null) {
+    errors.price = "Price is required.";
+  } else {
+    const price = Number(form.price);
+    if (Number.isNaN(price) || price < 0) {
+      errors.price = "Must be a positive number.";
+    } else if (price > 99999999.99) {
+      errors.price = "That's too large a value.";
+    }
+  }
+
+  const hasCriticalLow = form.criticalLow !== "";
+  const hasCriticalHigh = form.criticalHigh !== "";
+  const criticalLow = Number(form.criticalLow);
+  const criticalHigh = Number(form.criticalHigh);
+
+  if (hasCriticalLow && Number.isNaN(criticalLow)) {
+    errors.criticalLow = "Must be a number.";
+  }
+  if (hasCriticalHigh && Number.isNaN(criticalHigh)) {
+    errors.criticalHigh = "Must be a number.";
+  }
+  if (hasCriticalLow && hasCriticalHigh && !Number.isNaN(criticalLow) && !Number.isNaN(criticalHigh) && criticalLow >= criticalHigh) {
+    errors.criticalHigh = "Must be greater than Critical Low.";
+  }
+
+  if (form.followupWeeks !== "") {
+    const weeks = Number(form.followupWeeks);
+    if (!Number.isInteger(weeks) || weeks < 0) {
+      errors.followupWeeks = "Must be a whole number, 0 or more.";
+    } else if (weeks > 32767) {
+      errors.followupWeeks = "That's too large a value.";
+    }
+  }
+
+  const filledRanges = Object.entries(form.demographicRanges).filter(([, v]) => v.trim() !== "");
+
+  if (filledRanges.length === 0) {
+    errors.demographicRanges = "Enter a range for at least one demographic group.";
+  }
+
+  filledRanges.forEach(([group, value]) => {
+    if (!RANGE_FORMAT_REGEX.test(value.trim())) {
+      demographicErrors[group] = "Use a format like \"70-100\", \"<200\", \">40\", or \"Negative\".";
+    }
+  });
+
+  return { errors, demographicErrors };
+}
+
 export default function AddTestModal({ categories, defaultCategory, editingTest, onClose, onSave }) {
   const [form, setForm] = useState(emptyForm);
+  const [errors, setErrors] = useState({});
+  const [demographicErrors, setDemographicErrors] = useState({});
   const isEditMode = Boolean(editingTest);
 
   useEffect(() => {
@@ -38,12 +113,16 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
         demographicRanges: { ...emptyDemographicRanges, ...(editingTest.demographicRanges || {}) },
       });
     } else {
-      setForm({ ...emptyForm, demographicRanges: { ...emptyDemographicRanges }, category: defaultCategory });
+      setForm({ ...emptyForm, demographicRanges: { ...emptyDemographicRanges } });
+      // setForm({ ...emptyForm, demographicRanges: { ...emptyDemographicRanges }, category: defaultCategory });
     }
+    setErrors({});
+    setDemographicErrors({});
   }, [editingTest, defaultCategory]);
 
   function handleChange(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => ({ ...prev, [field]: undefined }));
   }
 
   function handleDemographicRangeChange(group, value) {
@@ -51,11 +130,18 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
       ...prev,
       demographicRanges: { ...prev.demographicRanges, [group]: value },
     }));
+    setErrors((prev) => ({ ...prev, demographicRanges: undefined }));
+    setDemographicErrors((prev) => ({ ...prev, [group]: undefined }));
   }
 
   function handleSubmit(e) {
     e.preventDefault();
-    if (!form.name.trim() || !form.category) return;
+
+    const { errors: validationErrors, demographicErrors: validationDemographicErrors } = validate(form);
+    setErrors(validationErrors);
+    setDemographicErrors(validationDemographicErrors);
+    if (Object.keys(validationErrors).length > 0 || Object.keys(validationDemographicErrors).length > 0) return;
+
     onSave({
       ...form,
       price: parseFloat(form.price) || 0,
@@ -66,21 +152,28 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
     });
   }
 
+  const inputClass = (hasError) =>
+    `w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
+      hasError ? "border-red-300 focus:border-red-400 focus:ring-red-400" : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+    }`;
+
   return (
     <ModalShell title={isEditMode ? "Edit Test" : "Add Test"} onClose={onClose} maxWidth="max-w-md">
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-1.5">Category</label>
             <select
               value={form.category}
               onChange={(e) => handleChange("category", e.target.value)}
-              className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              className={inputClass(errors.category)}
             >
+              <option value="">Select Category</option>
               {categories.map((cat) => (
                 <option key={cat.name} value={cat.name}>{cat.name}</option>
               ))}
             </select>
+            {errors.category && <p className="text-xs text-red-500 mt-1">{errors.category}</p>}
           </div>
 
           <div>
@@ -90,8 +183,9 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
               value={form.name}
               onChange={(e) => handleChange("name", e.target.value)}
               placeholder="e.g. Vitamin D3"
-              className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              className={inputClass(errors.name)}
             />
+            {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -101,18 +195,21 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
                 value={form.unit}
                 onChange={(e) => handleChange("unit", e.target.value)}
                 placeholder="mg/dl, ng/ml..."
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                className={inputClass(errors.unit)}
               />
+              {errors.unit && <p className="text-xs text-red-500 mt-1">{errors.unit}</p>}
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1.5">Price (₹)</label>
               <input
                 type="number"
+                step="any"
                 value={form.price}
                 onChange={(e) => handleChange("price", e.target.value)}
                 placeholder="0"
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                className={inputClass(errors.price)}
               />
+              {errors.price && <p className="text-xs text-red-500 mt-1">{errors.price}</p>}
             </div>
           </div>
 
@@ -125,8 +222,9 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
                 value={form.criticalLow}
                 onChange={(e) => handleChange("criticalLow", e.target.value)}
                 placeholder="Optional"
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                className={inputClass(errors.criticalLow)}
               />
+              {errors.criticalLow && <p className="text-xs text-red-500 mt-1">{errors.criticalLow}</p>}
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1.5">Critical High</label>
@@ -136,8 +234,9 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
                 value={form.criticalHigh}
                 onChange={(e) => handleChange("criticalHigh", e.target.value)}
                 placeholder="Optional"
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                className={inputClass(errors.criticalHigh)}
               />
+              {errors.criticalHigh && <p className="text-xs text-red-500 mt-1">{errors.criticalHigh}</p>}
             </div>
           </div>
 
@@ -149,8 +248,9 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
               value={form.followupWeeks}
               onChange={(e) => handleChange("followupWeeks", e.target.value)}
               placeholder="Optional"
-              className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              className={inputClass(errors.followupWeeks)}
             />
+            {errors.followupWeeks && <p className="text-xs text-red-500 mt-1">{errors.followupWeeks}</p>}
           </div>
 
           <div>
@@ -168,15 +268,17 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
             <label className="block text-sm font-semibold text-gray-900">
               Range by Category / Demographic Group
             </label>
+            {errors.demographicRanges && <p className="text-xs text-red-500">{errors.demographicRanges}</p>}
             {DEMOGRAPHIC_GROUPS.map((group) => (
               <div key={group}>
                 <label className="block text-xs font-medium text-gray-600 mb-1">{group}</label>
                 <input
                   value={form.demographicRanges[group] || ""}
                   onChange={(e) => handleDemographicRangeChange(group, e.target.value)}
-                  placeholder="e.g. 13.5 to 17.5 g/dL"
-                  className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                  placeholder="e.g. 70-100, <200, or Negative"
+                  className={inputClass(demographicErrors[group])}
                 />
+                {demographicErrors[group] && <p className="text-xs text-red-500 mt-1">{demographicErrors[group]}</p>}
               </div>
             ))}
           </div>

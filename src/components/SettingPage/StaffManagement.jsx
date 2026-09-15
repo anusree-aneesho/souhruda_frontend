@@ -2,9 +2,19 @@
 import { useState, useMemo } from "react";
 import { Plus, Search } from "lucide-react";
 import AddStaffModal from "./modals/AddStaffModal";
+import { addStaffApi } from "../../api/api";
+import Toast from "../common/Toast/Toast";
+import { useToast } from "../common/Toast/useToast";
 
 // Placeholder — no real data/API wired up yet.
 const staffMembers = [];
+
+const ROLE_VALUE_MAP = {
+  "Front Officer": "front_office",
+  "Technician": "technician",
+  "Lab Assistant": "lab_assistant",
+};
+
 
 function StaffStatusBadge({ status }) {
   const isActive = status === "Active";
@@ -107,6 +117,7 @@ function StaffCard({ staff, onEdit, onRemove }) {
 export default function StaffManagement() {
   const [search, setSearch] = useState("");
   const [modalState, setModalState] = useState(null);
+  const { toast, showToast, hideToast } = useToast();
 
   const filteredStaff = useMemo(() => {
     return staffMembers.filter(
@@ -126,9 +137,30 @@ export default function StaffManagement() {
     setModalState({ editingStaff: staff });
   }
 
-  function handleSaveStaff(formData) {
-    console.log("Save staff (not wired up yet):", formData);
-    setModalState(null);
+  async function handleSaveStaff(formData) {
+    if (formData.role === "Admin") {
+      showToast("Adding Admins isn't supported yet.", "error");
+      return;
+    }
+
+    const payload = {
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      branch_id: formData.branch_id,
+      role: ROLE_VALUE_MAP[formData.role],
+      status: formData.status,
+      latitude: formData.latitude || null,
+      longitude: formData.longitude || null,
+    };
+
+    try {
+      await addStaffApi(payload);
+      setModalState(null);
+      showToast(`${formData.name} added successfully — credentials emailed.`);
+    } catch (err) {
+      showToast(err.message || "Failed to add staff member.", "error");
+    }
   }
 
   function handleRemove(staff) {
@@ -181,6 +213,7 @@ export default function StaffManagement() {
             onSave={handleSaveStaff}
         />
       )}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   );
 }StaffManagement.jsx

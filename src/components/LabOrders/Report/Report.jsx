@@ -46,7 +46,12 @@ export default function Report() {
 
   const patient = order?.patient || { name: "Unknown", age: "-", gender: "-", regNo: "-" };
   const tests = order?.tests || [];
-  const reportDate = order?.orderedAt?.split(" at ")[0] || "-";
+const reportDate = order?.orderedAt
+  ? new Date(order.orderedAt).toLocaleDateString("en-GB", {
+      day: "2-digit", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    })
+  : "-";
 
   const results = state?.results || Object.fromEntries(tests.map((t) => [t.id, t.result || ""]));
 

@@ -22,8 +22,15 @@ function validate(formData) {
   return errors;
 }
 
+const MAX_LOGO_SIZE = 2 * 1024 * 1024; // 2MB
+const ALLOWED_LOGO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
+
 export default function EditBranchModal({ branch, onClose, onBranchUpdated }) {
   const [formData, setFormData] = useState(null);
+  const [existingLogoUrl, setExistingLogoUrl] = useState(null);
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
+  const [removeLogo, setRemoveLogo] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -46,6 +53,7 @@ export default function EditBranchModal({ branch, onClose, onBranchUpdated }) {
           email: s.email || "",
           is_active: b.is_active ?? true,
         });
+        setExistingLogoUrl(s.logo_url || null);
       } catch (err) {
         setError(err.message || "Failed to load branch details.");
       } finally {
@@ -59,6 +67,32 @@ export default function EditBranchModal({ branch, onClose, onBranchUpdated }) {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (fieldErrors[name]) setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
+  }
+
+  function handleLogoChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
+      setFieldErrors((prev) => ({ ...prev, logo: "Logo must be a JPG, PNG, WEBP or SVG file." }));
+      return;
+    }
+    if (file.size > MAX_LOGO_SIZE) {
+      setFieldErrors((prev) => ({ ...prev, logo: "Logo must be smaller than 2MB." }));
+      return;
+    }
+
+    setFieldErrors((prev) => ({ ...prev, logo: undefined }));
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+    setRemoveLogo(false);
+  }
+
+  function handleRemoveLogo() {
+    setLogoFile(null);
+    setLogoPreview(null);
+    setExistingLogoUrl(null);
+    setRemoveLogo(true);
   }
 
   async function handleSubmit(e) {
@@ -75,7 +109,12 @@ export default function EditBranchModal({ branch, onClose, onBranchUpdated }) {
     setSaving(true);
 
     try {
-      await updateBranchApi(branch.id, { ...formData, code: formData.code.toUpperCase() });
+      await updateBranchApi(branch.id, {
+        ...formData,
+        code: formData.code.toUpperCase(),
+        logo: logoFile,
+        remove_logo: removeLogo,
+      });
       onBranchUpdated();
       onClose();
     } catch (err) {
@@ -163,6 +202,45 @@ export default function EditBranchModal({ branch, onClose, onBranchUpdated }) {
             placeholder="Building name, street, area"
             className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-gray-900 mb-1.5">Lab Logo</label>
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 rounded-lg border border-dashed border-gray-300 flex items-center justify-center overflow-hidden bg-gray-50 shrink-0">
+              {logoPreview || existingLogoUrl ? (
+                <img
+                  src={logoPreview || existingLogoUrl}
+                  alt="Logo preview"
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <span className="text-[10px] text-gray-400 text-center px-1">No logo</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="inline-flex w-fit cursor-pointer items-center rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                {logoPreview || existingLogoUrl ? "Change logo" : "Upload logo"}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  onChange={handleLogoChange}
+                  className="hidden"
+                />
+              </label>
+              {(logoPreview || existingLogoUrl) && (
+                <button
+                  type="button"
+                  onClick={handleRemoveLogo}
+                  className="text-xs text-red-600 hover:underline w-fit cursor-pointer"
+                >
+                  Remove
+                </button>
+              )}
+              <p className="text-xs text-gray-400">PNG, JPG, WEBP or SVG · up to 2MB</p>
+            </div>
+          </div>
+          {fieldErrors.logo && <p className="text-xs text-red-600 mt-1">{fieldErrors.logo}</p>}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

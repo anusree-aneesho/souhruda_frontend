@@ -2,11 +2,14 @@ const API_BASE_URL = "http://localhost:8000/api/v1";
 
 async function request(endpoint, options = {}) {
   const token = localStorage.getItem("souhruda_auth_token");
+  const isFormData = options.body instanceof FormData;
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
+      // Let the browser set "Content-Type: multipart/form-data; boundary=..."
+      // itself when sending a file — setting it manually breaks the boundary.
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       Accept: "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
@@ -139,17 +142,38 @@ export async function getBranchApi(id) {
   return request(`/branches/${id}`);
 }
 
+function toBranchFormData(branchData) {
+  const formData = new FormData();
+  Object.entries(branchData).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    if (key === "logo") {
+      if (value instanceof File) formData.append("logo", value);
+      return;
+    }
+    if (key === "is_active" || key === "remove_logo") {
+      formData.append(key, value ? "1" : "0");
+      return;
+    }
+    formData.append(key, value);
+  });
+  return formData;
+}
+
 export async function createBranchApi(branchData) {
   return request("/branches", {
     method: "POST",
-    body: JSON.stringify(branchData),
+    body: toBranchFormData(branchData),
   });
 }
 
 export async function updateBranchApi(id, branchData) {
+  // Laravel can't parse multipart bodies on a real PUT request, so we POST
+  // with a _method override, which Laravel treats as a PUT.
+  const formData = toBranchFormData(branchData);
+  formData.append("_method", "PUT");
   return request(`/branches/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(branchData),
+    method: "POST",
+    body: formData,
   });
 }
 

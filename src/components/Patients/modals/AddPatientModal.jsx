@@ -20,7 +20,6 @@ export default function AddPatientModal({ onClose, onAdd }) {
     if (!form.date_of_birth) newErrors.date_of_birth = "Date of birth is required.";
     if (!form.gender) newErrors.gender = "Please select a gender.";
     if (!form.contact.trim()) newErrors.contact = "Contact number is required.";
-    if (!form.email.trim()) newErrors.email = "Email is required.";        // add this
     if (!form.address.trim()) newErrors.address = "Address is required.";
     return newErrors;
   }
@@ -128,13 +127,8 @@ export default function AddPatientModal({ onClose, onAdd }) {
             value={form.email}
             onChange={(e) => handleChange("email", e.target.value)}
             placeholder="patient@example.com"
-            className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
-            errors.email
-              ? "border-red-400 focus:border-red-500 focus:ring-red-500"
-              : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
-            }`}
+            className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
             />
-            {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
           </div>
 
           <div>

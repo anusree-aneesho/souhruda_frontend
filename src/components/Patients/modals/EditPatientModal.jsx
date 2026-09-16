@@ -20,16 +20,15 @@ export default function EditPatientModal({ patient, onClose, onSave }) {
     }
   }
 
-  function validate() {
-    const newErrors = {};
-    if (!form.name.trim()) newErrors.name = "Full name is required.";
-    if (!form.date_of_birth) newErrors.date_of_birth = "Date of birth is required.";
-    if (!form.gender) newErrors.gender = "Please select a gender.";
-    if (!form.contact.trim()) newErrors.contact = "Contact number is required.";
-    if (!form.email.trim()) newErrors.email = "Email is required.";
-    if (!form.address.trim()) newErrors.address = "Address is required.";
-    return newErrors;
-  }
+ function validate() {
+  const newErrors = {};
+  if (!form.name.trim()) newErrors.name = "Full name is required.";
+  if (!form.date_of_birth) newErrors.date_of_birth = "Date of birth is required.";
+  if (!form.gender) newErrors.gender = "Please select a gender.";
+  if (!form.contact.trim()) newErrors.contact = "Contact number is required.";
+  if (!form.address.trim()) newErrors.address = "Address is required.";
+  return newErrors;
+ }
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -126,16 +125,12 @@ export default function EditPatientModal({ patient, onClose, onSave }) {
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-1.5">Email ID</label>
             <input
-              type="email"
-              value={form.email}
-              onChange={(e) => handleChange("email", e.target.value)}
-              className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
-                errors.email
-                  ? "border-red-400 focus:border-red-500 focus:ring-red-500"
-                  : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
-              }`}
+            type="email"
+            value={form.email}
+            onChange={(e) => handleChange("email", e.target.value)}
+            placeholder="patient@example.com"
+            className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
             />
-            {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
           </div>
 
           <div>

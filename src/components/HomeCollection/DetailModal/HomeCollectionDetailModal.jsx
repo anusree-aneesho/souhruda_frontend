@@ -44,6 +44,8 @@ function mapDetail(r) {
     technician: r.technician ? { ...r.technician, location: r.technician.zone, otp: r.debug_otp } : null,
     otpReady: r.otp_ready ?? false,
     otpLocked: r.otp_locked ?? false,
+    assignable: r.assignable ?? true,
+    slotDate: r.slot_date,
     linkedOrderId: r.order_no || null,
     tests: r.tests || [],
   };
@@ -228,9 +230,21 @@ export default function HomeCollectionDetailModal() {
 
             <div className="flex flex-col sm:flex-row items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
               {hc.status === "Requested" && (
-                <button onClick={() => setAssignOpen(true)} className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700">
-                  Assign Technician
-                </button>
+                <>
+                  {!hc.assignable && (
+                    <p className="text-xs text-amber-600 w-full sm:w-auto sm:mr-2">
+                      This is a future-dated request — assigning a technician unlocks on {hc.slotDate}.
+                    </p>
+                  )}
+                  <button
+                    onClick={() => setAssignOpen(true)}
+                    disabled={!hc.assignable}
+                    title={!hc.assignable ? `Available on ${hc.slotDate}` : undefined}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
+                  >
+                    Assign Technician
+                  </button>
+                </>
               )}
 
               {hc.status === "Assigned" && (

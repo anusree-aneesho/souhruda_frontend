@@ -28,19 +28,23 @@ export default function SidebarNavDropdown({ label, icon: Icon, basePath, childr
 
       {isOpen && (
         <div className="mt-1 ml-4 pl-4 border-l border-gray-100 space-y-1">
-          {children.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive ? "bg-teal-50 text-teal-700" : "text-gray-500 hover:bg-gray-100"
-                }`
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
+          {children.map((item) => {
+            const ItemIcon = item.icon;
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive ? "bg-teal-50 text-teal-700" : "text-gray-500 hover:bg-gray-100"
+                  }`
+                }
+              >
+                {ItemIcon && <ItemIcon size={14} />}
+                {item.label}
+              </NavLink>
+            );
+          })}
         </div>
       )}
     </div>

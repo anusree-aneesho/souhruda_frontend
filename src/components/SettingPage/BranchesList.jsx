@@ -1,6 +1,7 @@
 import { useEffect, useImperativeHandle, forwardRef, useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { getBranchesApi, deleteBranchApi } from "../../api/api";
+import { useAuth } from "../../Context/AuthContext";
 import EditBranchModal from "./modals/EditBranchModal";
 
 const BranchesList = forwardRef(function BranchesList(_, ref) {
@@ -8,6 +9,8 @@ const BranchesList = forwardRef(function BranchesList(_, ref) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [editingBranch, setEditingBranch] = useState(null);
+  const { user } = useAuth();
+  const canManageBranches = user?.role === "super_admin";
 
   async function loadBranches() {
     setLoading(true);
@@ -63,22 +66,24 @@ const BranchesList = forwardRef(function BranchesList(_, ref) {
                   <span className="ml-2 text-xs text-gray-400">(inactive)</span>
                 )}
               </span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setEditingBranch(b)}
-                  className="text-gray-400 hover:text-teal-600 p-1 rounded-md hover:bg-gray-50 cursor-pointer"
-                  title="Edit branch"
-                >
-                  <Pencil size={14} />
-                </button>
-                <button
-                  onClick={() => handleDelete(b)}
-                  className="text-gray-400 hover:text-red-600 p-1 rounded-md hover:bg-gray-50 cursor-pointer"
-                  title="Delete branch"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
+              {canManageBranches && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setEditingBranch(b)}
+                    className="text-gray-400 hover:text-teal-600 p-1 rounded-md hover:bg-gray-50 cursor-pointer"
+                    title="Edit branch"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(b)}
+                    className="text-gray-400 hover:text-red-600 p-1 rounded-md hover:bg-gray-50 cursor-pointer"
+                    title="Delete branch"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              )}
             </li>
           ))}
         </ul>

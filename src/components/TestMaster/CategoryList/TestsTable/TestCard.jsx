@@ -1,5 +1,5 @@
 // src/components/TestMaster/TestsTable/TestCard.jsx
-export default function TestCard({ test, onEdit, onRemove, onViewRange }) {
+export default function TestCard({ test, onEdit, onRemove, onViewRange, canManage }) {
   const hasFollowup = test.followupWeeks !== null && test.followupWeeks !== undefined && test.followupWeeks !== "";
 
   return (
@@ -20,14 +20,16 @@ export default function TestCard({ test, onEdit, onRemove, onViewRange }) {
       <p className="text-xs text-gray-500">
         Follow-up: {hasFollowup ? `${test.followupWeeks} week${test.followupWeeks === 1 ? "" : "s"}` : <span className="text-gray-300">Not set</span>}
       </p>
-      <div className="flex items-center gap-4 pt-1">
-        <button onClick={() => onEdit(test)} className="text-sm text-teal-600 font-medium hover:underline cursor-pointer">
-          Edit
-        </button>
-        <button onClick={() => onRemove(test)} className="text-sm text-red-500 font-medium hover:underline cursor-pointer">
-          Remove
-        </button>
-      </div>
+      {canManage && (
+        <div className="flex items-center gap-4 pt-1">
+          <button onClick={() => onEdit(test)} className="text-sm text-teal-600 font-medium hover:underline cursor-pointer">
+            Edit
+          </button>
+          <button onClick={() => onRemove(test)} className="text-sm text-red-500 font-medium hover:underline cursor-pointer">
+            Remove
+          </button>
+        </div>
+      )}
     </div>
   );
 }

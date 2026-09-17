@@ -10,7 +10,8 @@ import {
   LayoutDashboard, ClipboardList, MapPin, FlaskConical,
   Users, Clock, Settings, Wrench, Receipt, UserCog, Package, Beaker,
 } from "lucide-react";
-const navItems = [
+
+const allNavItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
   { label: "Lab Orders", icon: ClipboardList, path: "/lab-orders"},
   { label: "Home Collection", icon: MapPin, path: "/home-collection"},
@@ -27,9 +28,15 @@ const settingsSubItems = [
   { label: "Staff Management", path: "/settings/staff-management", icon: UserCog },
   { label: "Stock", path: "/settings/stock", icon: Package },
 ];
+
 export default function Sidebar() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const isFrontOffice = user?.role === "front_office";
+
+  const navItems = isFrontOffice
+    ? allNavItems.filter((item) => item.path !== "/home-collection")
+    : allNavItems;
 
   function handleLogout() {
     logout();

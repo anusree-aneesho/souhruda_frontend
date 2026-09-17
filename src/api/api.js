@@ -460,3 +460,20 @@ export async function addStaffApi(payload) {
     body: JSON.stringify(payload),
   });
 }
+
+export async function getStaffMembersApi() {
+  return request("/staff-members");
+}
+
+export async function updateStaffMemberApi(id, payload) {
+  return request(`/staff-members/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteStaffMemberApi(id) {
+  return request(`/staff-members/${id}`, {
+    method: "DELETE",
+  });
+}

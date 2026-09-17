@@ -4,6 +4,13 @@
     overflow: visible !important;
   }
 
+  /* Flatten any `position: fixed` ancestor (e.g. a modal overlay) outside
+     the print target, since CSS repeats fixed-position elements on every
+     printed page — this is what was causing the bill to print twice. */
+  *:not(.print-target):not(.print-target *) {
+    position: static !important;
+  }
+
   body * {
     visibility: hidden;
   }
@@ -19,6 +26,13 @@
     top: 0;
     width: 100%;
     margin: 0;
+  }
+
+  /* Collapse layout height of any top-level sibling that doesn't contain
+     the print target, so the hidden app shell (sidebar, other pages)
+     doesn't leave behind invisible height that forces a second page. */
+  body > *:not(.print-target):not(:has(.print-target)) {
+    display: none !important;
   }
 
   .no-print {

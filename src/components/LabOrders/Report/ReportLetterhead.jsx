@@ -1,31 +1,17 @@
 // src/components/LabOrders/Report/ReportLetterhead.jsx
 import { useState, useEffect } from "react";
-import { getSettingsApi, getGstSettingsApi } from "../../../api/api";
+import { getGstSettingsApi } from "../../../api/api";
 
-export default function ReportLetterhead() {
-  const [labInfo, setLabInfo] = useState(null);
+export default function ReportLetterhead({ labInfo }) {
   const [gstInfo, setGstInfo] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const [labRes, gstRes] = await Promise.all([
-          getSettingsApi(),
-          getGstSettingsApi(),
-        ]);
-        setLabInfo(labRes.data);
-        setGstInfo(gstRes.data);
-      } catch (err) {
-        console.error("Failed to load letterhead settings:", err.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
+    getGstSettingsApi()
+      .then((res) => setGstInfo(res.data))
+      .catch((err) => console.error("Failed to load GST settings:", err.message));
   }, []);
 
-  if (loading || !labInfo) {
+  if (!labInfo) {
     return (
       <div className="text-center border-b border-gray-200 pb-4 mb-4">
         <h2 className="text-xl font-bold text-teal-700">Loading...</h2>
@@ -36,24 +22,64 @@ export default function ReportLetterhead() {
   const addressLine = [labInfo.address, labInfo.city, labInfo.state, labInfo.pincode]
     .filter(Boolean)
     .join(", ");
-  const contactLine = [labInfo.phone, labInfo.email].filter(Boolean).join(" · ");
+  const contactLine = [labInfo.phone, labInfo.email].filter(Boolean).join("  ·  ");
   const gstEnabled = gstInfo?.is_gst_registered;
 
   return (
-    <div className="text-center border-b border-gray-200 pb-4 mb-4">
-      <h2 className="text-xl font-bold text-teal-700">{labInfo.lab_name}</h2>
-      {addressLine && <p className="text-xs text-gray-400 mt-1">{addressLine}</p>}
-      {contactLine && <p className="text-xs text-gray-400">{contactLine}</p>}
-      {gstEnabled && (
-        <p className="text-xs text-gray-500 mt-1">
-          GSTIN: <span className="font-medium">{gstInfo.gstin}</span>
-          {gstInfo.legal_business_name && (
-            <span className="text-gray-400"> ({gstInfo.legal_business_name})</span>
+    <div className="mb-4">
+      <div className="flex items-center justify-between px-2 py-3">
+        <div className="flex items-center">
+          {labInfo.logo_path && (
+            <img
+              src={labInfo.logo_path}
+              alt="Logo"
+              className="w-11 h-11 object-contain mr-3"
+            />
           )}
-        </p>
+          <div>
+            <h2 className="text-xl font-extrabold text-gray-900 leading-tight">
+              {labInfo.lab_name}
+            </h2>
+            <p className="text-[9px] uppercase tracking-widest text-gray-400 mt-0.5">
+              Accurate · Caring · Instant
+            </p>
+          </div>
+        </div>
+        <div className="text-right text-[10px] text-gray-600 leading-relaxed">
+          {labInfo.phone && <div>☎ {labInfo.phone}</div>}
+          {labInfo.email && <div>✉ {labInfo.email}</div>}
+        </div>
+      </div>
+
+      {addressLine && (
+        <div className="bg-gray-900 text-gray-200 text-center text-[9px] tracking-wide py-1">
+          {addressLine}
+        </div>
       )}
-      {labInfo.license_no && (
-        <p className="text-xs text-gray-400">Lic. No: {labInfo.license_no}</p>
+
+      <div
+        className="h-[5px]"
+        style={{
+          backgroundImage:
+            "linear-gradient(90deg, #0d9488 0%, #0d9488 60%, #111827 60%, #111827 100%)",
+        }}
+      />
+
+      {(gstEnabled || labInfo.license_no) && (
+        <div className="text-center text-[9.5px] text-gray-500 pt-1">
+          {gstEnabled && (
+            <>
+              GSTIN: <span className="font-semibold text-gray-800">{gstInfo.gstin}</span>
+              {gstInfo.legal_business_name && <span> · {gstInfo.legal_business_name}</span>}
+            </>
+          )}
+          {labInfo.license_no && (
+            <>
+              {gstEnabled && <span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>}
+              Lic. No: {labInfo.license_no}
+            </>
+          )}
+        </div>
       )}
     </div>
   );

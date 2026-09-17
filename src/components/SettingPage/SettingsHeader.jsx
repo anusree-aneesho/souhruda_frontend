@@ -1,4 +1,9 @@
+import { useAuth } from "../../Context/AuthContext";
+
 export default function SettingsHeader({ onAddBranch }) {
+  const { user } = useAuth();
+  const canManageBranches = user?.role === "super_admin";
+
   return (
     <div className="flex items-center justify-between">
       <div>
@@ -7,12 +12,14 @@ export default function SettingsHeader({ onAddBranch }) {
           Basic details used on printed reports and WhatsApp messages.
         </p>
       </div>
-      <button
-        onClick={onAddBranch}
-        className="rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors cursor-pointer"
-      >
-        + Add Branch
-      </button>
+      {canManageBranches && (
+        <button
+          onClick={onAddBranch}
+          className="rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors cursor-pointer"
+        >
+          + Add Branch
+        </button>
+      )}
     </div>
   );
 }

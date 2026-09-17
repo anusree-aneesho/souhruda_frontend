@@ -1,20 +1,33 @@
 // src/components/SettingPage/StaffManagement.jsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Plus, Search } from "lucide-react";
 import AddStaffModal from "./modals/AddStaffModal";
-import { addStaffApi } from "../../api/api";
+import { addStaffApi, getStaffMembersApi, updateStaffMemberApi, deleteStaffMemberApi} from "../../api/api";
 import Toast from "../common/Toast/Toast";
 import { useToast } from "../common/Toast/useToast";
 
-// Placeholder — no real data/API wired up yet.
-const staffMembers = [];
-
 const ROLE_VALUE_MAP = {
-  "Front Officer": "front_office",
+  "Front Office": "front_office",
   "Technician": "technician",
   "Lab Assistant": "lab_assistant",
+  "Admin": "admin",
 };
 
+function mapStaff(s) {
+  return {
+    id: s.id,
+    staffId: s.staff_id,
+    name: s.name,
+    email: s.email,
+    phone: s.phone,
+    role: s.role,
+    branch: s.branch || "-",
+    branch_id: s.branch_id,
+    status: s.status,
+    latitude: s.latitude,
+    longitude: s.longitude,
+  };
+}
 
 function StaffStatusBadge({ status }) {
   const isActive = status === "Active";
@@ -117,7 +130,28 @@ function StaffCard({ staff, onEdit, onRemove }) {
 export default function StaffManagement() {
   const [search, setSearch] = useState("");
   const [modalState, setModalState] = useState(null);
+  const [staffMembers, setStaffMembers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast, showToast, hideToast } = useToast();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getStaffMembersApi()
+      .then((res) => {
+        if (!cancelled) setStaffMembers((res.data || []).map(mapStaff));
+      })
+      .catch(() => {
+        if (!cancelled) setStaffMembers([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredStaff = useMemo(() => {
     return staffMembers.filter(
@@ -127,7 +161,7 @@ export default function StaffManagement() {
         (s.phone ?? "").includes(search) ||
         (s.branch ?? "").toLowerCase().includes(search.toLowerCase())
     );
-  }, [search]);
+  }, [staffMembers, search]);
 
   function handleAddStaff() {
     setModalState({ editingStaff: null });
@@ -143,30 +177,57 @@ export default function StaffManagement() {
       return;
     }
 
-    const payload = {
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      branch_id: formData.branch_id,
-      role: ROLE_VALUE_MAP[formData.role],
-      status: formData.status,
-      latitude: formData.latitude || null,
-      longitude: formData.longitude || null,
-    };
+    const isEdit = Boolean(formData.id);
 
     try {
-      await addStaffApi(payload);
+      if (isEdit) {
+        const payload = {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          branch_id: formData.branch_id,
+          status: formData.status,
+          latitude: formData.latitude || null,
+          longitude: formData.longitude || null,
+        };
+
+        await updateStaffMemberApi(formData.id, payload);
+        showToast(`${formData.name} updated successfully.`);
+      } else {
+        const payload = {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          branch_id: formData.branch_id,
+          role: ROLE_VALUE_MAP[formData.role],
+          status: formData.status,
+          latitude: formData.latitude || null,
+          longitude: formData.longitude || null,
+        };
+
+        await addStaffApi(payload);
+        showToast(`${formData.name} added successfully — credentials emailed.`);
+      }
+
       setModalState(null);
-      showToast(`${formData.name} added successfully — credentials emailed.`);
+      const res = await getStaffMembersApi();
+      setStaffMembers((res.data || []).map(mapStaff));
     } catch (err) {
-      showToast(err.message || "Failed to add staff member.", "error");
+      showToast(err.message || "Failed to save staff member.", "error");
     }
   }
 
-  function handleRemove(staff) {
-    alert(`Remove ${staff.name} — not wired up yet.`);
-  }
+  async function handleRemove(staff) {
+    if (!window.confirm(`Remove ${staff.name}? This can't be undone.`)) return;
 
+    try {
+      await deleteStaffMemberApi(staff.id);
+      setStaffMembers((prev) => prev.filter((s) => s.id !== staff.id));
+      showToast(`${staff.name} removed successfully.`);
+    } catch (err) {
+      showToast(err.message || "Failed to remove staff member.", "error");
+    }
+  }
   return (
     <div className="space-y-6">
       <StaffHeader onAddStaff={handleAddStaff} />
@@ -174,46 +235,53 @@ export default function StaffManagement() {
       <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-5">
         <StaffSearch value={search} onChange={setSearch} />
 
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full min-w-[820px]">
-            <thead>
-              <tr className="text-left border-b border-gray-100">
-                <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">STAFF ID</th>
-                <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">NAME</th>
-                <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">EMAIL</th>
-                <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">PHONE</th>
-                <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">ROLE</th>
-                <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">BRANCH</th>
-                <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">STATUS</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
+        {isLoading ? (
+          <p className="text-sm text-gray-400 text-center py-6">Loading staff...</p>
+        ) : (
+          <>
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full min-w-[820px]">
+                <thead>
+                  <tr className="text-left border-b border-gray-100">
+                    <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">STAFF ID</th>
+                    <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">NAME</th>
+                    <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">EMAIL</th>
+                    <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">PHONE</th>
+                    <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">ROLE</th>
+                    <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">BRANCH</th>
+                    <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">STATUS</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredStaff.map((staff) => (
+                    <StaffRow key={staff.staffId} staff={staff} onEdit={handleEdit} onRemove={handleRemove} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="md:hidden space-y-3">
               {filteredStaff.map((staff) => (
-                <StaffRow key={staff.staffId} staff={staff} onEdit={handleEdit} onRemove={handleRemove} />
+                <StaffCard key={staff.staffId} staff={staff} onEdit={handleEdit} onRemove={handleRemove} />
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
 
-        <div className="md:hidden space-y-3">
-          {filteredStaff.map((staff) => (
-            <StaffCard key={staff.staffId} staff={staff} onEdit={handleEdit} onRemove={handleRemove} />
-          ))}
-        </div>
-
-        {filteredStaff.length === 0 && (
-          <p className="text-sm text-gray-400 text-center py-6">No staff found.</p>
+            {filteredStaff.length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-6">No staff found.</p>
+            )}
+          </>
         )}
       </div>
+
       {modalState && (
         <AddStaffModal
-            editingStaff={modalState.editingStaff}
-            onClose={() => setModalState(null)}
-            onSave={handleSaveStaff}
+          editingStaff={modalState.editingStaff}
+          onClose={() => setModalState(null)}
+          onSave={handleSaveStaff}
         />
       )}
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   );
-}StaffManagement.jsx
+}

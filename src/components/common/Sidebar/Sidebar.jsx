@@ -8,24 +8,24 @@ import { useAuth } from "../../../Context/AuthContext";
 import { LogOut } from "lucide-react";
 import {
   LayoutDashboard, ClipboardList, MapPin, FlaskConical,
-  Users, Clock, Settings, UserCog, Wrench, Beaker,
+  Users, Clock, Settings, Wrench, Receipt, UserCog, Package, Beaker,
 } from "lucide-react";
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
   { label: "Lab Orders", icon: ClipboardList, path: "/lab-orders"},
   { label: "Home Collection", icon: MapPin, path: "/home-collection"},
-  { label: "Front Office", icon: UserCog, path: "/staff" },
+  // { label: "Front Office", icon: UserCog, path: "/staff" },
   { label: "Technicians", icon: Wrench, path: "/technicians" },
-  { label: "Lab Assistant", icon: Beaker, path: "/lab-assistants" },
+  // { label: "Lab Assistant", icon: Beaker, path: "/lab-assistants" },
   { label: "Test Master", icon: FlaskConical, path: "/test-master" },
   { label: "Patients", icon: Users, path: "/patients" },
   { label: "Follow-ups", icon: Clock, path: "/follow-ups" },
 ];
 const settingsSubItems = [
-  { label: "Lab Settings", path: "/settings/lab-settings" },
-  { label: "GST Settings", path: "/settings/gst" },
-  { label: "Staff Management", path: "/settings/staff-management" },
-  { label: "Stock", path: "/settings/stock" },
+  { label: "Lab Settings", path: "/settings/lab-settings", icon: Beaker },
+  { label: "GST Settings", path: "/settings/gst", icon: Receipt },
+  { label: "Staff Management", path: "/settings/staff-management", icon: UserCog },
+  { label: "Stock", path: "/settings/stock", icon: Package },
 ];
 export default function Sidebar() {
   const { logout } = useAuth();

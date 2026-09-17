@@ -1,7 +1,9 @@
 // src/components/common/Sidebar/SidebarLogo.jsx
+import { Link } from "react-router-dom";
+
 export default function SidebarLogo() {
   return (
-    <div className="flex items-center gap-3 px-5 py-6">
+    <Link to="/" className="flex items-center gap-3 px-5 py-6 hover:opacity-80 transition-opacity">
       <div className="h-9 w-9 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-sm">
         SR
       </div>
@@ -9,6 +11,6 @@ export default function SidebarLogo() {
         <p className="font-bold text-sm text-gray-900 leading-tight">SOUHRUDA</p>
         <p className="text-[10px] tracking-wide text-gray-400">LAB OS </p>
       </div>
-    </div>
+    </Link>
   );
 }

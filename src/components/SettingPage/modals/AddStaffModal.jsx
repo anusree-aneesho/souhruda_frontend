@@ -2,8 +2,10 @@
 import { useState, useEffect } from "react";
 import ModalShell from "../../common/Modal/ModalShell";
 import { getBranchesApi } from "../../../api/api";
+import { useAuth } from "../../../Context/AuthContext";
 
-const ROLES = ["Front Office", "Technician", "Lab Assistant"];
+
+const ALL_ROLES = ["Front Office", "Technician", "Lab Assistant", "Admin"];
 
 const NAME_REGEX = /^[A-Za-z\s]+$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -20,7 +22,7 @@ const emptyForm = {
   longitude: "",
 };
 
-function validate(form, isTechnician) {
+function validate(form, isTechnician, isAdmin) {
   const errors = {};
 
   if (!form.name.trim()) {
@@ -68,12 +70,17 @@ function validate(form, isTechnician) {
 }
 
 export default function AddStaffModal({ editingStaff, onClose, onSave }) {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "super_admin";
+  const ROLES = isSuperAdmin ? ALL_ROLES : ALL_ROLES.filter((r) => r !== "Admin");
+
   const [form, setForm] = useState(emptyForm);
   const [branches, setBranches] = useState([]);
   const [isLocating, setIsLocating] = useState(false);
   const [errors, setErrors] = useState({});
   const isEditMode = Boolean(editingStaff);
   const isTechnician = form.role === "Technician";
+  const isAdmin = form.role === "Admin";
 
   useEffect(() => {
     let cancelled = false;
@@ -134,7 +141,7 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
   function handleSubmit(e) {
     e.preventDefault();
 
-    const validationErrors = validate(form, isTechnician);
+    const validationErrors = validate(form, isTechnician, isAdmin);
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
 
@@ -262,12 +269,14 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
               <select
                 value={form.role}
                 onChange={(e) => handleChange("role", e.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                disabled={isEditMode}
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
               >
                 {ROLES.map((r) => (
                   <option key={r}>{r}</option>
                 ))}
               </select>
+              {isEditMode && <p className="text-xs text-gray-400 mt-1">Role can't be changed after creation.</p>}
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1.5">Status</label>

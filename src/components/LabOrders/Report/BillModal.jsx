@@ -37,9 +37,10 @@ export default function BillModal({ orderId, patient, tests, paymentDone, onClos
   const gstAmount = gstEnabled ? (subtotal * gstRate) / 100 : 0;
   const grandTotal = subtotal + gstAmount;
 
-  const invoiceNumber = gstEnabled && gstInfo?.invoice_prefix
-    ? `${gstInfo.invoice_prefix}-${orderId}`
-    : `#${orderId}`;
+  const invoiceNumber =
+    gstEnabled && gstInfo?.invoice_prefix
+      ? `${gstInfo.invoice_prefix}-${orderId}`
+      : `#${orderId}`;
 
   async function handleDownloadBill() {
     setDownloadingBill(true);
@@ -206,7 +207,6 @@ export default function BillModal({ orderId, patient, tests, paymentDone, onClos
     doc.write(html);
     doc.close();
 
-    // Give the iframe a tick to lay out images/fonts before printing.
     iframe.contentWindow.focus();
     setTimeout(() => {
       iframe.contentWindow.print();
@@ -214,18 +214,29 @@ export default function BillModal({ orderId, patient, tests, paymentDone, onClos
   }
 
   return (
-    <ModalShell title={`Bill — Order ${invoiceNumber}`} onClose={onClose} maxWidth="max-w-md">
+    <ModalShell
+      title={`Bill — Order ${invoiceNumber}`}
+      onClose={onClose}
+      maxWidth="max-w-md"
+    >
       <div className="px-6 py-5">
+        {/* ── Letterhead ─────────────────────────────────────── */}
         {!loadingSettings && labInfo && (
           <div className="flex items-start justify-between border-b-[3px] border-teal-600 pb-4 mb-4">
             <div className="flex items-start">
               {labInfo.logo_path && (
-                <img src={labInfo.logo_path} alt="Logo" className="w-12 h-12 object-contain mr-3 rounded" />
+                <img
+                  src={labInfo.logo_path}
+                  alt="Logo"
+                  className="w-12 h-12 object-contain mr-3 rounded"
+                />
               )}
               <div>
                 <h2 className="text-lg font-bold text-gray-900">{labInfo.lab_name}</h2>
                 <p className="text-[10px] text-gray-500 mt-0.5 leading-relaxed">
-                  {[labInfo.address, labInfo.city, labInfo.state, labInfo.pincode].filter(Boolean).join(", ")}
+                  {[labInfo.address, labInfo.city, labInfo.state, labInfo.pincode]
+                    .filter(Boolean)
+                    .join(", ")}
                   <br />
                   {[labInfo.phone, labInfo.email].filter(Boolean).join("  ·  ")}
                 </p>
@@ -238,7 +249,9 @@ export default function BillModal({ orderId, patient, tests, paymentDone, onClos
                   </p>
                 )}
                 {labInfo.license_no && (
-                  <p className="text-[9px] text-gray-400 mt-0.5">Lic. No: {labInfo.license_no}</p>
+                  <p className="text-[9px] text-gray-400 mt-0.5">
+                    Lic. No: {labInfo.license_no}
+                  </p>
                 )}
               </div>
             </div>
@@ -251,9 +264,12 @@ export default function BillModal({ orderId, patient, tests, paymentDone, onClos
           </div>
         )}
 
+        {/* ── Billed To block ────────────────────────────────── */}
         <div className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3 mb-4">
           <div>
-            <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">Billed To</p>
+            <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
+              Billed To
+            </p>
             <p className="text-sm font-semibold text-gray-900">{patient.name}</p>
           </div>
           {paymentDone && (
@@ -264,17 +280,22 @@ export default function BillModal({ orderId, patient, tests, paymentDone, onClos
           )}
         </div>
 
+        {/* ── Items list ─────────────────────────────────────── */}
         <div className="flex items-center justify-between border-b border-gray-100 pb-2 mb-1">
           <span className="text-xs font-medium text-gray-400 tracking-wide">ITEM</span>
           <span className="text-xs font-medium text-gray-400 tracking-wide">AMOUNT</span>
         </div>
         {tests.map((test) => (
-          <div key={test.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+          <div
+            key={test.id}
+            className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
+          >
             <span className="text-sm text-gray-900">{test.name}</span>
             <span className="text-sm text-gray-700">Rs. {test.price.toFixed(2)}</span>
           </div>
         ))}
 
+        {/* ── GST breakdown ──────────────────────────────────── */}
         {gstEnabled && (
           <div className="mt-3 space-y-1">
             <div className="flex items-center justify-between text-sm text-gray-600">
@@ -288,28 +309,43 @@ export default function BillModal({ orderId, patient, tests, paymentDone, onClos
           </div>
         )}
 
+        {/* ── Grand total ────────────────────────────────────── */}
         <div
           className={`flex items-center justify-between rounded-lg px-4 py-3 mt-3 ${
             paymentDone ? "bg-green-50" : "bg-teal-50"
           }`}
         >
-          <span className={`text-sm font-medium ${paymentDone ? "text-green-700" : "text-teal-700"}`}>
+          <span
+            className={`text-sm font-medium ${
+              paymentDone ? "text-green-700" : "text-teal-700"
+            }`}
+          >
             {paymentDone ? "Paid" : "Total payable"}
           </span>
-          <span className={`text-lg font-bold ${paymentDone ? "text-green-700" : "text-teal-700"}`}>
+          <span
+            className={`text-lg font-bold ${
+              paymentDone ? "text-green-700" : "text-teal-700"
+            }`}
+          >
             Rs. {grandTotal.toFixed(2)}
           </span>
         </div>
 
         {labInfo?.footer_note && (
-          <p className="text-[9px] italic text-gray-400 text-center mt-6">{labInfo.footer_note}</p>
+          <p className="text-[9px] italic text-gray-400 text-center mt-6">
+            {labInfo.footer_note}
+          </p>
         )}
       </div>
 
       {downloadError && <p className="text-sm text-red-600 mt-3 px-6">{downloadError}</p>}
 
+      {/* ── Action bar ─────────────────────────────────────── */}
       <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
-        <button onClick={onClose} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
+        <button
+          onClick={onClose}
+          className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+        >
           Close
         </button>
         <button

@@ -1,7 +1,7 @@
 // src/components/HomeCollection/HomeCollectionTable/HomeCollectionTable.jsx
 import HomeCollectionRow from "./HomeCollectionRow";
 
-export default function HomeCollectionTable({ requests }) {
+export default function HomeCollectionTable({ requests, onCancelled }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[860px]">
@@ -15,12 +15,13 @@ export default function HomeCollectionTable({ requests }) {
             <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">PAYMENT</th>
             <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">TECHNICIAN</th>
             <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">STATUS</th>
+            <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">CANCEL</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
           {requests.map((req) => (
-            <HomeCollectionRow key={req.requestId} {...req} />
+            <HomeCollectionRow key={req.requestId} {...req} onCancelled={onCancelled} />
           ))}
         </tbody>
       </table>

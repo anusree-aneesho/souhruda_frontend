@@ -125,7 +125,7 @@ export default function HomeCollection() {
   const term = search.trim().toLowerCase();
   const filteredRequests = term
     ? requests.filter((r) =>
-        [r.requestId, r.patient, r.technician]
+        [r.requestId, r.patient, r.technician, r.status]
           .filter(Boolean)
           .some((field) => field.toLowerCase().includes(term))
       )
@@ -156,7 +156,7 @@ export default function HomeCollection() {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by patient, request ID, or technician..."
+          placeholder="Search by patient, request ID, technician, or status..."
           className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:bg-white transition-colors"
         />
       </div>
@@ -174,11 +174,11 @@ export default function HomeCollection() {
         {!isLoading && !error && pageRequests.length > 0 && (
           <>
             <div className="hidden md:block">
-              <HomeCollectionTable requests={pageRequests} />
+              <HomeCollectionTable requests={pageRequests} onCancelled={load} />
             </div>
             <div className="md:hidden space-y-3">
               {pageRequests.map((req) => (
-                <HomeCollectionCard key={req.requestId} {...req} />
+                <HomeCollectionCard key={req.requestId} {...req} onCancelled={load} />
               ))}
             </div>
 

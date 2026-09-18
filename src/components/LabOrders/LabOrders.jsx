@@ -1,6 +1,7 @@
 // src/components/LabOrders/LabOrders.jsx
 import { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { X } from "lucide-react";
 import LabOrdersHeader from "./LabOrdersHeader";
 import LabOrdersFilters from "./LabOrdersFilters";
 import LabOrdersTable from "./LabOrdersTable/LabOrdersTable";
@@ -34,11 +35,13 @@ export default function LabOrders() {
   const navigate = useNavigate();
   const { toast, showToast, hideToast } = useToast();
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") === "pending" ? "Pending" : "All";
+  const initialToday = searchParams.get("today") === "1";
 
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [isTodayFilter, setIsTodayFilter] = useState(initialToday);
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -63,7 +66,12 @@ export default function LabOrders() {
     setIsLoading(true);
     setLoadError(null);
 
-    getOrdersApi({ status: activeTab, q: search, page })
+    getOrdersApi({
+      today: isTodayFilter ? 1 : undefined,
+      status: activeTab,
+      q: search,
+      page,
+    })
       .then((res) => {
         if (!cancelled) {
           setOrders((res.data || []).map(mapOrder));
@@ -81,12 +89,35 @@ export default function LabOrders() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, search, page]);
+  }, [activeTab, isTodayFilter, search, page]);
 
   // Reset to page 1 whenever the filter or search changes.
   useEffect(() => {
     setPage(1);
-  }, [activeTab, search]);
+  }, [activeTab, isTodayFilter, search]);
+
+  // Clicking any of All / Pending / Completed drops the "Today" filter and
+  // returns to normal tab-driven browsing.
+  function handleTabChange(tab) {
+    setActiveTab(tab);
+    if (isTodayFilter) {
+      setIsTodayFilter(false);
+      if (searchParams.get("today")) {
+        const next = new URLSearchParams(searchParams);
+        next.delete("today");
+        setSearchParams(next, { replace: true });
+      }
+    }
+  }
+
+  function clearTodayFilter() {
+    setIsTodayFilter(false);
+    if (searchParams.get("today")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("today");
+      setSearchParams(next, { replace: true });
+    }
+  }
 
   const filteredOrders = useMemo(() => orders, [orders]);
 
@@ -98,8 +129,8 @@ export default function LabOrders() {
         <LabOrdersFilters
           search={search}
           onSearchChange={setSearch}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
+          activeTab={isTodayFilter ? null : activeTab}
+          onTabChange={handleTabChange}
         />
 
         {loadError && (
@@ -120,7 +151,9 @@ export default function LabOrders() {
             </div>
 
             {filteredOrders.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-6">No orders found.</p>
+              <p className="text-sm text-gray-400 text-center py-6">
+                {isTodayFilter ? "No orders today." : "No orders found."}
+              </p>
             )}
 
             {filteredOrders.length > 0 && lastPage > 1 && (

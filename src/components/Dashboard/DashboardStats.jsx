@@ -83,7 +83,7 @@ export default function DashboardStats() {
       sublabel: `${completedToday} completed`,
       icon: FileText,
       color: "teal",
-      onClick: () => navigate("/lab-orders/today"),
+      onClick: () => navigate("/lab-orders?today=1"),
     },
     {
       label: "Pending Results",
@@ -99,6 +99,7 @@ export default function DashboardStats() {
       sublabel: homeCollectionStat.sublabel,
       icon: MapPin,
       color: "blue",
+      onClick: () => navigate("/home-collection?filter=today"),
     },
     {
       label: "Today's Revenue",

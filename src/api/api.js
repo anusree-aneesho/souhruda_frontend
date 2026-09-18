@@ -392,7 +392,8 @@ export async function createOrderApi(payload) {
 
 export async function getOrdersApi(params = {}) {
   const query = new URLSearchParams();
-  if (params.status && params.status !== "All") query.set("status", params.status);
+  if (params.today) query.set("today", "1");
+  if (!params.today && params.status && params.status !== "All") query.set("status", params.status);
   if (params.q) query.set("q", params.q);
   if (params.page) query.set("page", params.page);
 

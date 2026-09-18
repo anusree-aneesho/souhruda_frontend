@@ -1,6 +1,6 @@
 // src/components/HomeCollection/HomeCollection.jsx
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Search, X } from "lucide-react";
 import HomeCollectionHeader from "./HomeCollectionHeader";
 import HomeCollectionStats from "./HomeCollectionStats";
@@ -35,6 +35,13 @@ function formatDate(dateStr) {
   });
 }
 
+// Local (browser) calendar date as YYYY-MM-DD — matches DashboardStats.jsx's
+// todayLocalDate(), avoiding a UTC day-off-by-one near midnight.
+function todayLocalDate() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 // Backend already returns requests newest-first (`->latest()`), so no
 // re-sorting is needed here — just cap and paginate what comes in.
 const MAX_DISPLAYED = 50;
@@ -47,6 +54,7 @@ function mapRequest(r) {
     tests: r.tests?.length || 0,
     distance: r.distance_km != null ? `${r.distance_km} km` : "—",
     date: formatDate(r.slot_date),
+    slotDateRaw: r.slot_date,
     slot: r.slot_label,
     payment: formatPayment(r.payment_mode),
     technician: r.technician?.name || "Unassigned",
@@ -97,6 +105,10 @@ export default function HomeCollection() {
   const { toast, showToast, hideToast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [dateFilter, setDateFilter] = useState(
+    searchParams.get("filter") === "today" ? "today" : null
+  );
   const { activeId } = useHomeCollectionModal();
   const prevActiveIdRef = useRef(null);
 
@@ -146,6 +158,7 @@ export default function HomeCollection() {
   const requests = rawRequests.map(mapRequest);
   const counts = computeCounts(rawRequests);
 
+  const today = todayLocalDate();
   const term = search.trim().toLowerCase();
   const filteredRequests = requests.filter((r) => {
     const matchesSearch =
@@ -154,13 +167,24 @@ export default function HomeCollection() {
         .filter(Boolean)
         .some((field) => field.toLowerCase().includes(term));
     const matchesStatus = !statusFilter || r.bucket === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesDate = !dateFilter || r.slotDateRaw === today;
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   // Clicking an already-active stat card clears the filter back to "All".
   function handleFilterChange(key) {
     setStatusFilter((prev) => (prev === key ? null : key));
     setPage(1);
+  }
+
+  function clearDateFilter() {
+    setDateFilter(null);
+    setPage(1);
+    if (searchParams.get("filter")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("filter");
+      setSearchParams(next, { replace: true });
+    }
   }
 
   // Newest-first, capped to the latest 50, 8 per page.
@@ -172,11 +196,12 @@ export default function HomeCollection() {
     safePage * PAGE_SIZE
   );
 
-  // Any time the search term changes, start back at page 1 — otherwise a
-  // narrower result set can leave the user stranded on a now-empty page.
+  // Any time the search term or date filter changes, start back at page 1 —
+  // otherwise a narrower result set can leave the user stranded on a
+  // now-empty page.
   useEffect(() => {
     setPage(1);
-  }, [search]);
+  }, [search, dateFilter]);
 
   return (
     <div className="space-y-6">
@@ -203,6 +228,16 @@ export default function HomeCollection() {
             <X size={14} />
           </button>
         )}
+
+        {dateFilter && (
+          <button
+            onClick={clearDateFilter}
+            className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-700 text-xs font-medium pl-3 pr-2 py-1.5 hover:bg-teal-100"
+          >
+            Showing: Today
+            <X size={14} />
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-4">
@@ -213,13 +248,18 @@ export default function HomeCollection() {
         )}
         {!isLoading && !error && requests.length > 0 && filteredRequests.length === 0 && (
           <p className="text-sm text-gray-400">
-            {term && statusFilter
+            {term && (statusFilter || dateFilter)
               ? `No requests match "${search}" in this category.`
               : term
               ? `No requests match "${search}".`
               : "No requests in this category."}{" "}
             {statusFilter && (
               <button onClick={() => setStatusFilter(null)} className="text-teal-600 font-medium hover:underline">
+                Clear filter
+              </button>
+            )}
+            {dateFilter && (
+              <button onClick={clearDateFilter} className="text-teal-600 font-medium hover:underline">
                 Clear filter
               </button>
             )}

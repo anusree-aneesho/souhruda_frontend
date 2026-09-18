@@ -1,8 +1,9 @@
 // src/components/common/Modal/ModalShell.jsx
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 export default function ModalShell({ title, onClose, children, maxWidth = "max-w-lg" }) {
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-16 overflow-y-auto"
       onClick={onClose}
@@ -22,6 +23,7 @@ export default function ModalShell({ title, onClose, children, maxWidth = "max-w
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

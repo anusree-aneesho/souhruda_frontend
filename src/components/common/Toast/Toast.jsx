@@ -1,5 +1,6 @@
 // src/components/common/Toast/Toast.jsx
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { CheckCircle, XCircle } from "lucide-react";
 
 export default function Toast({ message, type = "success", onClose }) {
@@ -11,7 +12,7 @@ export default function Toast({ message, type = "success", onClose }) {
 
   const isSuccess = type === "success";
 
-  return (
+  return createPortal(
     <div
       className={`fixed bottom-24 right-6 z-50 flex items-center gap-2 rounded-lg px-4 py-3 shadow-lg text-sm font-medium text-white ${
         isSuccess ? "bg-teal-600" : "bg-red-500"
@@ -19,7 +20,8 @@ export default function Toast({ message, type = "success", onClose }) {
     >
       {isSuccess ? <CheckCircle size={18} /> : <XCircle size={18} />}
       {message}
-    </div>
+    </div>,
+    document.body
   );
 
 }

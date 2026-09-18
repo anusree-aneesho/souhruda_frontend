@@ -7,6 +7,8 @@ import HomeCollectionStats from "./HomeCollectionStats";
 import HomeCollectionTable from "./HomeCollectionTable/HomeCollectionTable";
 import HomeCollectionCard from "./HomeCollectionTable/HomeCollectionCard";
 import Pagination from "../common/Pagination";
+import Toast from "../common/Toast/Toast";
+import { useToast } from "../common/Toast/useToast";
 import { getHomeCollectionRequestsApi } from "../../api/api";
 import { useHomeCollectionModal } from "../../Context/HomeCollectionModalContext";
 
@@ -73,6 +75,7 @@ export default function HomeCollection() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const { toast, showToast, hideToast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
   const { activeId } = useHomeCollectionModal();
@@ -99,12 +102,14 @@ export default function HomeCollection() {
   // without the user having to manually reload the page.
   useEffect(() => {
     if (location.state?.justBooked) {
+      const { hc_code, patient } = location.state.justBooked;
       load();
+      showToast(`${hc_code || "Request"} booked for ${patient?.name || "patient"}`);
       // Clear the state so a later back-navigation or manual refresh to
       // this page doesn't keep re-triggering a refetch on stale state.
       navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location.state, location.pathname, navigate, load]);
+  }, [location.state, location.pathname, navigate, load, showToast]);
 
   // The detail modal (Assign Technician, Confirm Collected, Mark
   // Processing, Send WhatsApp, etc.) lives globally via
@@ -192,6 +197,8 @@ export default function HomeCollection() {
           </>
         )}
       </div>
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   );
 }

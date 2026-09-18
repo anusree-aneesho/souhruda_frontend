@@ -2,6 +2,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ModalShell from "../../common/Modal/ModalShell";
+import ConfirmModal from "../../Patients/modals/ConfirmModal";
+import AlertModal from "../../common/Modal/AlertModal";
+import Toast from "../../common/Toast/Toast";
+import { useToast } from "../../common/Toast/useToast";
 import StatusStepper from "./StatusStepper";
 import RequestInfoBar from "./RequestInfoBar";
 import TestsList from "./TestsList";
@@ -62,6 +66,9 @@ export default function HomeCollectionDetailModal() {
   const [isAssignOpen, setAssignOpen] = useState(false);
   const [isLabelOpen, setLabelOpen] = useState(false);
   const [otpInput, setOtpInput] = useState("");
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [cancelError, setCancelError] = useState(null);
+  const { toast, showToast, hideToast } = useToast();
 
   useEffect(() => {
     if (!activeId) {
@@ -101,17 +108,19 @@ export default function HomeCollectionDetailModal() {
   setBaseHc(mapDetail(updated));
   setLocalHc(null);
   setAssignOpen(false);
+  showToast(`${updated.hc_code} assigned to ${updated.technician?.name || "technician"}`);
 }
 
   async function handleCancel() {
-    if (!window.confirm(`Cancel request ${hc.id}? This can't be undone.`)) return;
+    setConfirmingCancel(false);
 
     try {
       const updated = await updateHomeCollectionStatusApi(hc.id, "cancelled");
       setBaseHc(mapDetail(updated));
       setLocalHc(null);
+      showToast(`${hc.id} cancelled for ${hc.patient?.name || "patient"}`);
     } catch (err) {
-      alert(err.message || "Couldn't cancel this request.");
+      setCancelError(err.message || "Couldn't cancel this request.");
     }
   }
   async function handleMarkEnRoute() {
@@ -119,6 +128,7 @@ export default function HomeCollectionDetailModal() {
     const updated = await updateHomeCollectionStatusApi(hc.id, "en_route");
     setBaseHc(mapDetail(updated));
     setLocalHc(null);
+    showToast(`${hc.id} marked En Route`);
   } catch (err) {
     alert(err.message || "Couldn't update status.");
   }
@@ -135,6 +145,7 @@ export default function HomeCollectionDetailModal() {
     setBaseHc(mapDetail(updated));
     setLocalHc(null);
     setOtpInput("");
+    showToast(`${hc.id} marked Collected`);
   } catch (err) {
     alert(err.message || "Couldn't confirm sample collection.");
   }
@@ -145,6 +156,7 @@ export default function HomeCollectionDetailModal() {
       const updated = await updateHomeCollectionStatusApi(hc.id, "processing");
       setBaseHc(mapDetail(updated));
       setLocalHc(null);
+      showToast(`${hc.id} marked Processing`);
     } catch (err) {
       alert(err.message || "Couldn't mark this as processing.");
     }
@@ -175,7 +187,7 @@ export default function HomeCollectionDetailModal() {
       const updated = await updateHomeCollectionStatusApi(hc.id, "sent");
       setBaseHc(mapDetail(updated));
       setLocalHc(null);
-      alert(`Report sent to ${hc.patient.name} via WhatsApp.`);
+      showToast(`Report sent to ${hc.patient.name} via WhatsApp`);
     } catch (err) {
       alert(err.message || "Couldn't send the report.");
     }
@@ -249,7 +261,7 @@ export default function HomeCollectionDetailModal() {
                     </p>
                   )}
                   <button
-                    onClick={handleCancel}
+                    onClick={() => setConfirmingCancel(true)}
                     className="w-full sm:w-auto px-4 py-2.5 rounded-lg border border-red-200 text-sm font-medium text-red-600 hover:bg-red-50"
                   >
                     Cancel Request
@@ -332,6 +344,24 @@ export default function HomeCollectionDetailModal() {
 {isLabelOpen && hc && (
   <PrintLabelModal hc={hc} onClose={() => setLabelOpen(false)} />
 )}
+
+{confirmingCancel && (
+  <ConfirmModal
+    title="Cancel Request"
+    message={`Cancel request ${hc?.id}? This can't be undone.`}
+    confirmLabel="Cancel Request"
+    cancelLabel="Keep Request"
+    danger
+    onConfirm={handleCancel}
+    onClose={() => setConfirmingCancel(false)}
+  />
+)}
+
+{cancelError && (
+  <AlertModal title="Couldn't Cancel" message={cancelError} onClose={() => setCancelError(null)} />
+)}
+
+{toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </>
   );
 }

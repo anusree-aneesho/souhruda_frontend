@@ -2,6 +2,10 @@
 import { useState } from "react";
 import { useHomeCollectionModal } from "../../../Context/HomeCollectionModalContext";
 import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
+import ConfirmModal from "../../Patients/modals/ConfirmModal";
+import AlertModal from "../../common/Modal/AlertModal";
+import Toast from "../../common/Toast/Toast";
+import { useToast } from "../../common/Toast/useToast";
 import { updateHomeCollectionStatusApi } from "../../../api/api";
 
 export default function HomeCollectionRow({ requestId, patient, tests, distance, date, slot, payment, technician, status, onCancelled }) {
@@ -12,21 +16,30 @@ export default function HomeCollectionRow({ requestId, patient, tests, distance,
   };
    const { open } = useHomeCollectionModal();
    const [isCancelling, setIsCancelling] = useState(false);
+   const [confirmingCancel, setConfirmingCancel] = useState(false);
+   const [cancelError, setCancelError] = useState(null);
+   const { toast, showToast, hideToast } = useToast();
 
    // A technician can only be assigned to a request that's still
    // "Requested" — once that happens (Assigned, En Route, ...) the request
    // is no longer cancellable, so the button stays disabled from then on.
    const canCancel = status === "Requested";
 
-   async function handleCancel() {
-     if (!window.confirm(`Cancel request ${requestId}? This can't be undone.`)) return;
-
+   async function confirmCancel() {
+     setConfirmingCancel(false);
      setIsCancelling(true);
      try {
        await updateHomeCollectionStatusApi(requestId, "cancelled");
        onCancelled?.();
+       showToast(`${requestId} cancelled for ${patient}`);
      } catch (err) {
-       alert(err.message || "Couldn't cancel this request.");
+       setCancelError(err.message || "Couldn't cancel this request.");
+     } finally {
+       // Reset regardless of outcome — on success the row re-renders with
+       // status "Cancelled" (via onCancelled's refetch) and the button
+       // disables itself from that, but this component instance stays
+       // mounted (same requestId key), so without this reset it would keep
+       // showing "Cancelling…" forever instead of picking up the new state.
        setIsCancelling(false);
      }
    }
@@ -52,7 +65,7 @@ export default function HomeCollectionRow({ requestId, patient, tests, distance,
       </td>
       <td className="py-3">
         <button
-          onClick={handleCancel}
+          onClick={() => setConfirmingCancel(true)}
           disabled={!canCancel || isCancelling}
           title={canCancel ? undefined : "A technician has already been assigned — this request can no longer be cancelled."}
           className="text-xs font-medium text-red-600 hover:underline disabled:text-gray-300 disabled:cursor-not-allowed disabled:no-underline"
@@ -65,6 +78,24 @@ export default function HomeCollectionRow({ requestId, patient, tests, distance,
           Open →
         </button>
       </td>
+
+      {confirmingCancel && (
+        <ConfirmModal
+          title="Cancel Request"
+          message={`Cancel request ${requestId}? This can't be undone.`}
+          confirmLabel="Cancel Request"
+          cancelLabel="Keep Request"
+          danger
+          onConfirm={confirmCancel}
+          onClose={() => setConfirmingCancel(false)}
+        />
+      )}
+
+      {cancelError && (
+        <AlertModal title="Couldn't Cancel" message={cancelError} onClose={() => setCancelError(null)} />
+      )}
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </tr>
   );
 }

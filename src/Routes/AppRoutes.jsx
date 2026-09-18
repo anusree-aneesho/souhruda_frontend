@@ -21,6 +21,7 @@ import { Navigate } from "react-router-dom";
 import GstSettings from "../components/SettingPage/GstSettings";
 import StaffManagement from "../components/SettingPage/StaffManagement";
 import Stock from "../components/SettingPage/Stock";
+import TodaysOrders from "../components/LabOrders/TodaysOrders";
 
 export default function AppRoutes() {
   return (
@@ -32,6 +33,7 @@ export default function AppRoutes() {
         <Route element={<MainLayout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/lab-orders" element={<LabOrders/>} />
+          <Route path="/lab-orders/today" element={<TodaysOrders />} /> 
           <Route path="/home-collection" element={<HomeCollection />} />
           <Route path="/staff" element={<Staff />} />
           <Route path="/technicians" element={<Technicians />} />

@@ -1,6 +1,6 @@
 // src/components/LabOrders/LabOrders.jsx
 import { useState, useEffect, useMemo } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import LabOrdersHeader from "./LabOrdersHeader";
 import LabOrdersFilters from "./LabOrdersFilters";
 import LabOrdersTable from "./LabOrdersTable/LabOrdersTable";
@@ -33,8 +33,12 @@ export default function LabOrders() {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast, showToast, hideToast } = useToast();
+
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") === "pending" ? "Pending" : "All";
+
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState("All");
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -120,7 +124,7 @@ export default function LabOrders() {
             )}
 
             {filteredOrders.length > 0 && lastPage > 1 && (
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center justify-between !mt-2">
                 <p className="text-sm text-gray-500">
                   Page {page} of {lastPage} · {total} orders
                 </p>

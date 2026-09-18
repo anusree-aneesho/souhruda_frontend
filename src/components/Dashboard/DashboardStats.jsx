@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import StatCard from "../common/StatCard";
 import { FileText, Clock, MapPin, IndianRupee } from "lucide-react";
 import { getOrdersApi, getHomeCollectionRequestsApi } from "../../api/api";
+import { useNavigate } from "react-router-dom";
 
 // Local (browser) calendar date as YYYY-MM-DD — NOT toISOString(), which
 // gives UTC's date and can be a day off from IST near midnight.
@@ -18,6 +19,7 @@ function toLocalDateString(dateInput) {
 }
 
 export default function DashboardStats() {
+  const navigate = useNavigate();
   const [todaysOrders, setTodaysOrders] = useState([]);
   const [pendingTotal, setPendingTotal] = useState(0);
   const [homeCollectionStat, setHomeCollectionStat] = useState({
@@ -81,6 +83,7 @@ export default function DashboardStats() {
       sublabel: `${completedToday} completed`,
       icon: FileText,
       color: "teal",
+      onClick: () => navigate("/lab-orders/today"),
     },
     {
       label: "Pending Results",
@@ -88,6 +91,7 @@ export default function DashboardStats() {
       sublabel: "needs attention",
       icon: Clock,
       color: "amber",
+      onClick: () => navigate("/lab-orders?tab=pending"),
     },
     {
       label: "Home Collections",
@@ -108,7 +112,13 @@ export default function DashboardStats() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {stats.map((stat) => (
-        <StatCard key={stat.label} {...stat} />
+        <div
+          key={stat.label}
+          className={stat.onClick ? "cursor-pointer" : ""}
+          onClick={stat.onClick}
+        >
+          <StatCard {...stat} />
+        </div>
       ))}
     </div>
   );

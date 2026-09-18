@@ -1,25 +1,37 @@
 // src/components/TestMaster/TestsTable/TestsTable.jsx
-import { useState, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Plus, Search } from "lucide-react";
 import TestRow from "./TestRow";
 import TestCard from "./TestCard";
 import DemographicRangeModal from "../../modals/DemographicRangeModal";
 import { useAuth } from "../../../../Context/AuthContext";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 11;
 
 export default function TestsTable({ categoryName, tests, onAddTest, onEditTest, onRemoveTest }) {
   const [viewingTest, setViewingTest] = useState(null);
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
   const { user } = useAuth();
   const canManage = user?.role !== "front_office";
 
   useEffect(() => {
     setPage(1);
+    setSearch("");
   }, [categoryName]);
 
-  const lastPage = Math.max(1, Math.ceil(tests.length / PAGE_SIZE));
-  const pageTests = tests.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const filteredTests = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return tests;
+    return tests.filter((t) => t.name.toLowerCase().includes(q));
+  }, [tests, search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  const lastPage = Math.max(1, Math.ceil(filteredTests.length / PAGE_SIZE));
+  const pageTests = filteredTests.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
@@ -36,11 +48,28 @@ export default function TestsTable({ categoryName, tests, onAddTest, onEditTest,
         )}
       </div>
 
+      {tests.length > 4 && (
+        <div className="relative mb-4">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search tests..."
+            className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+          />
+        </div>
+      )}
+
       {tests.length === 0 && (
         <p className="text-sm text-gray-400 text-center py-8">No tests in this category yet.</p>
       )}
 
-      {tests.length > 0 && (
+      {tests.length > 0 && filteredTests.length === 0 && (
+        <p className="text-sm text-gray-400 text-center py-8">No tests match your search.</p>
+      )}
+
+      {filteredTests.length > 0 && (
         <>
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full min-w-[500px]">
@@ -85,7 +114,7 @@ export default function TestsTable({ categoryName, tests, onAddTest, onEditTest,
           {lastPage > 1 && (
             <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-100">
               <p className="text-sm text-gray-500">
-                Page {page} of {lastPage} · {tests.length} tests
+                Page {page} of {lastPage} · {filteredTests.length} tests
               </p>
               <div className="flex gap-2">
                 <button

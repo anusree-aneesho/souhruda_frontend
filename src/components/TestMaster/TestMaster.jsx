@@ -9,6 +9,7 @@ import {
   getTestCategories,
   getLabTests,
   createTestCategory,
+  updateTestCategory,
   createLabTest,
   updateLabTest,
   deleteLabTest,
@@ -24,6 +25,7 @@ export default function TestMaster() {
 
   const [isCategoryModalOpen, setCategoryModalOpen] = useState(false);
   const [testModalState, setTestModalState] = useState(null);
+  const [editingCategory, setEditingCategory] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -96,6 +98,43 @@ export default function TestMaster() {
       setTestsByCategory((prev) => ({ ...prev, [created.name]: [] }));
       setActiveCategory(created.name);
       setCategoryModalOpen(false);
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  async function handleEditCategory(id, newName) {
+    if (categories.some((c) => c.id !== id && c.name.toLowerCase() === newName.toLowerCase())) {
+      alert("A category with this name already exists.");
+      return;
+    }
+
+    try {
+      const res = await updateTestCategory(id, { name: newName });
+      const updated = res.data;
+      const oldCategory = categories.find((c) => c.id === id);
+
+      setCategories((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, name: updated.name } : c))
+      );
+
+      // The tests map is keyed by category name, so renaming means moving
+      // that category's tests under the new key.
+      if (oldCategory && oldCategory.name !== updated.name) {
+        setTestsByCategory((prev) => {
+          const updatedMap = { ...prev };
+          updatedMap[updated.name] = updatedMap[oldCategory.name] || [];
+          delete updatedMap[oldCategory.name];
+          return updatedMap;
+        });
+
+        if (activeCategory === oldCategory.name) {
+          setActiveCategory(updated.name);
+        }
+      }
+
+      setCategoryModalOpen(false);
+      setEditingCategory(null);
     } catch (err) {
       alert(err.message);
     }
@@ -199,6 +238,10 @@ export default function TestMaster() {
           categories={categoriesWithCount}
           activeCategory={activeCategory}
           onSelect={setActiveCategory}
+          onEditCategory={(cat) => {
+            setEditingCategory(cat);
+            setCategoryModalOpen(true);
+          }}
         />
         <TestsTable
           categoryName={activeCategory}
@@ -211,8 +254,13 @@ export default function TestMaster() {
 
       {isCategoryModalOpen && (
         <AddCategoryModal
-          onClose={() => setCategoryModalOpen(false)}
+          editingCategory={editingCategory}
+          onClose={() => {
+            setCategoryModalOpen(false);
+            setEditingCategory(null);
+          }}
           onAdd={handleAddCategory}
+          onEdit={handleEditCategory}
         />
       )}
 

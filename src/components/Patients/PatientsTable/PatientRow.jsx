@@ -1,7 +1,12 @@
+// src/components/Patients/PatientsTable/PatientRow.jsx
 import { useOrderModal } from "../../../Context/OrderModalContext";
+import { useAuth } from "../../../Context/AuthContext";
 
 export default function PatientRow({ id, regNo, name, age, gender, contact, orders, onView, onEdit, onDelete }) {
   const { open } = useOrderModal();
+  const { user } = useAuth();
+  const canBookTests = user?.role !== "front_office";
+
   return (
     <tr className="border-b border-gray-100 last:border-0">
       <td className="py-3 text-sm text-gray-500">{regNo}</td>
@@ -21,14 +26,18 @@ export default function PatientRow({ id, regNo, name, age, gender, contact, orde
         <button onClick={() => onDelete(id)} className="text-sm text-red-600 font-medium hover:underline cursor-pointer">
           Remove
         </button>
-        <span className="text-gray-300">·</span>
-        <button onClick={() => open("order", regNo)} className="text-sm text-teal-600 font-medium hover:underline cursor-pointer">
-          Book test →
-        </button>
-        <span className="text-gray-300">·</span>
-        <button onClick={() => open("homeCollection", regNo)} className="text-sm text-teal-600 font-medium hover:underline cursor-pointer">
-          Home collection →
-        </button>
+        {canBookTests && (
+          <>
+            <span className="text-gray-300">·</span>
+            <button onClick={() => open("order", regNo)} className="text-sm text-teal-600 font-medium hover:underline cursor-pointer">
+              Book test →
+            </button>
+            <span className="text-gray-300">·</span>
+            <button onClick={() => open("homeCollection", regNo)} className="text-sm text-teal-600 font-medium hover:underline cursor-pointer">
+              Home collection →
+            </button>
+          </>
+        )}
       </td>
     </tr>
   );

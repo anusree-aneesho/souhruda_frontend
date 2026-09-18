@@ -102,7 +102,7 @@ export default function LabOrders() {
             )}
 
             {filteredOrders.length > 0 && lastPage > 1 && (
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center justify-between !mt-2">
                 <p className="text-sm text-gray-500">
                   Page {page} of {lastPage} · {total} orders
                 </p>

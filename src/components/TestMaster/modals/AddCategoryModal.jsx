@@ -1,19 +1,29 @@
 // src/components/TestMaster/modals/AddCategoryModal.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ModalShell from "../../common/Modal/ModalShell";
 
-export default function AddCategoryModal({ onClose, onAdd }) {
+export default function AddCategoryModal({ editingCategory, onClose, onAdd, onEdit }) {
   const [name, setName] = useState("");
+  const isEditMode = Boolean(editingCategory);
+
+  useEffect(() => {
+    setName(editingCategory ? editingCategory.name : "");
+  }, [editingCategory]);
 
   function handleSubmit(e) {
     e.preventDefault();
     if (!name.trim()) return;
-    onAdd(name.trim());
+
+    if (isEditMode) {
+      onEdit(editingCategory.id, name.trim());
+    } else {
+      onAdd(name.trim());
+    }
     setName("");
   }
 
   return (
-    <ModalShell title="New Category" onClose={onClose} maxWidth="max-w-md ">
+    <ModalShell title={isEditMode ? "Edit Category" : "New Category"} onClose={onClose} maxWidth="max-w-md ">
       <form onSubmit={handleSubmit}>
         <div className="px-6 py-5">
           <label className="block text-sm font-semibold text-gray-900 mb-1.5">
@@ -39,7 +49,7 @@ export default function AddCategoryModal({ onClose, onAdd }) {
             type="submit"
             className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer"
           >
-            Add Category
+            {isEditMode ? "Save Changes" : "Add Category"}
           </button>
         </div>
       </form>

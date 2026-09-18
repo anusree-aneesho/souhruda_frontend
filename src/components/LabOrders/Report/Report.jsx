@@ -161,7 +161,7 @@ export default function Report() {
       ? `
     <div class="header">
         <div class="lab-block">
-            ${logoUrl ? `<img class="logo" src="${logoUrl}" alt="Logo" crossorigin="anonymous">` : ""}
+            ${logoUrl ? `<img class="logo" src="${logoUrl}" alt="Logo">` : ""}
             <div>
                 <div class="lab-name">${labInfo.lab_name}</div>
                 <div class="tagline">Accurate · Caring · Instant</div>

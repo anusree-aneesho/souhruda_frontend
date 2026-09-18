@@ -1,7 +1,7 @@
 // src/components/HomeCollection/HomeCollection.jsx
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import HomeCollectionHeader from "./HomeCollectionHeader";
 import HomeCollectionStats from "./HomeCollectionStats";
 import HomeCollectionTable from "./HomeCollectionTable/HomeCollectionTable";
@@ -51,18 +51,36 @@ function mapRequest(r) {
     payment: formatPayment(r.payment_mode),
     technician: r.technician?.name || "Unassigned",
     status: formatStatus(r.status),
+    // Which stat card this row belongs to, so clicking a card can filter
+    // the table by the same grouping the counts already use — null for
+    // anything not shown on a card (e.g. cancelled).
+    bucket: bucketStatus(r.status),
   };
 }
 
+// Same 4 buckets as the stat cards, for the "Showing: X" chip's label.
+const FILTER_LABELS = {
+  requested: "Requested",
+  inProgress: "In Progress",
+  reportReady: "Report Ready",
+  sentToPatient: "Sent to Patient",
+};
+
 // Bucket the raw statuses into the four summary cards
-function computeCounts(rows) {
+function bucketStatus(status) {
   const inProgressStatuses = ["assigned", "en_route", "collected", "processing"];
+  if (status === "requested") return "requested";
+  if (inProgressStatuses.includes(status)) return "inProgress";
+  if (status === "report_ready") return "reportReady";
+  if (status === "sent") return "sentToPatient";
+  return null; // cancelled, or anything else — excluded from the stat cards
+}
+
+function computeCounts(rows) {
   return rows.reduce(
     (acc, r) => {
-      if (r.status === "requested") acc.requested += 1;
-      else if (inProgressStatuses.includes(r.status)) acc.inProgress += 1;
-      else if (r.status === "report_ready") acc.reportReady += 1;
-      else if (r.status === "sent") acc.sentToPatient += 1;
+      const bucket = bucketStatus(r.status);
+      if (bucket) acc[bucket] += 1;
       return acc;
     },
     { requested: 0, inProgress: 0, reportReady: 0, sentToPatient: 0 }
@@ -75,6 +93,7 @@ export default function HomeCollection() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState(null);
   const { toast, showToast, hideToast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
@@ -128,13 +147,21 @@ export default function HomeCollection() {
   const counts = computeCounts(rawRequests);
 
   const term = search.trim().toLowerCase();
-  const filteredRequests = term
-    ? requests.filter((r) =>
-        [r.requestId, r.patient, r.technician, r.status]
-          .filter(Boolean)
-          .some((field) => field.toLowerCase().includes(term))
-      )
-    : requests;
+  const filteredRequests = requests.filter((r) => {
+    const matchesSearch =
+      !term ||
+      [r.requestId, r.patient, r.technician, r.status]
+        .filter(Boolean)
+        .some((field) => field.toLowerCase().includes(term));
+    const matchesStatus = !statusFilter || r.bucket === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  // Clicking an already-active stat card clears the filter back to "All".
+  function handleFilterChange(key) {
+    setStatusFilter((prev) => (prev === key ? null : key));
+    setPage(1);
+  }
 
   // Newest-first, capped to the latest 50, 8 per page.
   const displayedRequests = filteredRequests.slice(0, MAX_DISPLAYED);
@@ -154,16 +181,28 @@ export default function HomeCollection() {
   return (
     <div className="space-y-6">
       <HomeCollectionHeader />
-      <HomeCollectionStats counts={counts} />
+      <HomeCollectionStats counts={counts} activeFilter={statusFilter} onFilterChange={handleFilterChange} />
 
-      <div className="relative w-full sm:w-80">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by patient, request ID, technician, or status..."
-          className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:bg-white transition-colors"
-        />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-full sm:w-80">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by patient, request ID, technician, or status..."
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:bg-white transition-colors"
+          />
+        </div>
+
+        {statusFilter && (
+          <button
+            onClick={() => setStatusFilter(null)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-700 text-xs font-medium pl-3 pr-2 py-1.5 hover:bg-teal-100"
+          >
+            Showing: {FILTER_LABELS[statusFilter]}
+            <X size={14} />
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-4">
@@ -173,7 +212,18 @@ export default function HomeCollection() {
           <p className="text-sm text-gray-400">No home collection requests yet.</p>
         )}
         {!isLoading && !error && requests.length > 0 && filteredRequests.length === 0 && (
-          <p className="text-sm text-gray-400">No requests match "{search}".</p>
+          <p className="text-sm text-gray-400">
+            {term && statusFilter
+              ? `No requests match "${search}" in this category.`
+              : term
+              ? `No requests match "${search}".`
+              : "No requests in this category."}{" "}
+            {statusFilter && (
+              <button onClick={() => setStatusFilter(null)} className="text-teal-600 font-medium hover:underline">
+                Clear filter
+              </button>
+            )}
+          </p>
         )}
 
         {!isLoading && !error && pageRequests.length > 0 && (

@@ -216,6 +216,10 @@ export default function OrderDetail() {
         <AlertModal title="Couldn't Delete" message={deleteError} onClose={() => setDeleteError(null)} />
       )}
 
+      {saveError && (
+        <AlertModal title="Couldn't Save" message={saveError} onClose={() => setSaveError(null)} />
+      )}
+
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   );

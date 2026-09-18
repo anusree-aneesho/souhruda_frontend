@@ -1,9 +1,12 @@
 // src/components/LabOrders/LabOrders.jsx
 import { useState, useEffect, useMemo } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import LabOrdersHeader from "./LabOrdersHeader";
 import LabOrdersFilters from "./LabOrdersFilters";
 import LabOrdersTable from "./LabOrdersTable/LabOrdersTable";
 import LabOrderCard from "./LabOrdersTable/LabOrderCard";
+import Toast from "../common/Toast/Toast";
+import { useToast } from "../common/Toast/useToast";
 import { getOrdersApi } from "../../api/api";
 
 function capitalize(str) {
@@ -27,6 +30,9 @@ function mapOrder(o) {
 }
 
 export default function LabOrders() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { toast, showToast, hideToast } = useToast();
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("All");
   const [orders, setOrders] = useState([]);
@@ -35,6 +41,18 @@ export default function LabOrders() {
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [total, setTotal] = useState(0);
+
+  // OrderDetail navigates here with { justDeleted: { orderId, patientName } }
+  // right after a successful order deletion — same pattern as the justBooked
+  // / justCreated toasts elsewhere. Refetch so the removed order actually
+  // disappears from the list, and clear the state afterward.
+  useEffect(() => {
+    if (location.state?.justDeleted) {
+      const { orderId, patientName } = location.state.justDeleted;
+      showToast(`Order #${orderId} deleted for ${patientName || "patient"}`);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, navigate, showToast]);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,7 +120,7 @@ export default function LabOrders() {
             )}
 
             {filteredOrders.length > 0 && lastPage > 1 && (
-              <div className="flex items-center justify-between !mt-2">
+              <div className="flex items-center justify-between pt-2">
                 <p className="text-sm text-gray-500">
                   Page {page} of {lastPage} · {total} orders
                 </p>
@@ -127,6 +145,8 @@ export default function LabOrders() {
           </>
         )}
       </div>
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   );
 }

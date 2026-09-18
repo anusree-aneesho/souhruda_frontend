@@ -1,9 +1,13 @@
 // src/components/LabOrders/OrderDetail/OrderDetail.jsx
 import { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import OrderDetailHeader from "./OrderDetailHeader";
 import ResultsTable from "./ResultsTable";
 import ResultInsights from "./ResultInsights";
+import Toast from "../../common/Toast/Toast";
+import { useToast } from "../../common/Toast/useToast";
+import ConfirmModal from "../../Patients/modals/ConfirmModal";
+import AlertModal from "../../common/Modal/AlertModal";
 import { getOrderApi, saveOrderResultsApi, completeOrderApi, deleteOrderApi } from "../../../api/api";
 import { calculateFlag } from "../../../utils/calculateFlag";
 
@@ -43,6 +47,8 @@ function mapOrder(o) {
 export default function OrderDetail() {
   const { orderId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { toast, showToast, hideToast } = useToast();
 
   const [order, setOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,6 +56,19 @@ export default function OrderDetail() {
   const [results, setResults] = useState({});
   const [savingAction, setSavingAction] = useState(null); 
   const [saveError, setSaveError] = useState(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
+
+  // NewOrderModal navigates here with { justCreated: true, patient } right
+  // after "Create Order" succeeds — same pattern as Home Collection's
+  // justBooked. Show the confirmation once, then clear the state so a
+  // later back-navigation or manual refresh doesn't re-fire it.
+  useEffect(() => {
+    if (location.state?.justCreated) {
+      showToast(`Order #${orderId} created for ${location.state.patient?.name || "patient"}`);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, navigate, orderId, showToast]);
 
   useEffect(() => {
     let cancelled = false;
@@ -149,14 +168,13 @@ export default function OrderDetail() {
   }
 
   async function handleDelete() {
-    const confirmed = window.confirm("Delete this order? This cannot be undone from here.");
-    if (!confirmed) return;
+    setConfirmingDelete(false);
 
     try {
       await deleteOrderApi(orderId);
-      navigate("/lab-orders");
+      navigate("/lab-orders", { state: { justDeleted: { orderId, patientName: patient.name } } });
     } catch (err) {
-      setSaveError(err.message);
+      setDeleteError(err.message || "Couldn't delete this order.");
     }
   }
 
@@ -169,7 +187,7 @@ export default function OrderDetail() {
         age={patient.age}
         gender={patient.gender}
         orderedAt={orderedAt}
-        onDelete={handleDelete}
+        onDelete={() => setConfirmingDelete(true)}
       />
       <ResultsTable
         tests={tests}
@@ -181,6 +199,24 @@ export default function OrderDetail() {
         savingAction={savingAction}
       />
       <ResultInsights tests={tests} flags={flags} />
+
+      {confirmingDelete && (
+        <ConfirmModal
+          title="Cancel Order"
+          message="Delete this order? This cannot be undone from here."
+          confirmLabel="Delete Order"
+          cancelLabel="Keep Order"
+          danger
+          onConfirm={handleDelete}
+          onClose={() => setConfirmingDelete(false)}
+        />
+      )}
+
+      {deleteError && (
+        <AlertModal title="Couldn't Delete" message={deleteError} onClose={() => setDeleteError(null)} />
+      )}
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   );
 }

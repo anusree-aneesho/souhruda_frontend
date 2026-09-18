@@ -335,7 +335,7 @@ export default function NewOrderModal() {
 
       resetAndClose();
       navigate(`/lab-orders/${order.order_no}`, {
-        state: { patient: currentPatient, tests: selectedTests, orderedAt: order.ordered_at, paymentDone },
+        state: { patient: currentPatient, tests: selectedTests, orderedAt: order.ordered_at, paymentDone, justCreated: true },
       });
     } catch (err) {
       setSubmitError(err.message);

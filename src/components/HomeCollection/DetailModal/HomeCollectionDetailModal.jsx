@@ -102,6 +102,18 @@ export default function HomeCollectionDetailModal() {
   setLocalHc(null);
   setAssignOpen(false);
 }
+
+  async function handleCancel() {
+    if (!window.confirm(`Cancel request ${hc.id}? This can't be undone.`)) return;
+
+    try {
+      const updated = await updateHomeCollectionStatusApi(hc.id, "cancelled");
+      setBaseHc(mapDetail(updated));
+      setLocalHc(null);
+    } catch (err) {
+      alert(err.message || "Couldn't cancel this request.");
+    }
+  }
   async function handleMarkEnRoute() {
   try {
     const updated = await updateHomeCollectionStatusApi(hc.id, "en_route");
@@ -236,6 +248,12 @@ export default function HomeCollectionDetailModal() {
                       This is a future-dated request — assigning a technician unlocks on {hc.slotDate}.
                     </p>
                   )}
+                  <button
+                    onClick={handleCancel}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-lg border border-red-200 text-sm font-medium text-red-600 hover:bg-red-50"
+                  >
+                    Cancel Request
+                  </button>
                   <button
                     onClick={() => setAssignOpen(true)}
                     disabled={!hc.assignable}

@@ -25,14 +25,14 @@ export default function PatientViewModal({ patient, onClose }) {
           <ReadOnlyField label="Contact" value={patient.contact} />
         </div>
 
-        {patient.gender === "female" && (
-          <ReadOnlyField
-            label="Pregnant"
-            value={patient.isPregnant ? "Yes" : "No"}
-          />
-        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {patient.gender === "female" && (
+              <ReadOnlyField label="Pregnant" value={patient.isPregnant ? "Yes" : "No"} />
+             )}
+            <ReadOnlyField label="Reg. No" value={patient.regNo} />
+        </div>
 
-        <ReadOnlyField label="Reg. No" value={patient.regNo} />
+        
         <ReadOnlyField label="Email ID" value={patient.email} />
         <ReadOnlyField label="Address" value={patient.address} />
       </div>

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import CategoryItem from "./CategoryItem";
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 12;
 
 export default function CategoryList({ categories, activeCategory, onSelect }) {
   const [page, setPage] = useState(1);

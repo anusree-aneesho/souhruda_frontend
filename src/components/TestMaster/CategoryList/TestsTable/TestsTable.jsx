@@ -4,14 +4,16 @@ import { Plus } from "lucide-react";
 import TestRow from "./TestRow";
 import TestCard from "./TestCard";
 import DemographicRangeModal from "../../modals/DemographicRangeModal";
+import { useAuth } from "../../../../Context/AuthContext";
 
 const PAGE_SIZE = 12;
 
 export default function TestsTable({ categoryName, tests, onAddTest, onEditTest, onRemoveTest }) {
   const [viewingTest, setViewingTest] = useState(null);
   const [page, setPage] = useState(1);
+  const { user } = useAuth();
+  const canManage = user?.role !== "front_office";
 
-  // Reset to page 1 whenever the selected category changes.
   useEffect(() => {
     setPage(1);
   }, [categoryName]);
@@ -23,13 +25,15 @@ export default function TestsTable({ categoryName, tests, onAddTest, onEditTest,
     <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-sm text-gray-900">{categoryName} Tests</h3>
-        <button
-          onClick={onAddTest}
-          className="flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-700 transition-colors cursor-pointer"
-        >
-          <Plus size={14} />
-          Add Test
-        </button>
+        {canManage && (
+          <button
+            onClick={onAddTest}
+            className="flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-700 transition-colors cursor-pointer"
+          >
+            <Plus size={14} />
+            Add Test
+          </button>
+        )}
       </div>
 
       {tests.length === 0 && (
@@ -58,6 +62,7 @@ export default function TestsTable({ categoryName, tests, onAddTest, onEditTest,
                     onEdit={onEditTest}
                     onRemove={onRemoveTest}
                     onViewRange={setViewingTest}
+                    canManage={canManage}
                   />
                 ))}
               </tbody>
@@ -72,6 +77,7 @@ export default function TestsTable({ categoryName, tests, onAddTest, onEditTest,
                 onEdit={onEditTest}
                 onRemove={onRemoveTest}
                 onViewRange={setViewingTest}
+                canManage={canManage}
               />
             ))}
           </div>

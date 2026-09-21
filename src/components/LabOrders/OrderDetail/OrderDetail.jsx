@@ -10,6 +10,7 @@ import ConfirmModal from "../../Patients/modals/ConfirmModal";
 import AlertModal from "../../common/Modal/AlertModal";
 import { getOrderApi, saveOrderResultsApi, completeOrderApi, deleteOrderApi } from "../../../api/api";
 import { calculateFlag } from "../../../utils/calculateFlag";
+import ConfirmCompleteOrderModal from "./ConfirmCompleteOrderModal";
 
 function mapOrder(o) {
   return {
@@ -58,6 +59,8 @@ export default function OrderDetail() {
   const [saveError, setSaveError] = useState(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
+
+  const [confirmingComplete, setConfirmingComplete] = useState(false);
 
   // NewOrderModal navigates here with { justCreated: true, patient } right
   // after "Create Order" succeeds — same pattern as Home Collection's
@@ -190,15 +193,30 @@ export default function OrderDetail() {
         onDelete={() => setConfirmingDelete(true)}
       />
       <ResultsTable
-        tests={tests}
-        results={results}
-        flags={flags}
-        onResultChange={handleResultChange}
-        onSaveClose={handleSaveClose}
-        onMarkCompleted={handleMarkCompleted}
-        savingAction={savingAction}
+      tests={tests}
+      results={results}
+      flags={flags}
+      onResultChange={handleResultChange}
+      onSaveClose={handleSaveClose}
+      onMarkCompleted={() => setConfirmingComplete(true)}
+      savingAction={savingAction}
       />
       <ResultInsights tests={tests} flags={flags} />
+
+      {confirmingComplete && (
+        <ConfirmCompleteOrderModal
+          tests={tests}
+          results={results}
+          flags={flags}
+          onResultChange={handleResultChange}
+          isSaving={savingAction === "complete"}
+          onConfirm={async () => {
+          await handleMarkCompleted();
+          setConfirmingComplete(false);
+          }}
+         onClose={() => setConfirmingComplete(false)}
+        />
+      )}
 
       {confirmingDelete && (
         <ConfirmModal

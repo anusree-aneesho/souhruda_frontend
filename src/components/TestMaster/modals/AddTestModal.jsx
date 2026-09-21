@@ -1,5 +1,6 @@
 // src/components/TestMaster/modals/AddTestModal.jsx
 import { useState, useEffect } from "react";
+import { X, Plus } from "lucide-react";
 import ModalShell from "../../common/Modal/ModalShell";
 import { DEMOGRAPHIC_GROUPS } from "../../../data/demographicGroups";
 
@@ -25,9 +26,25 @@ const emptyForm = {
 // range parser interprets range_raw.
 const RANGE_FORMAT_REGEX = /^(-?\d+(\.\d+)?\s*-\s*-?\d+(\.\d+)?|[<>]\s*-?\d+(\.\d+)?|[A-Za-z][A-Za-z\s]*)$/;
 
-function validate(form) {
+let customRowIdCounter = 0;
+function nextCustomRowId() {
+  customRowIdCounter += 1;
+  return customRowIdCounter;
+}
+
+// Any key in demographicRanges that isn't one of the fixed groups is a
+// custom one someone added — pull those out so they can be edited as their
+// own labeled rows instead of disappearing into the fixed list.
+function extractCustomRows(demographicRanges) {
+  return Object.entries(demographicRanges || {})
+    .filter(([key]) => !DEMOGRAPHIC_GROUPS.includes(key))
+    .map(([label, value]) => ({ id: nextCustomRowId(), label, value }));
+}
+
+function validate(form, customRows) {
   const errors = {};
   const demographicErrors = {};
+  const customRowErrors = {};
 
   if (!form.category) {
     errors.category = "Select a category.";
@@ -78,29 +95,56 @@ function validate(form) {
     }
   }
 
-  const filledRanges = Object.entries(form.demographicRanges).filter(([, v]) => v.trim() !== "");
+  const filledFixedRanges = Object.entries(form.demographicRanges).filter(([, v]) => v.trim() !== "");
+  const filledCustomRows = customRows.filter((row) => row.value.trim() !== "" || row.label.trim() !== "");
 
-  if (filledRanges.length === 0) {
+  if (filledFixedRanges.length === 0 && filledCustomRows.length === 0) {
     errors.demographicRanges = "Enter a range for at least one demographic group.";
   }
 
-  filledRanges.forEach(([group, value]) => {
+  filledFixedRanges.forEach(([group, value]) => {
     if (!RANGE_FORMAT_REGEX.test(value.trim())) {
       demographicErrors[group] = "Use a format like \"70-100\", \"<200\", \">40\", or \"Negative\".";
     }
   });
 
-  return { errors, demographicErrors };
+  const seenCustomLabels = new Set();
+  filledCustomRows.forEach((row) => {
+    const label = row.label.trim();
+    const value = row.value.trim();
+    if (!label) {
+      customRowErrors[row.id] = "Give this group a name.";
+      return;
+    }
+    if (DEMOGRAPHIC_GROUPS.includes(label) || seenCustomLabels.has(label.toLowerCase())) {
+      customRowErrors[row.id] = "That group name is already used.";
+      return;
+    }
+    seenCustomLabels.add(label.toLowerCase());
+    if (!value) {
+      customRowErrors[row.id] = "Enter a range for this group.";
+    } else if (!RANGE_FORMAT_REGEX.test(value)) {
+      customRowErrors[row.id] = "Use a format like \"70-100\", \"<200\", \">40\", or \"Negative\".";
+    }
+  });
+
+  return { errors, demographicErrors, customRowErrors };
 }
 
 export default function AddTestModal({ categories, defaultCategory, editingTest, onClose, onSave }) {
   const [form, setForm] = useState(emptyForm);
+  const [customRows, setCustomRows] = useState([]);
   const [errors, setErrors] = useState({});
   const [demographicErrors, setDemographicErrors] = useState({});
+  const [customRowErrors, setCustomRowErrors] = useState({});
   const isEditMode = Boolean(editingTest);
 
   useEffect(() => {
     if (editingTest) {
+      const ranges = editingTest.demographicRanges || {};
+      const fixedRanges = Object.fromEntries(
+        Object.entries(ranges).filter(([key]) => DEMOGRAPHIC_GROUPS.includes(key))
+      );
       setForm({
         category: editingTest.category,
         name: editingTest.name,
@@ -110,14 +154,16 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
         criticalHigh: editingTest.criticalHigh ?? "",
         followupWeeks: editingTest.followupWeeks ?? "",
         criteria: editingTest.criteria || "",
-        demographicRanges: { ...emptyDemographicRanges, ...(editingTest.demographicRanges || {}) },
+        demographicRanges: { ...emptyDemographicRanges, ...fixedRanges },
       });
+      setCustomRows(extractCustomRows(ranges));
     } else {
       setForm({ ...emptyForm, demographicRanges: { ...emptyDemographicRanges } });
-      // setForm({ ...emptyForm, demographicRanges: { ...emptyDemographicRanges }, category: defaultCategory });
+      setCustomRows([]);
     }
     setErrors({});
     setDemographicErrors({});
+    setCustomRowErrors({});
   }, [editingTest, defaultCategory]);
 
   function handleChange(field, value) {
@@ -134,16 +180,56 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
     setDemographicErrors((prev) => ({ ...prev, [group]: undefined }));
   }
 
+  function handleAddCustomRow() {
+    setCustomRows((prev) => [...prev, { id: nextCustomRowId(), label: "", value: "" }]);
+  }
+
+  function handleCustomRowChange(id, field, value) {
+    setCustomRows((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
+    setErrors((prev) => ({ ...prev, demographicRanges: undefined }));
+    setCustomRowErrors((prev) => ({ ...prev, [id]: undefined }));
+  }
+
+  function handleRemoveCustomRow(id, label) {
+    const displayName = label?.trim() || "this custom group";
+    if (!window.confirm(`Delete "${displayName}"? This range will be permanently removed when you save.`)) {
+      return;
+    }
+    setCustomRows((prev) => prev.filter((row) => row.id !== id));
+    setCustomRowErrors((prev) => ({ ...prev, [id]: undefined }));
+  }
+
   function handleSubmit(e) {
     e.preventDefault();
 
-    const { errors: validationErrors, demographicErrors: validationDemographicErrors } = validate(form);
+    const { errors: validationErrors, demographicErrors: validationDemographicErrors, customRowErrors: validationCustomRowErrors } =
+      validate(form, customRows);
     setErrors(validationErrors);
     setDemographicErrors(validationDemographicErrors);
-    if (Object.keys(validationErrors).length > 0 || Object.keys(validationDemographicErrors).length > 0) return;
+    setCustomRowErrors(validationCustomRowErrors);
+    if (
+      Object.keys(validationErrors).length > 0 ||
+      Object.keys(validationDemographicErrors).length > 0 ||
+      Object.keys(validationCustomRowErrors).length > 0
+    ) {
+      return;
+    }
+
+    // Merge fixed + custom groups into one flat object — the backend
+    // already stores this as a single key-value structure, so it doesn't
+    // need to know which keys are "built-in" vs custom.
+    const mergedDemographicRanges = { ...form.demographicRanges };
+    customRows.forEach((row) => {
+      const label = row.label.trim();
+      const value = row.value.trim();
+      if (label && value) {
+        mergedDemographicRanges[label] = value;
+      }
+    });
 
     onSave({
       ...form,
+      demographicRanges: mergedDemographicRanges,
       price: parseFloat(form.price) || 0,
       criticalLow: form.criticalLow === "" ? null : parseFloat(form.criticalLow),
       criticalHigh: form.criticalHigh === "" ? null : parseFloat(form.criticalHigh),
@@ -281,6 +367,45 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
                 {demographicErrors[group] && <p className="text-xs text-red-500 mt-1">{demographicErrors[group]}</p>}
               </div>
             ))}
+
+            {/* Custom, user-defined groups beyond the fixed list above.
+                Stored in the same demographicRanges object as everything
+                else — the backend doesn't need to distinguish them. */}
+            {customRows.map((row) => (
+              <div key={row.id} className="border border-gray-100 rounded-lg p-3 space-y-2 bg-gray-50/50">
+                <div className="flex items-center gap-2">
+                  <input
+                    value={row.label}
+                    onChange={(e) => handleCustomRowChange(row.id, "label", e.target.value)}
+                    placeholder="Group name, e.g. Pregnant Women"
+                    className={`${inputClass(customRowErrors[row.id])} text-xs font-medium`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveCustomRow(row.id, row.label)}
+                    className="shrink-0 text-gray-400 hover:text-red-500 p-1"
+                    aria-label="Remove this custom group"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <input
+                  value={row.value}
+                  onChange={(e) => handleCustomRowChange(row.id, "value", e.target.value)}
+                  placeholder="e.g. 70-100, <200, or Negative"
+                  className={inputClass(customRowErrors[row.id])}
+                />
+                {customRowErrors[row.id] && <p className="text-xs text-red-500">{customRowErrors[row.id]}</p>}
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={handleAddCustomRow}
+              className="flex items-center gap-1.5 text-sm font-medium text-teal-600 hover:text-teal-700 cursor-pointer"
+            >
+              <Plus size={16} /> Add custom group
+            </button>
           </div>
         </div>
 

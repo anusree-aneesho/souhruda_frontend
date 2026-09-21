@@ -297,6 +297,34 @@ export function deleteLabTest(id) {
   });
 }
 
+// ── Test Package ───────────────────────────────────────────────
+
+export function getTestPackages() {
+  return request("/test-packages", {
+    method: "GET",
+  });
+}
+
+export function createTestPackage(payload) {
+  return request("/test-packages", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateTestPackage(id, payload) {
+  return request(`/test-packages/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteTestPackage(id) {
+  return request(`/test-packages/${id}`, {
+    method: "DELETE",
+  });
+}
+
 // ── Front Officer ──────────────────────────────
 
 export async function getFrontOfficersApi() {

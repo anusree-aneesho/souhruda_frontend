@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import FormField from "./FormField";
 import { getSettingsApi, updateSettingsApi } from "../../../api/api";
+import { useAuth } from "../../../Context/AuthContext";
 
 function validate(formData) {
   const errors = {};
@@ -40,6 +41,14 @@ export default function SettingsForm() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const { user } = useAuth();
+
+  const role = String(user?.role ?? "")
+    .toLowerCase()
+    .trim()
+    .replace(/[\s-]+/g, "_");
+
+  const canEdit = ["admin", "super_admin", "superadmin"].includes(role);
 
   useEffect(() => {
     async function loadSettings() {
@@ -83,6 +92,8 @@ export default function SettingsForm() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!canEdit) return;
+
     setError("");
     setSuccess(false);
 
@@ -126,6 +137,7 @@ export default function SettingsForm() {
   if (!formData) return <p className="text-sm text-red-500">{error || "Unable to load settings."}</p>;
 
   return (
+    <fieldset disabled={!canEdit} className={`min-w-0 border-0 p-0 mb-6 ${!canEdit ? "opacity-70" : ""}`}>
     <form
       onSubmit={handleSubmit}
       className="bg-white rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)] max-w-2xl space-y-5"
@@ -188,13 +200,16 @@ export default function SettingsForm() {
         <FormField label="Free Radius (km)" name="freeRadius" type="number" value={formData.freeRadius} onChange={handleChange} error={fieldErrors.freeRadius} />
       </div>
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors disabled:opacity-50 cursor-pointer"
-      >
-        {saving ? "Saving..." : "Save Settings"}
-      </button>
+      {canEdit && (
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors disabled:opacity-50 cursor-pointer"
+        >
+          {saving ? "Saving..." : "Save Settings"}
+        </button>
+      )}
     </form>
+    </fieldset>
   );
 }

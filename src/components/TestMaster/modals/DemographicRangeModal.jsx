@@ -5,6 +5,12 @@ import { DEMOGRAPHIC_GROUPS } from "../../../data/demographicGroups";
 export default function DemographicRangeModal({ test, onClose }) {
   const ranges = test?.demographicRanges || {};
 
+  // Anything not in the fixed list is a custom group someone added via
+  // "+ Add custom group" in the Add/Edit Test modal.
+  const customGroupEntries = Object.entries(ranges).filter(
+    ([key]) => !DEMOGRAPHIC_GROUPS.includes(key)
+  );
+
   const hasCriticalLow = test?.criticalLow !== null && test?.criticalLow !== undefined && test?.criticalLow !== "";
   const hasCriticalHigh = test?.criticalHigh !== null && test?.criticalHigh !== undefined && test?.criticalHigh !== "";
 
@@ -45,6 +51,12 @@ export default function DemographicRangeModal({ test, onClose }) {
                 <span className="text-sm text-amber-600 text-right">
                   {ranges[group] ? ranges[group] : <span className="text-gray-300">Not set</span>}
                 </span>
+              </div>
+            ))}
+            {customGroupEntries.map(([label, value]) => (
+              <div key={label} className="flex items-center justify-between gap-4 px-4 py-3 bg-gray-50/50">
+                <span className="text-sm font-medium text-gray-900">{label}</span>
+                <span className="text-sm text-amber-600 text-right">{value}</span>
               </div>
             ))}
           </div>

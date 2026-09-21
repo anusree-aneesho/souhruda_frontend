@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import FormField from "./SettingsForm/FormField";
 import { getGstSettingsApi, updateGstSettingsApi } from "../../api/api";
+import { useAuth } from "../../Context/AuthContext";
 
 function validate(formData) {
   const errors = {};
@@ -28,6 +29,14 @@ export default function GstSettings() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const { user } = useAuth();
+
+  const role = String(user?.role ?? "")
+    .toLowerCase()
+    .trim()
+    .replace(/[\s-]+/g, "_");
+
+  const canEdit = ["admin", "super_admin", "superadmin"].includes(role);
 
   useEffect(() => {
     async function load() {
@@ -66,6 +75,8 @@ export default function GstSettings() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!canEdit) return;
+
     setError("");
     setSuccess(false);
 
@@ -141,93 +152,101 @@ export default function GstSettings() {
           </p>
         )}
 
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="gst-registered"
-            checked={formData.isGstRegistered}
-            onChange={handleToggle}
-            className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
-          />
-          <label htmlFor="gst-registered" className="text-sm font-medium text-gray-900">
-            This branch is GST-registered
-          </label>
-        </div>
-
-        {formData.isGstRegistered && (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <FormField
-                label="GSTIN"
-                name="gstin"
-                value={formData.gstin}
-                onChange={handleChange}
-                placeholder="15-digit GSTIN (e.g. 32AAAAA0000A1Z5)"
-                error={fieldErrors.gstin}
-              />
-              <FormField
-                label="Legal Business Name"
-                name="legalBusinessName"
-                value={formData.legalBusinessName}
-                onChange={handleChange}
-                placeholder="e.g. Souhruda Diagnostics Pvt Ltd"
-                error={fieldErrors.legalBusinessName}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-              <FormField
-                label="GST Rate (%)"
-                name="gstRate"
-                type="number"
-                value={formData.gstRate}
-                onChange={handleChange}
-                placeholder="e.g. 18"
-                error={fieldErrors.gstRate}
-              />
-              <FormField
-                label="SAC Code"
-                name="sacCode"
-                value={formData.sacCode}
-                onChange={handleChange}
-                placeholder="e.g. 999316"
-              />
-              <FormField
-                label="Invoice Prefix"
-                name="invoicePrefix"
-                value={formData.invoicePrefix}
-                onChange={handleChange}
-                placeholder="e.g. INV"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <FormField
-                label="State"
-                name="state"
-                value={formData.state}
-                onChange={handleChange}
-                placeholder="e.g. Kerala"
-              />
-              <FormField
-                label="State Code"
-                name="stateCode"
-                value={formData.stateCode}
-                onChange={handleChange}
-                placeholder="e.g. 32 for Kerala"
-                error={fieldErrors.stateCode}
-              />
-            </div>
-          </>
-        )}
-
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors disabled:opacity-50 cursor-pointer"
+        <fieldset
+          disabled={!canEdit}
+          className={`space-y-5 min-w-0 border-0 p-0 m-0 ${!canEdit ? "opacity-70" : ""}`}
         >
-          {saving ? "Saving..." : "Save GST Settings"}
-        </button>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="gst-registered"
+              checked={formData.isGstRegistered}
+              onChange={handleToggle}
+              className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+            />
+            <label htmlFor="gst-registered" className="text-sm font-medium text-gray-900">
+              This branch is GST-registered
+            </label>
+          </div>
+
+          {formData.isGstRegistered && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <FormField
+                  label="GSTIN"
+                  name="gstin"
+                  value={formData.gstin}
+                  onChange={handleChange}
+                  placeholder="15-digit GSTIN (e.g. 32AAAAA0000A1Z5)"
+                  error={fieldErrors.gstin}
+                />
+                <FormField
+                  label="Legal Business Name"
+                  name="legalBusinessName"
+                  value={formData.legalBusinessName}
+                  onChange={handleChange}
+                  placeholder="e.g. Souhruda Diagnostics Pvt Ltd"
+                  error={fieldErrors.legalBusinessName}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <FormField
+                  label="GST Rate (%)"
+                  name="gstRate"
+                  type="number"
+                  value={formData.gstRate}
+                  onChange={handleChange}
+                  placeholder="e.g. 18"
+                  error={fieldErrors.gstRate}
+                />
+                <FormField
+                  label="SAC Code"
+                  name="sacCode"
+                  value={formData.sacCode}
+                  onChange={handleChange}
+                  placeholder="e.g. 999316"
+                />
+                <FormField
+                  label="Invoice Prefix"
+                  name="invoicePrefix"
+                  value={formData.invoicePrefix}
+                  onChange={handleChange}
+                  placeholder="e.g. INV"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <FormField
+                  label="State"
+                  name="state"
+                  value={formData.state}
+                  onChange={handleChange}
+                  placeholder="e.g. Kerala"
+                />
+                <FormField
+                  label="State Code"
+                  name="stateCode"
+                  value={formData.stateCode}
+                  onChange={handleChange}
+                  placeholder="e.g. 32 for Kerala"
+                  error={fieldErrors.stateCode}
+                />
+              </div>
+            </>
+          )}
+
+          {canEdit && (
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {saving ? "Saving..." : "Save GST Settings"}
+            </button>
+          )}
+
+        </fieldset>
       </form>
     </div>
   );

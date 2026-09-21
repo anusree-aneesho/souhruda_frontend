@@ -3,7 +3,7 @@ import { Star } from "lucide-react";
 import CurrentStatusBadge from "./CurrentStatusBadge";
 import AccountStatusBadge from "./AccountStatusBadge";
 
-export default function TechnicianRow({ technician, onEdit, onRemove }) {
+export default function TechnicianRow({ technician, onEdit, onRemove, canManage = false }) {
   const { techId, name, phone, zone, rating, status, assignedJobs, currentStatus } = technician;
   return (
     <tr className="border-b border-gray-100 last:border-0">
@@ -24,14 +24,16 @@ export default function TechnicianRow({ technician, onEdit, onRemove }) {
       <td className="py-3 text-sm">
         <AccountStatusBadge status={status} />
       </td>
-      <td className="py-3 text-right space-x-3 whitespace-nowrap">
-        <button onClick={() => onEdit(technician)} className="text-sm text-teal-600 font-medium hover:underline cursor-pointer">
-          Edit
-        </button>
-        <button onClick={() => onRemove(technician)} className="text-sm text-red-500 font-medium hover:underline cursor-pointer">
-          Remove
-        </button>
-      </td>
+      {canManage && (
+        <td className="py-3 text-right space-x-3 whitespace-nowrap">
+          <button onClick={() => onEdit(technician)} className="text-sm text-teal-600 font-medium hover:underline cursor-pointer">
+            Edit
+          </button>
+          <button onClick={() => onRemove(technician)} className="text-sm text-red-500 font-medium hover:underline cursor-pointer">
+            Remove
+          </button>
+        </td>
+      )}
     </tr>
   );
 }

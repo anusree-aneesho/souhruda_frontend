@@ -1,5 +1,5 @@
 // src/Routes/AppRoutes.jsx
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "../layouts/Mainlayout";
 import ProtectedRoute from "./ProtectedRoute";
 import Login from "../components/Auth/Login";
@@ -18,11 +18,11 @@ import OrderDetail from "../components/LabOrders/OrderDetail/OrderDetail";
 import Report from "../components/LabOrders/Report/Report";
 import ActivityLogPage from "../components/Dashboard/ActivityLogPage";
 import ResetPassword from "../components/Auth/ResetPassword";
-import { Navigate } from "react-router-dom";
 import GstSettings from "../components/SettingPage/GstSettings";
 import StaffManagement from "../components/SettingPage/StaffManagement";
 import TestConfiguration from "../components/SettingPage/TestConfiguration/TestConfiguration";
 import Stock from "../components/SettingPage/Stock";
+import RequireRole from "../components/common/RequireRole";
 
 export default function AppRoutes() {
   return (
@@ -33,7 +33,7 @@ export default function AppRoutes() {
       <Route element={<ProtectedRoute />}>
         <Route element={<MainLayout />}>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/lab-orders" element={<LabOrders/>} />
+          <Route path="/lab-orders" element={<LabOrders />} />
           <Route path="/home-collection" element={<HomeCollection />} />
           <Route path="/staff" element={<Staff />} />
           <Route path="/technicians" element={<Technicians />} />
@@ -45,11 +45,29 @@ export default function AppRoutes() {
           <Route path="/lab-orders/:orderId" element={<OrderDetail />} />
           <Route path="/lab-orders/:orderId/report" element={<Report />} />
           <Route path="/activity-logs" element={<ActivityLogPage />} />
-          <Route path="/settings" element={<Navigate to="/settings/lab-settings" replace />} />
+
+          <Route
+            path="/settings"
+            element={<Navigate to="/settings/lab-settings" replace />}
+          />
+
           <Route path="/settings/lab-settings" element={<Settings />} />
           <Route path="/settings/gst" element={<GstSettings />} />
-          <Route path="/settings/staff-management" element={<StaffManagement />} />
-          <Route path="/settings/test-configuration" element={<TestConfiguration />} />
+
+          <Route
+            path="/settings/staff-management"
+            element={
+              <RequireRole roles={["admin", "super_admin", "superadmin"]}>
+                <StaffManagement />
+              </RequireRole>
+            }
+          />
+
+          <Route
+            path="/settings/test-configuration"
+            element={<TestConfiguration />}
+          />
+
           <Route path="/settings/stock" element={<Stock />} />
         </Route>
       </Route>

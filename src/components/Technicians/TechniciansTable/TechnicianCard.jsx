@@ -3,7 +3,7 @@ import { Star } from "lucide-react";
 import CurrentStatusBadge from "./CurrentStatusBadge";
 import AccountStatusBadge from "./AccountStatusBadge";
 
-export default function TechnicianCard({ technician, onEdit, onRemove }) {
+export default function TechnicianCard({ technician, onEdit, onRemove, canManage = false }) {
   const { techId, name, phone, zone, rating, status, assignedJobs, currentStatus } = technician;
   return (
     <div className="border border-gray-100 rounded-lg p-4 space-y-2">
@@ -24,14 +24,16 @@ export default function TechnicianCard({ technician, onEdit, onRemove }) {
         <span className="text-teal-600 font-medium">{assignedJobs} jobs</span>
         <CurrentStatusBadge status={currentStatus} />
       </div>
-      <div className="flex items-center gap-4 pt-1">
-        <button onClick={() => onEdit(technician)} className="text-sm text-teal-600 font-medium hover:underline cursor-pointer">
-          Edit
-        </button>
-        <button onClick={() => onRemove(technician)} className="text-sm text-red-500 font-medium hover:underline cursor-pointer">
-          Remove
-        </button>
-      </div>
+      {canManage && (
+        <div className="flex items-center gap-4 pt-1">
+          <button onClick={() => onEdit(technician)} className="text-sm text-teal-600 font-medium hover:underline cursor-pointer">
+            Edit
+          </button>
+          <button onClick={() => onRemove(technician)} className="text-sm text-red-500 font-medium hover:underline cursor-pointer">
+            Remove
+          </button>
+        </div>
+      )}
     </div>
   );
 }

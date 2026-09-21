@@ -2,6 +2,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Plus, Search } from "lucide-react";
 import AddStaffModal from "./modals/AddStaffModal";
+import ConfirmModal from "../Patients/modals/ConfirmModal";
 import { addStaffApi, getStaffMembersApi, updateStaffMemberApi, deleteStaffMemberApi} from "../../api/api";
 import Toast from "../common/Toast/Toast";
 import { useToast } from "../common/Toast/useToast";
@@ -132,6 +133,7 @@ export default function StaffManagement() {
   const [modalState, setModalState] = useState(null);
   const [staffMembers, setStaffMembers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [confirmingRemove, setConfirmingRemove] = useState(null); // staff | null
   const { toast, showToast, hideToast } = useToast();
 
   useEffect(() => {
@@ -217,8 +219,13 @@ export default function StaffManagement() {
     }
   }
 
-  async function handleRemove(staff) {
-    if (!window.confirm(`Remove ${staff.name}? This can't be undone.`)) return;
+  function handleRemove(staff) {
+    setConfirmingRemove(staff);
+  }
+
+  async function confirmRemove() {
+    const staff = confirmingRemove;
+    setConfirmingRemove(null);
 
     try {
       await deleteStaffMemberApi(staff.id);
@@ -281,6 +288,19 @@ export default function StaffManagement() {
           onSave={handleSaveStaff}
         />
       )}
+
+      {confirmingRemove && (
+        <ConfirmModal
+          title="Remove Staff"
+          message={`Remove ${confirmingRemove.name}? This can't be undone.`}
+          confirmLabel="Remove"
+          cancelLabel="Keep Staff"
+          danger
+          onConfirm={confirmRemove}
+          onClose={() => setConfirmingRemove(null)}
+        />
+      )}
+
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   );

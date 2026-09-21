@@ -8,7 +8,7 @@ import { useAuth } from "../../../Context/AuthContext";
 import { LogOut } from "lucide-react";
 import {
   LayoutDashboard, ClipboardList, MapPin, FlaskConical,
-  Users, Clock, Settings, Wrench, Receipt, UserCog, Package, Beaker,
+  Users, Clock, Settings, Wrench, Receipt, UserCog, Package, Beaker, BarChart3,
 } from "lucide-react";
 
 const allNavItems = [
@@ -21,6 +21,7 @@ const allNavItems = [
   { label: "Test Master", icon: FlaskConical, path: "/test-master" },
   { label: "Patients", icon: Users, path: "/patients" },
   { label: "Follow-ups", icon: Clock, path: "/follow-ups" },
+  { label: "Statistics", icon: BarChart3, path: "/statistics" },
 ];
 const settingsSubItems = [
   { label: "Lab Settings", path: "/settings/lab-settings", icon: Beaker },

@@ -21,6 +21,7 @@ import ResetPassword from "../components/Auth/ResetPassword";
 import { Navigate } from "react-router-dom";
 import GstSettings from "../components/SettingPage/GstSettings";
 import StaffManagement from "../components/SettingPage/StaffManagement";
+import TestConfiguration from "../components/SettingPage/TestConfiguration/TestConfiguration";
 import Stock from "../components/SettingPage/Stock";
 
 export default function AppRoutes() {
@@ -48,6 +49,7 @@ export default function AppRoutes() {
           <Route path="/settings/lab-settings" element={<Settings />} />
           <Route path="/settings/gst" element={<GstSettings />} />
           <Route path="/settings/staff-management" element={<StaffManagement />} />
+          <Route path="/settings/test-configuration" element={<TestConfiguration />} />
           <Route path="/settings/stock" element={<Stock />} />
         </Route>
       </Route>

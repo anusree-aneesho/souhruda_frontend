@@ -5,6 +5,8 @@ import TechniciansSearch from "./TechniciansSearch";
 import TechniciansTable from "./TechniciansTable/TechniciansTable";
 import TechnicianCard from "./TechniciansTable/TechnicianCard";
 import CreateTechnicianModal from "./modals/CreateTechnicianModal";
+import Toast from "../common/Toast/Toast";
+import { useToast } from "../common/Toast/useToast";
 import {
   getTechniciansApi,
   createTechnicianApi,
@@ -36,6 +38,7 @@ export default function Technicians() {
   const [search, setSearch] = useState("");
   const [modalState, setModalState] = useState(null); // null | { editingTechnician: null | technician }
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const { toast, showToast, hideToast } = useToast();
 
   const loadTechnicians = useCallback(() => {
     return getTechniciansApi()
@@ -86,6 +89,8 @@ export default function Technicians() {
       // (newest first) and computed fields (assignedJobs, currentStatus)
       // a real page reload would show, instead of drifting out of sync.
       await loadTechnicians();
+
+      showToast(isEdit ? `Rating updated for ${formData.name}` : `${formData.name} added as technician`);
     } catch (err) {
       console.error("Failed to save technician", err);
       alert(err.message || "Failed to save technician. Please check the form and try again.");
@@ -161,6 +166,8 @@ export default function Technicians() {
           onSave={handleSaveTechnician}
         />
       )}
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   );
 }

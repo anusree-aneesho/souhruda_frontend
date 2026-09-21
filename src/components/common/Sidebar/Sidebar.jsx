@@ -23,21 +23,39 @@ const allNavItems = [
   { label: "Follow-ups", icon: Clock, path: "/follow-ups" },
   { label: "Statistics", icon: BarChart3, path: "/statistics" },
 ];
+
+// `roles` = who can see the item. Leave it out to show the item to everyone.
 const settingsSubItems = [
   { label: "Lab Settings", path: "/settings/lab-settings", icon: Beaker },
   { label: "GST Settings", path: "/settings/gst", icon: Receipt },
-  { label: "Staff Management", path: "/settings/staff-management", icon: UserCog },
+  {
+    label: "Staff Management",
+    path: "/settings/staff-management",
+    icon: UserCog,
+    roles: ["admin", "super_admin", "superadmin"],
+  },
   { label: "Stock", path: "/settings/stock", icon: Package },
 ];
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const isFrontOffice = user?.role === "front_office";
+
+  // Normalise so "Super Admin", "super-admin" and "super_admin" all match
+  const role = String(user?.role ?? "")
+    .toLowerCase()
+    .trim()
+    .replace(/[\s-]+/g, "_");
+
+  const isFrontOffice = role === "front_office";
 
   const navItems = isFrontOffice
     ? allNavItems.filter((item) => item.path !== "/home-collection")
     : allNavItems;
+
+  const visibleSettingsItems = settingsSubItems.filter(
+    (item) => !item.roles || item.roles.includes(role)
+  );
 
   function handleLogout() {
     logout();
@@ -55,7 +73,7 @@ export default function Sidebar() {
           label="Settings"
           icon={Settings}
           basePath="/settings"
-          children={settingsSubItems}
+          children={visibleSettingsItems}
         />
       </nav>
 

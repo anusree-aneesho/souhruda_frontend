@@ -22,6 +22,7 @@ import { Navigate } from "react-router-dom";
 import GstSettings from "../components/SettingPage/GstSettings";
 import StaffManagement from "../components/SettingPage/StaffManagement";
 import Stock from "../components/SettingPage/Stock";
+import RequireRole from "../components/common/RequireRole";
 
 export default function AppRoutes() {
   return (
@@ -47,8 +48,15 @@ export default function AppRoutes() {
           <Route path="/settings" element={<Navigate to="/settings/lab-settings" replace />} />
           <Route path="/settings/lab-settings" element={<Settings />} />
           <Route path="/settings/gst" element={<GstSettings />} />
-          <Route path="/settings/staff-management" element={<StaffManagement />} />
           <Route path="/settings/stock" element={<Stock />} />
+          <Route
+            path="/settings/staff-management"
+            element={
+              <RequireRole roles={["admin", "super_admin", "superadmin"]}>
+                <StaffManagement />
+              </RequireRole>
+            }
+          />
         </Route>
       </Route>
     </Routes>

@@ -7,12 +7,16 @@ import TechnicianCard from "./TechniciansTable/TechnicianCard";
 import CreateTechnicianModal from "./modals/CreateTechnicianModal";
 import Toast from "../common/Toast/Toast";
 import { useToast } from "../common/Toast/useToast";
+import { useAuth } from "../../Context/AuthContext";
 import {
   getTechniciansApi,
   createTechnicianApi,
   updateTechnicianApi,
   deleteTechnicianApi,
 } from "../../api/api";
+
+// Roles that can only view the technicians list (no add / edit / remove)
+const VIEW_ONLY_ROLES = ["lab_assistant", "technician"];
 
 function mapTechnicianFromApi(t) {
   return {
@@ -33,6 +37,17 @@ function mapTechnicianFromApi(t) {
 }
 
 export default function Technicians() {
+  const { user } = useAuth();
+
+  // Normalise so "Lab Assistant", "lab-assistant" and "lab_assistant" all match
+  const role = String(user?.role ?? "")
+    .toLowerCase()
+    .trim()
+    .replace(/[\s-]+/g, "_");
+
+  // Hidden until the user is loaded, and for view-only roles
+  const canManage = Boolean(user) && !VIEW_ONLY_ROLES.includes(role);
+
   const [technicians, setTechnicians] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -63,14 +78,14 @@ export default function Technicians() {
   async function handleSaveTechnician(formData) {
     const isEdit = Boolean(formData.id);
     const payload = {
-  name: formData.name,
-  email: formData.email,
-  phone: formData.phone,
-  branch_id: formData.branch_id,
-  status: formData.status,
-  latitude: formData.latitude,
-  longitude: formData.longitude,
-};
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      branch_id: formData.branch_id,
+      status: formData.status,
+      latitude: formData.latitude,
+      longitude: formData.longitude,
+    };
 
     // Rating is only editable (and only sent) on update — new technicians
     // default to 5.0 server-side, and StoreTechnicianRequest doesn't accept it.
@@ -102,6 +117,8 @@ export default function Technicians() {
   }
 
   async function handleRemoveTechnician(tech) {
+    if (!canManage) return; // safety net in case the button is ever rendered
+
     if (!window.confirm(`Remove "${tech.name}"? This can't be undone.`)) return;
 
     try {
@@ -118,6 +135,7 @@ export default function Technicians() {
       <TechniciansHeader
         onAddTechnician={() => setModalState({ editingTechnician: null })}
         onCreateTechnician={() => setShowCreateModal(true)}
+        canManage={canManage}
       />
 
       <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-5">
@@ -126,12 +144,13 @@ export default function Technicians() {
         {loading ? (
           <p className="text-sm text-gray-400 text-center py-6">Loading technicians...</p>
         ) : (
-          <>  
+          <>
             <div className="hidden md:block">
               <TechniciansTable
                 technicians={filteredTechnicians}
                 onEdit={(t) => setModalState({ editingTechnician: t })}
                 onRemove={handleRemoveTechnician}
+                canManage={canManage}
               />
             </div>
             <div className="md:hidden space-y-3">
@@ -141,6 +160,7 @@ export default function Technicians() {
                   technician={t}
                   onEdit={(tech) => setModalState({ editingTechnician: tech })}
                   onRemove={handleRemoveTechnician}
+                  canManage={canManage}
                 />
               ))}
             </div>
@@ -152,7 +172,7 @@ export default function Technicians() {
         )}
       </div>
 
-      {modalState && (
+      {canManage && modalState && (
         <CreateTechnicianModal
           editingTechnician={modalState.editingTechnician}
           onClose={() => setModalState(null)}
@@ -160,7 +180,7 @@ export default function Technicians() {
         />
       )}
 
-      {showCreateModal && (
+      {canManage && showCreateModal && (
         <CreateTechnicianModal
           onClose={() => setShowCreateModal(false)}
           onSave={handleSaveTechnician}

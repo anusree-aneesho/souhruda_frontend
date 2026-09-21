@@ -1,7 +1,7 @@
 // src/components/Technicians/TechniciansTable/TechniciansTable.jsx
 import TechnicianRow from "./TechnicianRow";
 
-export default function TechniciansTable({ technicians, onEdit, onRemove }) {
+export default function TechniciansTable({ technicians, onEdit, onRemove, canManage = false }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[920px]">
@@ -15,12 +15,18 @@ export default function TechniciansTable({ technicians, onEdit, onRemove }) {
             <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">ASSIGNED JOBS</th>
             <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">CURRENT STATUS</th>
             <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">STATUS</th>
-            <th></th>
+            {canManage && <th></th>}
           </tr>
         </thead>
         <tbody>
           {technicians.map((t) => (
-            <TechnicianRow key={t.techId} technician={t} onEdit={onEdit} onRemove={onRemove} />
+            <TechnicianRow
+              key={t.techId}
+              technician={t}
+              onEdit={onEdit}
+              onRemove={onRemove}
+              canManage={canManage}
+            />
           ))}
         </tbody>
       </table>

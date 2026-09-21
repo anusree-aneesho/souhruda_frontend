@@ -7,13 +7,14 @@ function mapCategory(c) {
   return { id: c.id, name: c.name };
 }
 
-function mapTest(t) {
+function mapTest(t, categoryId) {
   return {
     id: t.id,
     name: t.name,
     unit: t.unit || "",
     range: t.range_text || t.range_raw || "",
     price: Number(t.price) || 0,
+    categoryId, // which category this test belongs to
   };
 }
 
@@ -21,12 +22,14 @@ export default function SelectTestsStep({ activeCategory, onCategoryChange, sele
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categorySearch, setCategorySearch] = useState("");
-  const [tests, setTests] = useState([]);
-  const [testsLoading, setTestsLoading] = useState(false);
+  const [allTests, setAllTests] = useState([]); // tests from EVERY category
+  const [testsLoading, setTestsLoading] = useState(true);
   const [testSearch, setTestSearch] = useState("");
   const [hasMoreBelow, setHasMoreBelow] = useState(false);
   const listRef = useRef(null);
+  const pillRefs = useRef({});
 
+  // Load categories, then the tests of every category once
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -38,10 +41,26 @@ export default function SelectTestsStep({ activeCategory, onCategoryChange, sele
         if (!activeCategory && mapped.length > 0) {
           onCategoryChange(mapped[0].id);
         }
+        setCategoriesLoading(false);
+
+        const results = await Promise.all(
+          mapped.map((c) =>
+            getLabTests(c.id)
+              .then((r) => (r.data || []).map((t) => mapTest(t, c.id)))
+              .catch((err) => {
+                console.error(`Failed to load tests for category ${c.id}:`, err.message);
+                return [];
+              })
+          )
+        );
+        if (!cancelled) setAllTests(results.flat());
       } catch (err) {
         console.error("Failed to load test categories:", err.message);
       } finally {
-        if (!cancelled) setCategoriesLoading(false);
+        if (!cancelled) {
+          setCategoriesLoading(false);
+          setTestsLoading(false);
+        }
       }
     })();
     return () => {
@@ -50,40 +69,63 @@ export default function SelectTestsStep({ activeCategory, onCategoryChange, sele
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const categoryNameById = useMemo(
+    () => Object.fromEntries(categories.map((c) => [c.id, c.name])),
+    [categories]
+  );
+
+  // how many ticked tests each category has, e.g. { 3: 2, 7: 1 }
+  const selectedCountByCategory = useMemo(() => {
+    const counts = {};
+    selectedTests.forEach((t) => {
+      counts[t.category] = (counts[t.category] || 0) + 1;
+    });
+    return counts;
+  }, [selectedTests]);
+
+  const query = testSearch.trim().toLowerCase();
+
+  // While searching: matches from ALL categories
+  const searchResults = useMemo(() => {
+    if (!query) return [];
+    return allTests.filter((t) => t.name.toLowerCase().includes(query));
+  }, [allTests, query]);
+
+  // What the list shows: search results (all categories) or the active category
+  const visibleTests = useMemo(() => {
+    if (query) return searchResults;
+    return allTests.filter((t) => t.categoryId === activeCategory);
+  }, [query, searchResults, allTests, activeCategory]);
+
+  // Move the highlighted category pill to where the match lives
   useEffect(() => {
-    if (!activeCategory) return;
-    let cancelled = false;
-    setTestsLoading(true);
-    setTestSearch("");
-    (async () => {
-      try {
-        const res = await getLabTests(activeCategory);
-        if (!cancelled) setTests((res.data || []).map(mapTest));
-      } catch (err) {
-        if (!cancelled) setTests([]);
-        console.error("Failed to load lab tests:", err.message);
-      } finally {
-        if (!cancelled) setTestsLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    if (!query || searchResults.length === 0) return;
+    const alreadyHere = searchResults.some((t) => t.categoryId === activeCategory);
+    if (!alreadyHere) onCategoryChange(searchResults[0].categoryId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchResults]);
+
+  // Keep the active pill visible in the horizontally scrolling row
+  useEffect(() => {
+    pillRefs.current[activeCategory]?.scrollIntoView({
+      inline: "center",
+      block: "nearest",
+      behavior: "smooth",
+    });
   }, [activeCategory]);
 
   const filteredCategories = useMemo(() => {
     const q = categorySearch.trim().toLowerCase();
-    if (!q) return categories;
-    return categories.filter((c) => c.name.toLowerCase().includes(q));
-  }, [categories, categorySearch]);
+    const list = q
+      ? categories.filter((c) => c.name.toLowerCase().includes(q))
+      : categories;
 
-  const filteredTests = useMemo(() => {
-    const q = testSearch.trim().toLowerCase();
-    if (!q) return tests;
-    return tests.filter((t) => t.name.toLowerCase().includes(q));
-  }, [tests, testSearch]);
+    // categories with selected tests go first; everything else keeps its original order
+    const withSelection = list.filter((c) => selectedCountByCategory[c.id]);
+    const withoutSelection = list.filter((c) => !selectedCountByCategory[c.id]);
+    return [...withSelection, ...withoutSelection];
+  }, [categories, categorySearch, selectedCountByCategory]);
 
-  // Check whether the list is scrollable and, if so, whether we're at the bottom.
   function updateScrollHint() {
     const el = listRef.current;
     if (!el) return;
@@ -93,7 +135,7 @@ export default function SelectTestsStep({ activeCategory, onCategoryChange, sele
 
   useEffect(() => {
     updateScrollHint();
-  }, [filteredTests, testsLoading]);
+  }, [visibleTests, testsLoading]);
 
   const totalPrice = selectedTests.reduce((sum, t) => sum + t.price, 0);
 
@@ -122,28 +164,50 @@ export default function SelectTestsStep({ activeCategory, onCategoryChange, sele
             {categorySearch ? "No categories match your search." : "No test categories set up yet."}
           </p>
         ) : (
-          filteredCategories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => onCategoryChange(cat.id)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap shrink-0 transition-colors ${
-                activeCategory === cat.id ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))
+          filteredCategories.map((cat) => {
+            const isActive = activeCategory === cat.id;
+            const count = selectedCountByCategory[cat.id] || 0;
+
+            return (
+              <button
+                key={cat.id}
+                ref={(el) => (pillRefs.current[cat.id] = el)}
+                onClick={() => {
+                  setTestSearch("");
+                  onCategoryChange(cat.id);
+                }}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap shrink-0 transition-colors inline-flex items-center gap-1.5 ${
+                  isActive
+                    ? "bg-teal-600 text-white"
+                    : count > 0
+                    ? "bg-teal-50 text-teal-700 border border-teal-300 hover:bg-teal-100"
+                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                }`}
+              >
+                {cat.name}
+                {count > 0 && (
+                  <span
+                    className={`text-xs rounded-full px-1.5 py-0.5 leading-none ${
+                      isActive ? "bg-white/25 text-white" : "bg-teal-600 text-white"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })
         )}
       </div>
 
-      {!testsLoading && tests.length > 4 && (
+      {!testsLoading && allTests.length > 4 && (
         <div className="relative">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             value={testSearch}
             onChange={(e) => setTestSearch(e.target.value)}
-            placeholder="Search tests in this category..."
+            placeholder="Search tests in all categories..."
             className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
           />
         </div>
@@ -159,12 +223,12 @@ export default function SelectTestsStep({ activeCategory, onCategoryChange, sele
             <p className="flex items-center gap-2 py-4 px-3.5 text-sm text-gray-400">
               <Loader2 size={14} className="animate-spin" /> Loading tests...
             </p>
-          ) : filteredTests.length === 0 ? (
+          ) : visibleTests.length === 0 ? (
             <p className="py-4 px-3.5 text-sm text-gray-400">
-              {testSearch ? "No tests match your search." : "No tests found in this category."}
+              {query ? "No tests match your search." : "No tests found in this category."}
             </p>
           ) : (
-            filteredTests.map((test) => {
+            visibleTests.map((test) => {
               const isChecked = selectedTests.some((s) => s.id === test.id);
               return (
                 <label
@@ -174,10 +238,17 @@ export default function SelectTestsStep({ activeCategory, onCategoryChange, sele
                   <input
                     type="checkbox"
                     checked={isChecked}
-                    onChange={() => onToggleTest({ ...test, category: activeCategory })}
+                    onChange={() => onToggleTest({ ...test, category: test.categoryId })}
                     className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 shrink-0"
                   />
-                  <span className="text-sm font-medium text-gray-900 flex-1 truncate">{test.name}</span>
+                  <span className="text-sm font-medium text-gray-900 flex-1 truncate">
+                    {test.name}
+                    {query && (
+                      <span className="ml-2 text-xs font-normal text-gray-400">
+                        {categoryNameById[test.categoryId]}
+                      </span>
+                    )}
+                  </span>
                   {test.range && (
                     <span className="text-xs text-gray-400 shrink-0 hidden sm:inline">{test.range} {test.unit}</span>
                   )}

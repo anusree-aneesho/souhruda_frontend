@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { FlaskConical, Loader2, Package2, Pencil, Plus } from "lucide-react";
 import { getLabTests, getTestPackages } from "../../../api/api";
 import AddPackageModal from "./modals/AddPackageModal";
+import Toast from "../../common/Toast/Toast";
+import { useToast } from "../../common/Toast/useToast";
 
 function PackageCard({ pkg, onEdit }) {
   const labTests = pkg.lab_tests || [];
@@ -69,6 +71,7 @@ export default function TestPackage() {
   const [error, setError] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingPackage, setEditingPackage] = useState(null);
+  const { toast, showToast, hideToast } = useToast();
 
   useEffect(() => {
     let cancelled = false;
@@ -96,6 +99,7 @@ export default function TestPackage() {
   }, []);
 
   function handleSaved(savedPackage) {
+    const wasEditing = Boolean(editingPackage);
     setPackages((prev) => {
       const exists = prev.some((p) => p.id === savedPackage.id);
       return exists
@@ -104,6 +108,10 @@ export default function TestPackage() {
     });
     setShowAddModal(false);
     setEditingPackage(null);
+    showToast(
+      wasEditing ? "Package updated successfully." : "Package added successfully.",
+      "success"
+    );
   }
 
   function closeModal() {
@@ -164,6 +172,8 @@ export default function TestPackage() {
           onSaved={handleSaved}
         />
       )}
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   );
 }

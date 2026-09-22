@@ -515,3 +515,29 @@ export async function updateTestPriceApi(testId, price) {
     body: JSON.stringify({ price }),
   });
 }
+
+// ── Doctors ──────────────────────────────────────────────
+
+export async function getDoctorsApi(page = 1) {
+  return request(`/doctors?page=${page}`);
+}
+
+export async function createDoctorApi(payload) {
+  return request("/doctors", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateDoctorApi(id, payload) {
+  return request(`/doctors/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteDoctorApi(id) {
+  return request(`/doctors/${id}`, {
+    method: "DELETE",
+  });
+}

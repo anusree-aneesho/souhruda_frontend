@@ -173,18 +173,19 @@ export default function AddDoctorModal({ doctor, onClose, onSaved }) {
 
           <div className="flex justify-end gap-3 pt-2">
             <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-2.5 text-sm rounded-lg border border-gray-300 font-medium text-gray-700"
+                type="button"
+                onClick={onClose}
+                disabled={saving}
+                className="px-6 py-2.5 text-sm rounded-lg border border-gray-300 font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Cancel
+                Cancel
             </button>
             <button
-              type="submit"
-              disabled={saving}
-              className="px-6 py-2.5 text-sm rounded-lg bg-teal-600 text-white font-medium disabled:opacity-50"
+                type="submit"
+                disabled={saving}
+                className="px-6 py-2.5 text-sm rounded-lg bg-teal-600 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? "Saving..." : doctor ? "Save Changes" : "Add Doctor"}
+                {saving ? "Saving..." : doctor ? "Save Changes" : "Add Doctor"}
             </button>
           </div>
         </form>

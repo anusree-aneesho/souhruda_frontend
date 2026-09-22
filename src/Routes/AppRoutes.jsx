@@ -23,6 +23,7 @@ import StaffManagement from "../components/SettingPage/StaffManagement";
 import TestConfiguration from "../components/SettingPage/TestConfiguration/TestConfiguration";
 import Stock from "../components/SettingPage/Stock";
 import RequireRole from "../components/common/RequireRole";
+import Reports from "../components/Reports/Reports";
 
 export default function AppRoutes() {
   return (
@@ -41,6 +42,7 @@ export default function AppRoutes() {
           <Route path="/test-master" element={<TestMaster />} />
           <Route path="/patients" element={<Patients />} />
           <Route path="/follow-ups" element={<FollowUps />} />
+          <Route path="/reports" element={<Reports />} />
           <Route path="/statistics" element={<Statistics />} />
           <Route path="/lab-orders/:orderId" element={<OrderDetail />} />
           <Route path="/lab-orders/:orderId/report" element={<Report />} />

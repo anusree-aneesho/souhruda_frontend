@@ -21,6 +21,7 @@ import {
   Beaker,
   BarChart3,
   SlidersHorizontal,
+  FileText,
 } from "lucide-react";
 
 const allNavItems = [
@@ -34,6 +35,7 @@ const allNavItems = [
   { label: "Patients", icon: Users, path: "/patients" },
   { label: "Follow-ups", icon: Clock, path: "/follow-ups" },
   { label: "Statistics", icon: BarChart3, path: "/statistics" },
+  { label: "Reports", icon: FileText, path: "/reports" },
 ];
 
 // `roles` = who can see the item. Leave it out to show the item to everyone.

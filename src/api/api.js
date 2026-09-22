@@ -506,3 +506,12 @@ export async function deleteStaffMemberApi(id) {
     method: "DELETE",
   });
 }
+
+// ── Test Configuration ──────────────────────────────────────
+
+export async function updateTestPriceApi(testId, price) {
+  return request(`/lab-tests/${testId}/price`, {
+    method: "PATCH",
+    body: JSON.stringify({ price }),
+  });
+}

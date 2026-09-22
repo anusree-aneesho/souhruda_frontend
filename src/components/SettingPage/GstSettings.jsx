@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import FormField from "./SettingsForm/FormField";
+import Toast from "../common/Toast/Toast";
+import { useToast } from "../common/Toast/useToast";
 import { getGstSettingsApi, updateGstSettingsApi } from "../../api/api";
 import { useAuth } from "../../Context/AuthContext";
 
@@ -28,7 +30,7 @@ export default function GstSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const { toast, showToast, hideToast } = useToast();
   const { user } = useAuth();
 
   const role = String(user?.role ?? "")
@@ -78,7 +80,6 @@ export default function GstSettings() {
     if (!canEdit) return;
 
     setError("");
-    setSuccess(false);
 
     const errors = validate(formData);
     if (Object.keys(errors).length > 0) {
@@ -100,7 +101,7 @@ export default function GstSettings() {
         state_code: formData.stateCode,
         invoice_prefix: formData.invoicePrefix,
       });
-      setSuccess(true);
+      showToast("GST settings saved successfully.");
     } catch (err) {
       setError(err.message || "Failed to save GST settings.");
     } finally {
@@ -146,11 +147,7 @@ export default function GstSettings() {
         {error && (
           <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
         )}
-        {success && (
-          <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-            GST settings saved successfully.
-          </p>
-        )}
+        {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
 
         <fieldset
           disabled={!canEdit}

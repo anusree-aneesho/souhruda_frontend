@@ -1,22 +1,74 @@
 // src/components/SettingPage/TestConfiguration/TestPackage.jsx
-import { useState, useEffect, useMemo } from "react";
-import { FlaskConical, Loader2, Plus, Search } from "lucide-react";
-import { getLabTests, getTestPackages, createTestPackage } from "../../../api/api";
+import { useState, useEffect } from "react";
+import { FlaskConical, Loader2, Package2, Pencil, Plus } from "lucide-react";
+import { getLabTests, getTestPackages } from "../../../api/api";
+import AddPackageModal from "./modals/AddPackageModal";
 
-const inputClass =
-  "w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500";
+function PackageCard({ pkg, onEdit }) {
+  const labTests = pkg.lab_tests || [];
+
+  return (
+    <div className="group relative bg-white rounded-xl border border-gray-200 shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-5 hover:border-teal-300 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all">
+      <button
+        onClick={() => onEdit(pkg)}
+        title="Edit package"
+        className="absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 bg-white border border-gray-200 opacity-0 group-hover:opacity-100 hover:text-teal-600 hover:border-teal-300 transition-all cursor-pointer"
+      >
+        <Pencil size={14} />
+      </button>
+
+      <div className="flex items-start justify-between mb-3 pr-9">
+        <div className="w-10 h-10 rounded-lg bg-teal-50 flex items-center justify-center shrink-0">
+          <Package2 size={18} className="text-teal-600" />
+        </div>
+        <span
+          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+            pkg.is_active
+              ? "bg-teal-50 text-teal-700"
+              : "bg-gray-100 text-gray-500"
+          }`}
+        >
+          {pkg.is_active ? "Active" : "Inactive"}
+        </span>
+      </div>
+
+      <h3 className="text-sm font-semibold text-gray-900 truncate" title={pkg.name}>
+        {pkg.name}
+      </h3>
+      <p className="text-2xl font-bold text-teal-700 mt-1">
+        ₹{Number(pkg.price || 0).toFixed(2)}
+      </p>
+
+      <div className="flex items-center gap-1.5 text-xs text-gray-400 mt-4 mb-2">
+        <FlaskConical size={12} />
+        {labTests.length} test{labTests.length === 1 ? "" : "s"} included
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {labTests.length === 0 ? (
+          <span className="text-xs text-gray-400">No tests linked</span>
+        ) : (
+          labTests.map((t) => (
+            <span
+              key={t.id}
+              className="px-2 py-1 rounded-md bg-gray-50 border border-gray-100 text-xs text-gray-600"
+            >
+              {t.name}
+            </span>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function TestPackage() {
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-
   const [tests, setTests] = useState([]);
   const [packages, setPackages] = useState([]);
-  const [loadingTests, setLoadingTests] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [loadingPackages, setLoadingPackages] = useState(true);
   const [error, setError] = useState("");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingPackage, setEditingPackage] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -25,226 +77,92 @@ export default function TestPackage() {
       .then((res) => {
         if (!cancelled) setTests(res.data || []);
       })
-      .catch((err) => {
-        if (!cancelled) setError(err.message);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingTests(false);
+      .catch(() => {
+        // Handled inside the Add Package modal if it turns out empty.
       });
 
     getTestPackages()
       .then((res) => {
         if (!cancelled) setPackages(res.data || []);
       })
-      .catch(() => {
-        // Existing-packages list is a nice-to-have; don't block test
-        // selection if this call fails (e.g. permission not yet seeded).
+      .catch((err) => {
+        if (!cancelled) setError(err.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPackages(false);
       });
 
     return () => { cancelled = true; };
   }, []);
 
-  const filteredTests = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
-    if (!q) return tests;
-    return tests.filter((t) => t.name.toLowerCase().includes(q));
-  }, [tests, searchTerm]);
-
-  const selectedCount = selectedIds.length;
-
-  const totalTestsPrice = useMemo(() => {
-    return tests
-      .filter((t) => selectedIds.includes(t.id))
-      .reduce((sum, t) => sum + Number(t.price || 0), 0);
-  }, [tests, selectedIds]);
-
-  function toggleTest(id) {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((tid) => tid !== id) : [...prev, id]
-    );
+  function handleSaved(savedPackage) {
+    setPackages((prev) => {
+      const exists = prev.some((p) => p.id === savedPackage.id);
+      return exists
+        ? prev.map((p) => (p.id === savedPackage.id ? savedPackage : p))
+        : [...prev, savedPackage];
+    });
+    setShowAddModal(false);
+    setEditingPackage(null);
   }
 
-  function resetForm() {
-    setName("");
-    setPrice("");
-    setSelectedIds([]);
-    setSearchTerm("");
-  }
-
-  async function handleAdd() {
-    setError("");
-
-    if (!name.trim()) {
-      setError("Package name is required.");
-      return;
-    }
-    if (price === "" || Number.isNaN(Number(price)) || Number(price) < 0) {
-      setError("Enter a valid price.");
-      return;
-    }
-    if (selectedIds.length === 0) {
-      setError("Select at least one test for this package.");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const res = await createTestPackage({
-        name: name.trim(),
-        price: Number(price),
-        test_ids: selectedIds,
-      });
-      setPackages((prev) => [...prev, res.data]);
-      resetForm();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
+  function closeModal() {
+    setShowAddModal(false);
+    setEditingPackage(null);
   }
 
   return (
     <div className="space-y-6">
-      {/* Package details */}
-      <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-1.5">
-              Package Name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Full Body Checkup"
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-1.5">
-              Price (₹)
-            </label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="e.g. 1499"
-              className={inputClass}
-            />
-          </div>
-        </div>
-
-        {/* Test selection */}
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="flex items-center justify-between mb-3 gap-4 flex-wrap">
-            <label className="block text-sm font-semibold text-gray-900">
-              Select Tests
-            </label>
-            {selectedCount > 0 && (
-              <span className="text-xs text-gray-500">
-                {selectedCount} selected · tests total ₹{totalTestsPrice.toFixed(2)}
-              </span>
-            )}
-          </div>
-
-          <div className="relative mb-3">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search tests..."
-              className={`${inputClass} pl-9`}
-            />
-          </div>
-
-          {loadingTests ? (
-            <div className="flex items-center gap-2 text-sm text-gray-400 py-6 justify-center">
-              <Loader2 size={16} className="animate-spin" />
-              Loading tests...
-            </div>
-          ) : tests.length === 0 ? (
-            <p className="text-sm text-gray-400 py-6 text-center">
-              No tests found. Add tests under Test Master first.
-            </p>
-          ) : filteredTests.length === 0 ? (
-            <p className="text-sm text-gray-400 py-6 text-center">
-              No tests match "{searchTerm}".
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[420px] overflow-y-auto pr-1">
-              {filteredTests.map((test) => {
-                const isSelected = selectedIds.includes(test.id);
-                return (
-                  <label
-                    key={test.id}
-                    className={`flex items-start gap-3 rounded-lg border p-3.5 cursor-pointer transition-colors ${
-                      isSelected
-                        ? "border-teal-500 bg-teal-50/60"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleTest(test.id)}
-                      className="mt-1 h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
-                    />
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 text-sm font-medium text-gray-900 truncate">
-                        <FlaskConical size={13} className="text-teal-600 shrink-0" />
-                        {test.name}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-0.5">
-                        {test.unit ? `${test.unit} · ` : ""}₹{Number(test.price || 0).toFixed(2)}
-                      </div>
-                    </div>
-                  </label>
-                );
-              })}
-            </div>
-          )}
+          <h2 className="text-lg font-bold text-gray-900">Existing Packages</h2>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {packages.length} package{packages.length === 1 ? "" : "s"} configured
+          </p>
         </div>
-
-        {error && <p className="text-sm text-red-500">{error}</p>}
-
-        <div className="flex justify-end">
-          <button
-            onClick={handleAdd}
-            disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
-          >
-            {saving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-            Add
-          </button>
-        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 transition-colors cursor-pointer"
+        >
+          <Plus size={16} />
+          Add Package
+        </button>
       </div>
 
-      {/* Existing packages */}
-      {packages.length > 0 && (
-        <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Existing Packages</h3>
-          <div className="space-y-2">
-            {packages.map((pkg) => (
-              <div
-                key={pkg.id}
-                className="flex items-center justify-between border border-gray-100 rounded-lg px-4 py-3"
-              >
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{pkg.name}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {(pkg.lab_tests || []).length} test{(pkg.lab_tests || []).length === 1 ? "" : "s"}
-                  </p>
-                </div>
-                <p className="text-sm font-semibold text-gray-900">
-                  ₹{Number(pkg.price || 0).toFixed(2)}
-                </p>
-              </div>
-            ))}
-          </div>
+      {loadingPackages ? (
+        <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] flex items-center gap-2 text-sm text-gray-400 py-10 justify-center">
+          <Loader2 size={16} className="animate-spin" />
+          Loading packages...
         </div>
+      ) : error ? (
+        <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+          <p className="text-sm text-red-500 py-6 text-center">{error}</p>
+        </div>
+      ) : packages.length === 0 ? (
+        <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] flex flex-col items-center text-center py-12">
+          <div className="w-12 h-12 rounded-full bg-teal-50 flex items-center justify-center mb-4">
+            <Package2 size={22} className="text-teal-600" />
+          </div>
+          <h3 className="text-base font-semibold text-gray-900">No packages yet</h3>
+          <p className="text-sm text-gray-500 mt-1 max-w-sm">
+            Click "Add Package" to bundle tests together under a single price.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {packages.map((pkg) => (
+            <PackageCard key={pkg.id} pkg={pkg} onEdit={setEditingPackage} />
+          ))}
+        </div>
+      )}
+
+      {(showAddModal || editingPackage) && (
+        <AddPackageModal
+          tests={tests}
+          editingPackage={editingPackage}
+          onClose={closeModal}
+          onSaved={handleSaved}
+        />
       )}
     </div>
   );

@@ -19,6 +19,7 @@ function mapOrder(o) {
       age: o.patient?.age ?? "-",
       gender: o.patient?.gender ?? "-",
       regNo: o.patient?.patient_number ?? "-",
+       phone: o.patient?.phone ?? "",
     },
     tests: (o.items || []).map((item) => {
       const lt = item.lab_test;

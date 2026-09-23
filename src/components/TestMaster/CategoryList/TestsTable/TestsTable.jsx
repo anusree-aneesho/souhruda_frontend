@@ -6,7 +6,10 @@ import TestCard from "./TestCard";
 import DemographicRangeModal from "../../modals/DemographicRangeModal";
 import { useAuth } from "../../../../Context/AuthContext";
 
-const PAGE_SIZE = 11;
+const PAGE_SIZE = 9;
+const ROW_HEIGHT = 45;
+const HEADER_HEIGHT = 30;
+const TABLE_MIN_HEIGHT = HEADER_HEIGHT + PAGE_SIZE * ROW_HEIGHT;
 
 export default function TestsTable({ categoryName, tests, onAddTest, onEditTest, onRemoveTest }) {
   const [viewingTest, setViewingTest] = useState(null);
@@ -34,7 +37,7 @@ export default function TestsTable({ categoryName, tests, onAddTest, onEditTest,
   const pageTests = filteredTests.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+    <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-sm text-gray-900">{categoryName} Tests</h3>
         {canManage && (
@@ -61,80 +64,82 @@ export default function TestsTable({ categoryName, tests, onAddTest, onEditTest,
         </div>
       )}
 
-      {tests.length === 0 && (
-        <p className="text-sm text-gray-400 text-center py-8">No tests in this category yet.</p>
-      )}
+      <div className="flex-1" style={{ minHeight: `${TABLE_MIN_HEIGHT}px` }}>
+        {tests.length === 0 && (
+          <p className="text-sm text-gray-400 text-center py-8">No tests in this category yet.</p>
+        )}
 
-      {tests.length > 0 && filteredTests.length === 0 && (
-        <p className="text-sm text-gray-400 text-center py-8">No tests match your search.</p>
-      )}
+        {tests.length > 0 && filteredTests.length === 0 && (
+          <p className="text-sm text-gray-400 text-center py-8">No tests match your search.</p>
+        )}
 
-      {filteredTests.length > 0 && (
-        <>
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full min-w-[500px]">
-              <thead>
-                <tr className="text-left border-b border-gray-100">
-                  <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">TEST NAME</th>
-                  <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">UNIT</th>
-                  <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">RANGE</th>
-                  <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">PRICE</th>
-                  <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">FOLLOW-UP</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {pageTests.map((test) => (
-                  <TestRow
-                    key={test.id}
-                    test={test}
-                    onEdit={onEditTest}
-                    onRemove={onRemoveTest}
-                    onViewRange={setViewingTest}
-                    canManage={canManage}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="md:hidden space-y-3">
-            {pageTests.map((test) => (
-              <TestCard
-                key={test.id}
-                test={test}
-                onEdit={onEditTest}
-                onRemove={onRemoveTest}
-                onViewRange={setViewingTest}
-                canManage={canManage}
-              />
-            ))}
-          </div>
-
-          {lastPage > 1 && (
-            <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-100">
-              <p className="text-sm text-gray-500">
-                Page {page} of {lastPage} · {filteredTests.length} tests
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page <= 1}
-                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  ← Prev
-                </button>
-                <button
-                  onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
-                  disabled={page >= lastPage}
-                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Next →
-                </button>
-              </div>
+        {filteredTests.length > 0 && (
+          <>
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full min-w-[500px]">
+                <thead>
+                  <tr className="text-left border-b border-gray-100">
+                    <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">TEST NAME</th>
+                    <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">UNIT</th>
+                    <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">RANGE</th>
+                    <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">PRICE</th>
+                    <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">FOLLOW-UP</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageTests.map((test) => (
+                    <TestRow
+                      key={test.id}
+                      test={test}
+                      onEdit={onEditTest}
+                      onRemove={onRemoveTest}
+                      onViewRange={setViewingTest}
+                      canManage={canManage}
+                    />
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
-        </>
+
+            <div className="md:hidden space-y-3">
+              {pageTests.map((test) => (
+                <TestCard
+                  key={test.id}
+                  test={test}
+                  onEdit={onEditTest}
+                  onRemove={onRemoveTest}
+                  onViewRange={setViewingTest}
+                  canManage={canManage}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {lastPage > 1 && (
+        <div className="flex items-center justify-between pt-3 mt-2 border-t border-gray-100">
+          <p className="text-xs text-gray-500">
+            Page {page} of {lastPage} · {filteredTests.length} tests
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              ← Prev
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
+              disabled={page >= lastPage}
+              className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next →
+            </button>
+          </div>
+        </div>
       )}
 
       {viewingTest && (

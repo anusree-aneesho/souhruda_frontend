@@ -158,7 +158,7 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
       });
       setCustomRows(extractCustomRows(ranges));
     } else {
-      setForm({ ...emptyForm, demographicRanges: { ...emptyDemographicRanges } });
+      setForm({ ...emptyForm, category: defaultCategory || "", demographicRanges: { ...emptyDemographicRanges } });
       setCustomRows([]);
     }
     setErrors({});

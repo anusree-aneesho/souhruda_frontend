@@ -120,6 +120,21 @@ export default function OrderDetail() {
   const orderedAt = order?.orderedAt || "-";
   const paymentDone = Boolean(order?.paymentDone);
 
+  function formatOrderedAt(raw) {
+    if (!raw || raw === "-") return "-";
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) return raw;
+    return parsed.toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  const formattedOrderedAt = formatOrderedAt(orderedAt);
+
   const flags = useMemo(
     () => Object.fromEntries(tests.map((t) => [t.id, calculateFlag(t.range, results[t.id])])),
     [tests, results]
@@ -194,7 +209,7 @@ export default function OrderDetail() {
         regNo={patient.regNo}
         age={patient.age}
         gender={patient.gender}
-        orderedAt={orderedAt}
+        orderedAt={formattedOrderedAt}
         onDelete={() => setConfirmingDelete(true)}
       />
       <ResultsTable

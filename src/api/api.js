@@ -31,11 +31,13 @@ async function request(endpoint, options = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(
+    const message =
       data.message ||
-        data.errors?.email?.[0] ||
-        "Something went wrong. Please try again."
-    );
+      Object.values(data.errors || {})[0]?.[0] ||
+      "Something went wrong. Please try again.";
+    const err = new Error(message);
+    if (data.errors) err.errors = data.errors;
+    throw err;
   }
 
   return data;

@@ -2,11 +2,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Search } from "lucide-react";
 import { getTestCategories, getLabTests, updateTestPriceApi } from "../../../api/api";
+import Toast from "../../common/Toast/Toast";
+import { useToast } from "../../common/Toast/useToast";
 
 const PREVIEW_COUNT = 12;   // shown when the search box is empty
 const SEARCH_LIMIT = 30;    // max cards shown while searching
 
-function PriceCard({ test, categoryName, onSaved }) {
+function PriceCard({ test, categoryName, onSaved, onError }) {
   const [value, setValue] = useState(String(test.price));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -25,7 +27,9 @@ function PriceCard({ test, categoryName, onSaved }) {
       await updateTestPriceApi(test.id, price);
       onSaved(test.id, price);
     } catch (err) {
-      setError(err.message || "Failed to update.");
+      const message = err.message || "Failed to update.";
+      setError(message);
+      onError?.(test.name, message);
     } finally {
       setSaving(false);
     }
@@ -70,6 +74,7 @@ function PriceCard({ test, categoryName, onSaved }) {
 }
 
 export default function TestPrice() {
+  const { toast, showToast, hideToast } = useToast();
   const [categories, setCategories] = useState([]);
   const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -130,6 +135,11 @@ export default function TestPrice() {
 
   function handleSaved(testId, price) {
     setTests((prev) => prev.map((t) => (t.id === testId ? { ...t, price } : t)));
+    const test = tests.find((t) => t.id === testId);
+    showToast(
+      `${test?.name || "Test"} price updated to ₹${price.toFixed(2)}.`,
+      "success"
+    );
   }
 
   return (
@@ -168,6 +178,7 @@ export default function TestPrice() {
                   test={t}
                   categoryName={categoryNameById[t.categoryId]}
                   onSaved={handleSaved}
+                  onError={(name, message) => showToast(`${name}: ${message}`, "error")}
                 />
               ))}
             </div>
@@ -182,6 +193,10 @@ export default function TestPrice() {
           </>
         )}
       </div>
+
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={hideToast} />
+      )}
     </div>
   );
 }

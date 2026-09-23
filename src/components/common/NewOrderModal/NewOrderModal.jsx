@@ -18,6 +18,7 @@ import {
   createHomeCollectionRequestApi,
   createOrderApi,
 } from "../../../api/api";
+import { getDoctorsApi } from "../../../api/api";
 
 
 function mapPatient(p) {
@@ -123,6 +124,9 @@ export default function NewOrderModal() {
   const [editingPatient, setEditingPatient] = useState(null);
   const [isLoadingPatientToEdit, setIsLoadingPatientToEdit] = useState(false);
 
+  const [doctors, setDoctors] = useState([]); 
+  const [referredBy, setReferredBy] = useState("Self");
+
   async function handleEditSelectedPatient() {
     if (!selectedPatient?.id) return;
     setIsLoadingPatientToEdit(true);
@@ -185,6 +189,22 @@ export default function NewOrderModal() {
     }
   }, [isOpen, skipPatientStep, presetPatientRegNo]);
 
+  useEffect(() => {
+  if (!isOpen) return;
+  let cancelled = false;
+  (async () => {
+    try {
+      const res = await getDoctorsApi();
+      if (!cancelled) setDoctors(res.data || []);
+    } catch (err) {
+      console.error("Failed to load doctors:", err.message);
+    }
+  })();
+  return () => {
+    cancelled = true;
+  };
+}, [isOpen]);
+
   const [address, setAddress] = useState("");
   const [pinnedLocation, setPinnedLocation] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
@@ -215,6 +235,7 @@ export default function NewOrderModal() {
     setSubmitError(null);
     setIsCreatingPatient(false);
     setEditingPatient(null);
+    setReferredBy("Self");
     close();
   }
 
@@ -322,11 +343,12 @@ export default function NewOrderModal() {
       }
 
       const payload = {
-        patient_id: patientId,
-        tests: selectedTests.map((t) => ({
-          lab_test_id: t.id,
-          price: t.price,
+         patient_id: patientId,
+         tests: selectedTests.map((t) => ({
+         lab_test_id: t.id,
+         price: t.price,
         })),
+        referred_by: referredBy,
         payment_received: paymentDone,
       };
 
@@ -370,6 +392,7 @@ export default function NewOrderModal() {
         slot_date: preferredDate,
         slot_label: timeSlot,
         payment_mode: paymentMethod.toLowerCase(),
+        referred_by: referredBy, 
       };
 
       const created = await createHomeCollectionRequestApi(payload);
@@ -381,12 +404,12 @@ export default function NewOrderModal() {
     }
   }
 
-  const isNextDisabled =
-    (step === 1 && patientType === "existing" && !selectedPatient) ||
-    (step === 1 && patientType === "new" && (!newPatientData.name.trim() || !newPatientData.dateOfBirth)) ||
-    (step === 1 && isCreatingPatient) ||
-    (step === 2 && (selectedTests.length === 0 || !currentPatient)) ||
-    (isHomeCollection && step === 3 && (!address.trim() || !preferredDate || !pinnedLocation));
+const isNextDisabled =
+  (step === 1 && patientType === "existing" && !selectedPatient) ||
+  (step === 1 && patientType === "new" && (!newPatientData.name.trim() || !newPatientData.dateOfBirth)) ||
+  (step === 1 && isCreatingPatient) ||
+  (step === 2 && (selectedTests.length === 0 || !currentPatient || !referredBy)) ||
+  (isHomeCollection && step === 3 && (!address.trim() || !preferredDate || !pinnedLocation));
 
   if (!isOpen) return null;
 
@@ -414,6 +437,9 @@ export default function NewOrderModal() {
             onCategoryChange={setActiveCategory}
             selectedTests={selectedTests}
             onToggleTest={toggleTest}
+            doctors={doctors}
+            referredBy={referredBy}
+            onReferredByChange={setReferredBy}
           />
         )}
 

@@ -42,6 +42,7 @@ function mapOrder(o) {
     }),
     orderedAt: o.ordered_at,
     paymentDone: Boolean(o.payment_received),
+    referredBy: o.referred_by || "Self",
   };
 }
 
@@ -92,6 +93,7 @@ export default function OrderDetail() {
               orderedAt: mapped.orderedAt,
               results: Object.fromEntries(mapped.tests.map((t) => [t.id, t.result || ""])),
               paymentDone: mapped.paymentDone,
+              referredBy: mapped.referredBy, 
             },
           });
           return;
@@ -127,22 +129,24 @@ export default function OrderDetail() {
   }
 
   async function handleMarkCompleted() {
-    setSavingAction("complete");
-    setSaveError(null);
+  setSavingAction("complete");
+  setSaveError(null);
 
-    try {
-      const resultsPayload = Object.entries(results).map(([itemId, value]) => ({
-        order_item_id: Number(itemId),
-        result_value: value || null,
-      }));
+  try {
+    const resultsPayload = Object.entries(results).map(([itemId, value]) => ({
+      order_item_id: Number(itemId),
+      result_value: value || null,
+    }));
 
-      await completeOrderApi(orderId, resultsPayload);
-      navigate(`/lab-orders/${orderId}/report`, { state: { patient, tests, orderedAt, results, paymentDone } });
-    } catch (err) {
-      setSaveError(err.message);
-      setSavingAction(null);
-    }
+    await completeOrderApi(orderId, resultsPayload);
+    navigate(`/lab-orders/${orderId}/report`, {
+      state: { patient, tests, orderedAt, results, paymentDone, referredBy: order?.referredBy || "Self" }  // 👈 add referredBy
+    });
+  } catch (err) {
+    setSaveError(err.message);
+    setSavingAction(null);
   }
+}
 
   if (isLoading) {
     return <p className="text-sm text-gray-400 text-center py-10">Loading order…</p>;

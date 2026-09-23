@@ -18,7 +18,7 @@ function mapTest(t, categoryId) {
   };
 }
 
-export default function SelectTestsStep({ activeCategory, onCategoryChange, selectedTests, onToggleTest, doctors, referredBy, onReferredByChange }) 
+export default function SelectTestsStep({ activeCategory, onCategoryChange, selectedTests, onToggleTest, doctors, referredBy, onReferredByChange, referredByError })
 {
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
@@ -143,20 +143,28 @@ export default function SelectTestsStep({ activeCategory, onCategoryChange, sele
   return (
     <div className="px-6 py-5 space-y-4">
       <div>
-        <label className="block text-sm font-semibold text-gray-900 mb-1.5">Referred By</label>
-          <select
-           value={referredBy}
-           onChange={(e) => onReferredByChange(e.target.value)}
-           className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
-          >
-        <option value="Self">Self</option>
-          {doctors.map((doc) => (
-        <option key={doc.id} value={doc.name}>
-          {doc.name}
-        </option>
-      ))}
-      </select>
-    </div>
+            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Referred By</label>
+              <select
+              value={referredBy}
+              onChange={(e) => onReferredByChange(e.target.value)}
+              className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
+                referredByError
+                  ? "border-red-400 focus:border-red-500 focus:ring-red-500"
+                  : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+              }`}
+              >
+            <option value="" disabled>Select</option>
+            <option value="Self">Self</option>
+              {doctors.map((doc) => (
+            <option key={doc.id} value={doc.name}>
+              {doc.name}
+            </option>
+          ))}
+          </select>
+          {referredByError && (
+            <p className="text-xs text-red-500 mt-1">This field is required.</p>
+          )}
+          </div>
       {categories.length > 4 && (
         <div className="relative">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />

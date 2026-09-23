@@ -125,7 +125,9 @@ export default function NewOrderModal() {
   const [isLoadingPatientToEdit, setIsLoadingPatientToEdit] = useState(false);
 
   const [doctors, setDoctors] = useState([]); 
-  const [referredBy, setReferredBy] = useState("Self");
+  const [referredBy, setReferredBy] = useState("");
+
+  const [referredByTouched, setReferredByTouched] = useState(false);
 
   async function handleEditSelectedPatient() {
     if (!selectedPatient?.id) return;
@@ -235,7 +237,8 @@ export default function NewOrderModal() {
     setSubmitError(null);
     setIsCreatingPatient(false);
     setEditingPatient(null);
-    setReferredBy("Self");
+    setReferredBy("");
+    setReferredByTouched(false);
     close();
   }
 
@@ -301,6 +304,10 @@ export default function NewOrderModal() {
         };
 
   async function handleNext() {
+    if (step === 2 && !referredBy) {
+    setReferredByTouched(true);
+    return;
+    }
     if (step === 1 && patientType === "new" && !createdPatient) {
       if (!newPatientData.name.trim()) {
         setSubmitError("Please enter the patient's name.");
@@ -439,7 +446,11 @@ const isNextDisabled =
             onToggleTest={toggleTest}
             doctors={doctors}
             referredBy={referredBy}
-            onReferredByChange={setReferredBy}
+            onReferredByChange={(val) => {
+              setReferredBy(val);
+              if (val) setReferredByTouched(false);
+            }}
+            referredByError={referredByTouched && !referredBy}
           />
         )}
 

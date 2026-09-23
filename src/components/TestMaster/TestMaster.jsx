@@ -5,6 +5,7 @@ import CategoryList from "./CategoryList/CategoryList";
 import TestsTable from "../TestMaster/CategoryList/TestsTable/TestsTable";
 import AddCategoryModal from "./modals/AddCategoryModal";
 import AddTestModal from "./modals/AddTestModal";
+import Toast from "../common/Toast/Toast";
 import {
   getTestCategories,
   getLabTests,
@@ -13,7 +14,7 @@ import {
   createLabTest,
   updateLabTest,
   deleteLabTest,
-} from "../../api/api"; 
+} from "../../api/api";
 
 const dotColors = ["teal", "pink", "purple", "amber"];
 
@@ -26,6 +27,7 @@ export default function TestMaster() {
   const [isCategoryModalOpen, setCategoryModalOpen] = useState(false);
   const [testModalState, setTestModalState] = useState(null);
   const [editingCategory, setEditingCategory] = useState(null);
+  const [toast, setToast] = useState(null); // { message, type }
 
   useEffect(() => {
     let cancelled = false;
@@ -85,7 +87,7 @@ export default function TestMaster() {
 
   async function handleAddCategory(name) {
     if (categories.some((c) => c.name.toLowerCase() === name.toLowerCase())) {
-      alert("A category with this name already exists.");
+      setToast({ message: "A category with this name already exists.", type: "error" });
       return;
     }
 
@@ -98,14 +100,15 @@ export default function TestMaster() {
       setTestsByCategory((prev) => ({ ...prev, [created.name]: [] }));
       setActiveCategory(created.name);
       setCategoryModalOpen(false);
+      setToast({ message: "Category added successfully", type: "success" });
     } catch (err) {
-      alert(err.message);
+      setToast({ message: err.message || "Failed to add category", type: "error" });
     }
   }
 
   async function handleEditCategory(id, newName) {
     if (categories.some((c) => c.id !== id && c.name.toLowerCase() === newName.toLowerCase())) {
-      alert("A category with this name already exists.");
+      setToast({ message: "A category with this name already exists.", type: "error" });
       return;
     }
 
@@ -135,16 +138,16 @@ export default function TestMaster() {
 
       setCategoryModalOpen(false);
       setEditingCategory(null);
+      setToast({ message: "Category updated successfully", type: "success" });
     } catch (err) {
-      alert(err.message);
+      setToast({ message: err.message || "Failed to update category", type: "error" });
     }
   }
 
-  // ⬇ CHANGED: was local-state-only, now calls createLabTest / updateLabTest
   async function handleSaveTest(testData) {
     const category = categories.find((c) => c.name === testData.category);
     if (!category) {
-      alert("Please select a valid category.");
+      setToast({ message: "Please select a valid category.", type: "error" });
       return;
     }
 
@@ -164,9 +167,11 @@ export default function TestMaster() {
       ranges,
     };
 
+    const isEditing = Boolean(testModalState?.editingTest);
+
     try {
       let saved;
-      if (testModalState?.editingTest) {
+      if (isEditing) {
         const res = await updateLabTest(testModalState.editingTest.id, payload);
         saved = res.data;
       } else {
@@ -177,7 +182,7 @@ export default function TestMaster() {
       setTestsByCategory((prev) => {
         const updated = { ...prev };
 
-        if (testModalState?.editingTest) {
+        if (isEditing) {
           const oldCategory = testModalState.editingTest.category;
           updated[oldCategory] = (updated[oldCategory] || []).filter(
             (t) => t.id !== testModalState.editingTest.id
@@ -206,12 +211,15 @@ export default function TestMaster() {
 
       setActiveCategory(testData.category);
       setTestModalState(null);
+      setToast({
+        message: isEditing ? "Test updated successfully" : "Test added successfully",
+        type: "success",
+      });
     } catch (err) {
-      alert(err.message);
+      setToast({ message: err.message || "Failed to save test", type: "error" });
     }
   }
 
-  // ⬇ CHANGED: was local-state-only, now calls deleteLabTest
   async function handleRemoveTest(test) {
     if (!window.confirm(`Remove "${test.name}"? This can't be undone.`)) return;
     try {
@@ -220,8 +228,9 @@ export default function TestMaster() {
         ...prev,
         [activeCategory]: prev[activeCategory].filter((t) => t.id !== test.id),
       }));
+      setToast({ message: "Test removed successfully", type: "success" });
     } catch (err) {
-      alert(err.message);
+      setToast({ message: err.message || "Failed to remove test", type: "error" });
     }
   }
 
@@ -271,6 +280,14 @@ export default function TestMaster() {
           editingTest={testModalState.editingTest}
           onClose={() => setTestModalState(null)}
           onSave={handleSaveTest}
+        />
+      )}
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
         />
       )}
     </div>

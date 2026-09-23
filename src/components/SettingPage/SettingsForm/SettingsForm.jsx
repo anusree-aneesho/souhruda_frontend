@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import FormField from "./FormField";
+import Toast from "../../common/Toast/Toast";
+import { useToast } from "../../common/Toast/useToast";
 import { getSettingsApi, updateSettingsApi } from "../../../api/api";
 import { useAuth } from "../../../Context/AuthContext";
 
@@ -40,7 +42,7 @@ export default function SettingsForm() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const { toast, showToast, hideToast } = useToast();
   const { user } = useAuth();
 
   const role = String(user?.role ?? "")
@@ -95,7 +97,6 @@ export default function SettingsForm() {
     if (!canEdit) return;
 
     setError("");
-    setSuccess(false);
 
     const errors = validate(formData);
     if (Object.keys(errors).length > 0) {
@@ -125,7 +126,7 @@ export default function SettingsForm() {
         home_visit_fee: Number(formData.homeVisitFee) || 0,
         free_radius: Number(formData.freeRadius) || 0,
       });
-      setSuccess(true);
+      showToast("Settings saved successfully.");
     } catch (err) {
       setError(err.message || "Failed to save settings.");
     } finally {
@@ -145,11 +146,7 @@ export default function SettingsForm() {
       {error && (
         <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
       )}
-      {success && (
-        <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-          Settings saved successfully.
-        </p>
-      )}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
 
       <FormField label="Lab Name" name="labName" value={formData.labName} onChange={handleChange} error={fieldErrors.labName} />
       <FormField label="Address" name="address" value={formData.address} onChange={handleChange} error={fieldErrors.address} />

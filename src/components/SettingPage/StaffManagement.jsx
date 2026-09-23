@@ -174,11 +174,6 @@ export default function StaffManagement() {
   }
 
   async function handleSaveStaff(formData) {
-    if (formData.role === "Admin") {
-      showToast("Adding Admins isn't supported yet.", "error");
-      return;
-    }
-
     const isEdit = Boolean(formData.id);
 
     try {

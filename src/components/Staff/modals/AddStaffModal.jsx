@@ -1,4 +1,3 @@
-// src/components/FrontOfficers/modals/AddFrontOfficerModal.jsx
 import { useState, useEffect } from "react";
 import ModalShell from "../../common/Modal/ModalShell";
 
@@ -52,6 +51,8 @@ function hasErrors(errors) {
 export default function AddFrontOfficerModal({ editingFrontOfficer, branches, onClose, onSave }) {
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState(emptyErrors);
+  const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const isEditMode = Boolean(editingFrontOfficer);
 
   useEffect(() => {
@@ -73,20 +74,30 @@ export default function AddFrontOfficerModal({ editingFrontOfficer, branches, on
 
   function handleChange(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
-    // Clear that field's error as soon as the user starts fixing it.
     setErrors((prev) => (prev[field] ? { ...prev, [field]: "" } : prev));
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
+    if (saving) return; // guard against a stray double-fire (e.g. double Enter)
+
     const nextErrors = validate(form, isEditMode);
     setErrors(nextErrors);
     if (hasErrors(nextErrors)) return;
 
-    onSave({
-      ...form,
-      id: editingFrontOfficer?.id,
-    });
+    setSaving(true);
+    setSubmitError("");
+    try {
+      await onSave({
+        ...form,
+        id: editingFrontOfficer?.id,
+      });
+      // On success the parent typically closes the modal itself (via onSave -> re-fetch -> onClose).
+      // If yours doesn't, add onClose() here.
+    } catch (err) {
+      setSubmitError(err?.message || "Something went wrong. Please try again.");
+      setSaving(false);
+    }
   }
 
   const fieldClass = (field) =>
@@ -97,9 +108,15 @@ export default function AddFrontOfficerModal({ editingFrontOfficer, branches, on
     }`;
 
   return (
-    <ModalShell title={isEditMode ? "Edit Front Officer" : "Add Front Officer"} onClose={onClose} maxWidth="max-w-md">
+    <ModalShell title={isEditMode ? "Edit Front Officer" : "Add Front Officer"} onClose={saving ? undefined : onClose} maxWidth="max-w-md">
       <form onSubmit={handleSubmit} noValidate>
         <div className="px-6 py-5 space-y-4">
+          {submitError && (
+            <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              {submitError}
+            </p>
+          )}
+
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-1.5">Full Name</label>
             <input
@@ -107,6 +124,7 @@ export default function AddFrontOfficerModal({ editingFrontOfficer, branches, on
               value={form.name}
               onChange={(e) => handleChange("name", e.target.value)}
               placeholder="Front officer name"
+              disabled={saving}
               className={fieldClass("name")}
             />
             {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
@@ -119,7 +137,7 @@ export default function AddFrontOfficerModal({ editingFrontOfficer, branches, on
               value={form.email}
               onChange={(e) => handleChange("email", e.target.value)}
               placeholder="frontofficer@lab.com"
-              disabled={isEditMode}
+              disabled={isEditMode || saving}
               className={fieldClass("email")}
             />
             {isEditMode ? (
@@ -136,6 +154,7 @@ export default function AddFrontOfficerModal({ editingFrontOfficer, branches, on
                 value={form.phone}
                 onChange={(e) => handleChange("phone", e.target.value)}
                 placeholder="10-digit number"
+                disabled={saving}
                 className={fieldClass("phone")}
               />
               {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
@@ -145,6 +164,7 @@ export default function AddFrontOfficerModal({ editingFrontOfficer, branches, on
               <select
                 value={form.branch_id}
                 onChange={(e) => handleChange("branch_id", e.target.value)}
+                disabled={saving}
                 className={fieldClass("branch_id") + " cursor-pointer"}
               >
                 <option value="">Select branch</option>
@@ -163,7 +183,8 @@ export default function AddFrontOfficerModal({ editingFrontOfficer, branches, on
             <select
               value={form.status}
               onChange={(e) => handleChange("status", e.target.value)}
-              className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 cursor-pointer"
+              disabled={saving}
+              className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 cursor-pointer disabled:bg-gray-50 disabled:text-gray-400"
             >
               <option>Active</option>
               <option>Inactive</option>
@@ -175,15 +196,17 @@ export default function AddFrontOfficerModal({ editingFrontOfficer, branches, on
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            disabled={saving}
+            className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700"
+            disabled={saving}
+            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isEditMode ? "Save Changes" : "Add Front Officer"}
+            {saving ? "Saving..." : isEditMode ? "Save Changes" : "Add Front Officer"}
           </button>
         </div>
       </form>

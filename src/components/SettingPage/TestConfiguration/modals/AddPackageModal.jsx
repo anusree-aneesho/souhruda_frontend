@@ -47,12 +47,20 @@ export default function AddPackageModal({ tests, editingPackage, onClose, onSave
       setError("Package name is required.");
       return;
     }
+    if (!/^[A-Za-z ]+$/.test(name.trim())) {
+      setError("Package name must contain letters only (no numbers or symbols).");
+      return;
+    }
     if (price === "" || Number.isNaN(Number(price)) || Number(price) < 0) {
       setError("Enter a valid price.");
       return;
     }
-    if (selectedIds.length === 0) {
-      setError("Select at least one test for this package.");
+    if (!Number.isInteger(Number(price))) {
+      setError("Price must be a whole number (no decimal points).");
+      return;
+    }
+    if (selectedIds.length < 2) {
+      setError("Select at least 2 tests for this package.");
       return;
     }
 
@@ -100,7 +108,7 @@ export default function AddPackageModal({ tests, editingPackage, onClose, onSave
             <input
               type="number"
               min="0"
-              step="0.01"
+              step="1"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               placeholder="e.g. 1499"

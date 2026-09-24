@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getOrdersForRangeApi } from "../../api/api";
 import {
   Briefcase,
   IndianRupee,
@@ -29,12 +30,17 @@ function StatCard({ label, value, icon: Icon, bg, color }) {
   );
 }
 
-function RangeFilter({ options = rangeOptions, active = "1 Year" }) {
+function RangeFilter({ options = rangeOptions, active, onSelect, showToday = true }) {
+  const visibleOptions = showToday
+    ? options
+    : options.filter((r) => r !== "Today");
+
   return (
     <div className="flex gap-2 flex-wrap">
-      {options.map((r) => (
+      {visibleOptions.map((r) => (
         <button
           key={r}
+          onClick={() => onSelect(r)}
           className={`px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer ${
             r === active
               ? "bg-teal-600 text-white"
@@ -48,7 +54,17 @@ function RangeFilter({ options = rangeOptions, active = "1 Year" }) {
   );
 }
 
-function HighlightCard({ label, value, icon: Icon, bg, color, options }) {
+function HighlightCard({
+  label,
+  value,
+  icon: Icon,
+  bg,
+  color,
+  options,
+  active,
+  onSelect,
+  showToday,
+}) {
   return (
     <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-4">
       <div className="flex items-center justify-between">
@@ -58,7 +74,12 @@ function HighlightCard({ label, value, icon: Icon, bg, color, options }) {
         </div>
       </div>
       <p className="text-2xl font-bold text-gray-900">{value}</p>
-      <RangeFilter options={options} />
+      <RangeFilter
+        options={options}
+        active={active}
+        onSelect={onSelect}
+        showToday={showToday}
+      />
     </div>
   );
 }
@@ -167,6 +188,37 @@ export default function Statistics() {
     };
   }, []);
 
+  const rangeKeyMap = {
+    Today: "today",
+    Yesterday: "yesterday",
+    "1 Week": "week",
+    "1 Month": "month",
+    "1 Year": "year",
+  };
+
+  const [ordersRange, setOrdersRange] = useState(null);
+  const [hasSwitchedRange, setHasSwitchedRange] = useState(false);
+  const [ordersRangeCount, setOrdersRangeCount] = useState(null);
+  const [ordersRangeLoading, setOrdersRangeLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setOrdersRangeLoading(true);
+    (async () => {
+      try {
+        const res = await getOrdersForRangeApi(rangeKeyMap[ordersRange]);
+        if (!cancelled) setOrdersRangeCount(res.count);
+      } catch (err) {
+        console.error("Failed to load orders for range:", err.message);
+      } finally {
+        if (!cancelled) setOrdersRangeLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ordersRange]);
+
   // Row 1 — Total/Completed/Pending/Cancelled come from the API now.
   // Total Revenue and Average Order Value stay hardcoded until wired up separately.
   const statCards = [
@@ -256,12 +308,18 @@ export default function Statistics() {
       {/* Row 2 — highlight cards with their own range filters */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <HighlightCard
-          label="Orders (Last 1 Year)"
-          value="737"
+          label="Today's Orders"
+          value={ordersRangeLoading ? "…" : (ordersRangeCount ?? 0).toLocaleString()}
           icon={Calendar}
           bg="bg-blue-50"
           color="text-blue-600"
           options={rangeOptions}
+          active={ordersRange}
+          onSelect={(r) => {
+            setOrdersRange(r);
+            setHasSwitchedRange(true);
+          }}
+          showToday={hasSwitchedRange}
         />
         <HighlightCard
           label="Today's Revenue"

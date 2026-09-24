@@ -598,6 +598,10 @@ export async function getStatisticsSummaryApi() {
   return request("/statistics/summary");
 }
 
+export async function getOrdersForRangeApi(range = "today") {
+  return request(`/statistics/orders-for-range?range=${range}`);
+}
+
 export async function getStatisticsRankingsApi() {
   return request("/statistics/rankings");
 }

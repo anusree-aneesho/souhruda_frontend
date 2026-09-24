@@ -53,6 +53,8 @@ function mapDetail(r) {
     slotDate: r.slot_date,
     linkedOrderId: r.order_no || null,
     tests: r.tests || [],
+    testsTotal: r.tests_total,
+    grandTotal: r.grand_total,
   };
 }
 
@@ -241,7 +243,7 @@ export default function HomeCollectionDetailModal() {
 
               {hc.status === "En Route" && <TrackingMap />}
 
-              <TestsList tests={hc.tests} />
+              <TestsList tests={hc.tests} total={hc.testsTotal} collectionCharge={hc.collectionCharge} grandTotal={hc.grandTotal} />
 
               {hc.status === "Processing" && (
                 <p className="text-sm text-gray-500 text-right">

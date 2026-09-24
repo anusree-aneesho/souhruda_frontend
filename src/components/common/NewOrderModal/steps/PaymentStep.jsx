@@ -2,7 +2,6 @@
 import { useMemo, useState } from "react";
 import { computeOrderPricing } from "../../../../utils/orderPricing";
 
-const HOME_VISIT_FEE = 50;
 const paymentMethods = ["UPI", "Cash", "Card"];
 
 // Deterministic pseudo-QR pattern, purely decorative (no real payment integration).
@@ -26,9 +25,10 @@ function QrPattern({ seed = 1 }) {
   );
 }
 
-export default function PaymentStep({ selectedTests, packages = [], appliedPackageIds = [], paymentMethod, onPaymentMethodChange }) {
+export default function PaymentStep({ selectedTests, packages = [], appliedPackageIds = [], collectionCharge = 0, paymentMethod, onPaymentMethodChange }) {
   const testsTotal = computeOrderPricing(selectedTests, packages, appliedPackageIds).total;
-  const total = testsTotal + HOME_VISIT_FEE;
+  // Home visit fee comes from the backend quote (base fee + per-km rate), not a hardcoded value.
+  const total = testsTotal + collectionCharge;
 
   return (
     <div className="px-6 py-5 space-y-4">
@@ -39,7 +39,7 @@ export default function PaymentStep({ selectedTests, packages = [], appliedPacka
         </div>
         <div className="flex items-center justify-between text-sm">
           <span className="text-gray-500">Home visit fee</span>
-          <span className="text-gray-900">₹{HOME_VISIT_FEE.toFixed(2)}</span>
+          <span className="text-gray-900">₹{collectionCharge.toFixed(2)}</span>
         </div>
       </div>
 

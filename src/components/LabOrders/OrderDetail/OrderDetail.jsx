@@ -54,6 +54,8 @@ function mapOrder(o) {
     // stored server-side — never re-summed from individual test prices,
     // so it stays correct when a package discount applied.
     billTotal: o.bill_total != null ? Number(o.bill_total) : null,
+    // Home visit fee for home-collection orders (0 otherwise) — billed on top of the tests.
+    homeVisitFee: Number(o.home_visit_fee) || 0,
   };
 }
 
@@ -106,6 +108,7 @@ export default function OrderDetail() {
               paymentDone: mapped.paymentDone,
               referredBy: mapped.referredBy,
               billTotal: mapped.billTotal,
+              homeVisitFee: mapped.homeVisitFee,
             },
           });
           return;
@@ -131,6 +134,7 @@ export default function OrderDetail() {
   const orderedAt = order?.orderedAt || "-";
   const paymentDone = Boolean(order?.paymentDone);
   const billTotal = order?.billTotal;
+  const homeVisitFee = order?.homeVisitFee || 0;
 
   function formatOrderedAt(raw) {
     if (!raw || raw === "-") return "-";
@@ -168,7 +172,7 @@ export default function OrderDetail() {
 
     await completeOrderApi(orderId, resultsPayload);
     navigate(`/lab-orders/${orderId}/report`, {
-      state: { patient, tests, orderedAt, results, paymentDone, referredBy: order?.referredBy || "Self", billTotal }
+      state: { patient, tests, orderedAt, results, paymentDone, referredBy: order?.referredBy || "Self", billTotal, homeVisitFee }
     });
   } catch (err) {
     setSaveError(err.message);

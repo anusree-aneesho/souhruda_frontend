@@ -66,7 +66,7 @@ export default function HomeCollectionSchedule() {
     <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-semibold text-sm text-gray-900">Home Collection Schedule</h3>
-        <Link to="/home-collection" className="text-sm text-teal-600 font-medium hover:underline">
+        <Link to="/home-collection" className="text-xs text-teal-600 font-medium hover:underline">
           View all →
         </Link>
       </div>

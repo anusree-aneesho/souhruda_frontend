@@ -10,6 +10,8 @@ import Toast from "../common/Toast/Toast";
 import { useToast } from "../common/Toast/useToast";
 import { getOrdersApi } from "../../api/api";
 
+const PER_PAGE = 9;
+
 function capitalize(str) {
   return str ? str.charAt(0).toUpperCase() + str.slice(1) : str;
 }
@@ -71,6 +73,7 @@ export default function LabOrders() {
       status: activeTab,
       q: search,
       page,
+      per_page: PER_PAGE,
     })
       .then((res) => {
         if (!cancelled) {
@@ -157,22 +160,22 @@ export default function LabOrders() {
             )}
 
             {filteredOrders.length > 0 && lastPage > 1 && (
-              <div className="flex items-center justify-between !mt-2">
-                <p className="text-sm text-gray-500">
+              <div className="flex items-center justify-between border-t border-gray-100 pt-2 !mt-1">
+                <p className="text-xs text-gray-500">
                   Page {page} of {lastPage} · {total} orders
                 </p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page <= 1}
-                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     ← Prev
                   </button>
                   <button
                     onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
                     disabled={page >= lastPage}
-                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Next →
                   </button>

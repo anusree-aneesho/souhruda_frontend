@@ -1,6 +1,6 @@
 // src/components/SettingPage/StaffManagement.jsx
 import { useState, useMemo, useEffect } from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Pencil, Trash2} from "lucide-react";
 import AddStaffModal from "./modals/AddStaffModal";
 import ConfirmModal from "../Patients/modals/ConfirmModal";
 import { addStaffApi, getStaffMembersApi, updateStaffMemberApi, deleteStaffMemberApi} from "../../api/api";
@@ -90,13 +90,25 @@ function StaffRow({ staff, onEdit, onRemove }) {
       <td className="py-3 text-sm">
         <StaffStatusBadge status={status} />
       </td>
-      <td className="py-3 text-right space-x-3 whitespace-nowrap">
-        <button onClick={() => onEdit(staff)} className="text-sm text-teal-600 font-medium hover:underline cursor-pointer">
-          Edit
-        </button>
-        <button onClick={() => onRemove(staff)} className="text-sm text-red-500 font-medium hover:underline cursor-pointer">
-          Remove
-        </button>
+      <td className="py-3 text-right">
+        <div className="flex items-center justify-end gap-2">
+          <button
+            onClick={() => onEdit(staff)}
+            className="p-1.5 rounded-md text-teal-600 hover:bg-teal-50 cursor-pointer"
+            aria-label={`Edit ${name}`}
+            title="Edit"
+          >
+            <Pencil size={15} />
+          </button>
+          <button
+            onClick={() => onRemove(staff)}
+            className="p-1.5 rounded-md text-red-500 hover:bg-red-50 cursor-pointer"
+            aria-label={`Remove ${name}`}
+            title="Remove"
+          >
+            <Trash2 size={15} />
+          </button>
+        </div>
       </td>
     </tr>
   );

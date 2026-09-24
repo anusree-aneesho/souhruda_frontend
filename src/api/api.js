@@ -426,6 +426,7 @@ export async function getOrdersApi(params = {}) {
   if (!params.today && params.status && params.status !== "All") query.set("status", params.status);
   if (params.q) query.set("q", params.q);
   if (params.page) query.set("page", params.page);
+  if (params.per_page) query.set("per_page", params.per_page);
 
   const qs = query.toString();
   return request(`/orders${qs ? `?${qs}` : ""}`);

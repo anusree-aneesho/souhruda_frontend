@@ -5,6 +5,8 @@ import CategoryItem from "./CategoryItem";
 import { useAuth } from "../../../Context/AuthContext";
 
 const PAGE_SIZE = 11;
+const ROW_HEIGHT = 44;
+const LIST_MIN_HEIGHT = PAGE_SIZE * ROW_HEIGHT;
 
 export default function CategoryList({ categories, activeCategory, onSelect, onEditCategory }) {
   const [page, setPage] = useState(1);
@@ -33,7 +35,7 @@ export default function CategoryList({ categories, activeCategory, onSelect, onE
   const pageCategories = filteredCategories.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+    <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] flex flex-col">
       <h3 className="font-semibold text-sm text-gray-900 mb-3">Categories</h3>
 
       {categories.length > 4 && (
@@ -49,21 +51,23 @@ export default function CategoryList({ categories, activeCategory, onSelect, onE
         </div>
       )}
 
-      <div className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible">
-        {pageCategories.length === 0 ? (
-          <p className="text-sm text-gray-400 px-3 py-2">No categories match your search.</p>
-        ) : (
-          pageCategories.map((cat) => (
-            <CategoryItem
-              key={cat.name}
-              {...cat}
-              isActive={activeCategory === cat.name}
-              onClick={() => onSelect(cat.name)}
-              onEdit={onEditCategory}
-              canManage={canManage}
-            />
-          ))
-        )}
+      <div className="flex-1" style={{ minHeight: `${LIST_MIN_HEIGHT}px` }}>
+        <div className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible">
+          {pageCategories.length === 0 ? (
+            <p className="text-sm text-gray-400 px-3 py-2">No categories match your search.</p>
+          ) : (
+            pageCategories.map((cat) => (
+              <CategoryItem
+                key={cat.name}
+                {...cat}
+                isActive={activeCategory === cat.name}
+                onClick={() => onSelect(cat.name)}
+                onEdit={onEditCategory}
+                canManage={canManage}
+              />
+            ))
+          )}
+        </div>
       </div>
 
       {lastPage > 1 && (

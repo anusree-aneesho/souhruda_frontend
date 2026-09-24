@@ -226,6 +226,8 @@ export default function BillModal({ orderId, patient, tests, billTotal, paymentD
       <div class="label">Billed To</div>
       <div class="value">${patient.name}</div>
       <div class="sub">Reg No: ${patient.regNo || "-"}</div>
+      ${patient.phone ? `<div class="sub">Phone: ${patient.phone}</div>` : ""}
+
     </div>
     <div class="block right">
       <div class="label">Billed On</div>
@@ -322,20 +324,25 @@ export default function BillModal({ orderId, patient, tests, billTotal, paymentD
         )}
 
         {/* ── Billed To block ────────────────────────────────── */}
-        <div className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3 mb-4">
-          <div>
-            <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
-              Billed To
-            </p>
-            <p className="text-sm font-semibold text-gray-900">{patient.name}</p>
+{/* ── Billed To block ────────────────────────────────── */}
+          <div className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3 mb-4">
+            <div>
+              <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
+                Billed To
+              </p>
+              <p className="text-sm font-semibold text-gray-900">{patient.name}</p>
+              <p className="text-xs text-gray-500">Reg No: {patient.regNo || "-"}</p>
+              {patient.phone && (
+                <p className="text-xs text-gray-500">Phone: {patient.phone}</p>
+              )}
+            </div>
+            {paymentDone && (
+              <span className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
+                <CheckCircle2 size={13} />
+                Paid
+              </span>
+            )}
           </div>
-          {paymentDone && (
-            <span className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
-              <CheckCircle2 size={13} />
-              Paid
-            </span>
-          )}
-        </div>
 
         {/* ── Items list — grouped by applied package, same as Confirm
               Order, instead of every test flat ────────────────── */}

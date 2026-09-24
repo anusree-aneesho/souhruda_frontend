@@ -31,11 +31,13 @@ async function request(endpoint, options = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(
+    const message =
       data.message ||
-        data.errors?.email?.[0] ||
-        "Something went wrong. Please try again."
-    );
+      Object.values(data.errors || {})[0]?.[0] ||
+      "Something went wrong. Please try again.";
+    const err = new Error(message);
+    if (data.errors) err.errors = data.errors;
+    throw err;
   }
 
   return data;
@@ -540,4 +542,50 @@ export async function deleteDoctorApi(id) {
   return request(`/doctors/${id}`, {
     method: "DELETE",
   });
+}
+// ── Reports ──────────────────────────────────────────────
+export async function getPatientsReportApi({ dateFrom, dateTo, q } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  if (q) params.append("q", q);
+  const qs = params.toString();
+  return request(`/reports/patients${qs ? `?${qs}` : ""}`);
+}
+
+export async function getFinanceReportApi({ dateFrom, dateTo } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  const qs = params.toString();
+  return request(`/reports/finance${qs ? `?${qs}` : ""}`);
+}
+
+export async function getDayReportApi(date) {
+  const params = new URLSearchParams();
+  if (date) params.append("date", date);
+  const qs = params.toString();
+  return request(`/reports/daily${qs ? `?${qs}` : ""}`);
+}
+
+export async function getWeeklyReportApi(weekStart) {
+  const params = new URLSearchParams();
+  if (weekStart) params.append("week_start", weekStart);
+  const qs = params.toString();
+  return request(`/reports/weekly${qs ? `?${qs}` : ""}`);
+}
+
+export async function getMonthlyReportApi(month, year) {
+  const params = new URLSearchParams();
+  if (month) params.append("month", month);
+  if (year) params.append("year", year);
+  const qs = params.toString();
+  return request(`/reports/monthly${qs ? `?${qs}` : ""}`);
+}
+
+export async function getYearlyReportApi(year) {
+  const params = new URLSearchParams();
+  if (year) params.append("year", year);
+  const qs = params.toString();
+  return request(`/reports/yearly${qs ? `?${qs}` : ""}`);
 }

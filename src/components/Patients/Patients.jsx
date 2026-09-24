@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import PatientsHeader from "./PatientsHeader";
 import PatientsSearch from "./PatientsSearch";
 import PatientsTable from "./PatientsTable/PatientsTable";
@@ -17,6 +17,8 @@ import {
   updatePatientApi,
   deletePatientApi,
 } from "../../api/api";
+
+const PAGE_SIZE = 9;
 
 function mapPatient(p) {
   return {
@@ -43,32 +45,37 @@ export default function Patients() {
   const [editingPatient, setEditingPatient] = useState(null);
   const [deletingPatient, setDeletingPatient] = useState(null);
   const [alertMessage, setAlertMessage] = useState(null);
-  //paginate
-  const [currentPage, setCurrentPage] = useState(1);
-  const [lastPage, setLastPage] = useState(1);
-  const [totalPatients, setTotalPatients] = useState(0);
+
+  // Client-side pagination: backend already sends only the latest 50
+  // patients (see PatientController@index), so paging through them
+  // just slices the array already in memory — no refetch per page.
+  const [page, setPage] = useState(1);
 
   const { toast, showToast, hideToast } = useToast();
 
-  const loadPatients = useCallback(async (query = "", page = 1) => {
-  setLoading(true);
-  try {
-     const res = await getPatientsApi(query, page);
-     setPatients(res.data.map(mapPatient));
-     setCurrentPage(res.meta.current_page);
-     setLastPage(res.meta.last_page);
-     setTotalPatients(res.meta.total);
+  const loadPatients = useCallback(async (query = "") => {
+    setLoading(true);
+    try {
+      const res = await getPatientsApi(query);
+      setPatients(res.data.map(mapPatient));
+      setPage(1);
     } catch (err) {
-     console.error("Failed to load patients:", err.message);
+      console.error("Failed to load patients:", err.message);
     } finally {
-    setLoading(false);
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => loadPatients(search, 1), 300);
+    const timer = setTimeout(() => loadPatients(search), 300);
     return () => clearTimeout(timer);
   }, [search, loadPatients]);
+
+  const lastPage = Math.max(1, Math.ceil(patients.length / PAGE_SIZE));
+  const pagePatients = useMemo(
+    () => patients.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [patients, page]
+  );
 
   async function handleAddPatient(newPatientData) {
     const [first_name, ...rest] = newPatientData.name.trim().split(" ");
@@ -161,64 +168,66 @@ export default function Patients() {
   }
 
   function handlePageChange(newPage) {
-      loadPatients(search, newPage);
+    setPage(newPage);
   }
 
   return (
     <div className="space-y-6">
       <PatientsHeader onAddPatient={() => setModalOpen(true)} />
 
-      <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-5">
-        <PatientsSearch value={search} onChange={setSearch} />
+      <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="space-y-5">
+          <PatientsSearch value={search} onChange={setSearch} />
 
-        {loading ? (
-          <p className="text-sm text-gray-400 text-center py-6">Loading...</p>
-        ) : (
-          <>
-            <div className="hidden md:block">
-              <PatientsTable
-                patients={patients}
-                onView={handleView}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
-            </div>
-            <div className="md:hidden space-y-3">
-              {patients.map((p) => (
-                <PatientCard
-                  key={p.id}
-                  {...p}
+          {loading ? (
+            <p className="text-sm text-gray-400 text-center py-6">Loading...</p>
+          ) : (
+            <>
+              <div className="hidden md:block">
+                <PatientsTable
+                  patients={pagePatients}
                   onView={handleView}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                 />
-              ))}
-            </div>
-            {patients.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-6">No patients found.</p>
-            )}
-          </>
-        )}
-        
+              </div>
+              <div className="md:hidden space-y-3">
+                {pagePatients.map((p) => (
+                  <PatientCard
+                    key={p.id}
+                    {...p}
+                    onView={handleView}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+              {patients.length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-6">No patients found.</p>
+              )}
+            </>
+          )}
+        </div>
+
         {!loading && patients.length > 0 && lastPage > 1 && (
-          <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-            <p className="text-sm text-gray-500">
-              Showing page {currentPage} of {lastPage} ({totalPatients} total)
+          <div className="flex items-center justify-between border-t border-gray-100 pt-3 mt-2">
+            <p className="text-xs text-gray-500">
+              Page {page} of {lastPage} · {patients.length} patients
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex gap-2">
               <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page === 1}
+                className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
-                Previous
+                ← Prev
               </button>
               <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === lastPage}
-                className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page === lastPage}
+                className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
-                Next
+                Next →
               </button>
             </div>
           </div>

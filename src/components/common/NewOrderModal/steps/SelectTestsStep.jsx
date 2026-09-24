@@ -206,8 +206,8 @@ export default function SelectTestsStep({
             <option value="" disabled>Select</option>
             <option value="Self">Self</option>
               {doctors.map((doc) => (
-            <option key={doc.id} value={doc.name}>
-              {doc.name}
+            <option key={doc.id} value={`Dr. ${doc.name}`}>
+              Dr. {doc.name}
             </option>
           ))}
           </select>

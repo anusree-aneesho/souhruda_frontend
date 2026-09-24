@@ -19,6 +19,7 @@ function mapOrder(o) {
       age: o.patient?.age ?? "-",
       gender: o.patient?.gender ?? "-",
       regNo: o.patient?.patient_number ?? "-",
+       phone: o.patient?.phone ?? "",
     },
     tests: (o.items || []).map((item) => {
       const lt = item.lab_test;
@@ -131,6 +132,21 @@ export default function OrderDetail() {
   const paymentDone = Boolean(order?.paymentDone);
   const billTotal = order?.billTotal;
 
+  function formatOrderedAt(raw) {
+    if (!raw || raw === "-") return "-";
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) return raw;
+    return parsed.toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  const formattedOrderedAt = formatOrderedAt(orderedAt);
+
   const flags = useMemo(
     () => Object.fromEntries(tests.map((t) => [t.id, calculateFlag(t.range, results[t.id])])),
     [tests, results]
@@ -205,7 +221,7 @@ export default function OrderDetail() {
         regNo={patient.regNo}
         age={patient.age}
         gender={patient.gender}
-        orderedAt={orderedAt}
+        orderedAt={formattedOrderedAt}
         onDelete={() => setConfirmingDelete(true)}
       />
       <ResultsTable

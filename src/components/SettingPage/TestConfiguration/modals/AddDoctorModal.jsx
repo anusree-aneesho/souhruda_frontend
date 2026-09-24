@@ -16,32 +16,117 @@ export default function AddDoctorModal({ doctor, onClose, onSaved }) {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
+    }
+  };
+
+  const validate = (values) => {
+    const errors = {};
+
+    if (!values.name.trim()) {
+      errors.name = "Full name is required.";
+    } else if (!/^[A-Za-z\s]+$/.test(values.name.trim())) {
+      errors.name = "Name can only contain letters.";
+    }
+
+    if (
+      values.qualifications.trim() &&
+      !/^[A-Za-z\s.,]+$/.test(values.qualifications.trim())
+    ) {
+      errors.qualifications =
+        "Only letters, commas, and periods are allowed.";
+    }
+
+    if (
+      values.specialization.trim() &&
+      !/^[A-Za-z\s.,]+$/.test(values.specialization.trim())
+    ) {
+      errors.specialization =
+        "Only letters, commas, and periods are allowed.";
+    }
+
+    if (!values.registration_no.trim()) {
+      errors.registration_no = "Registration number is required.";
+    } else if (!/^[A-Za-z0-9/-]+$/.test(values.registration_no.trim())) {
+      errors.registration_no =
+        "Use only letters, numbers, hyphens, and slashes.";
+    }
+
+    if (!values.phone.trim()) {
+      errors.phone = "Phone number is required.";
+    } else if (!/^[6-9]\d{9}$/.test(values.phone.trim())) {
+      errors.phone = "Enter a valid 10-digit phone number.";
+    }
+
+    if (values.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())) {
+      errors.email = "Enter a valid email address.";
+    }
+
+    return errors;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSaving(true);
     setError("");
+
+    const errors = validate(form);
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      return;
+    }
+
+    setSaving(true);
     try {
+      const payload = {
+        ...form,
+        name: form.name.trim(),
+        registration_no: form.registration_no.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim(),
+      };
       if (doctor) {
-        await updateDoctorApi(doctor.id, form);
+        const updated = await updateDoctorApi(doctor.id, payload);
+        onSaved(updated, true);
       } else {
-        await createDoctorApi(form);
+        const created = await createDoctorApi(payload);
+        onSaved(created, false);
       }
-      onSaved();
     } catch (err) {
+      const apiErrors = err.errors;
+      if (apiErrors) {
+        setFieldErrors(
+          Object.fromEntries(
+            Object.entries(apiErrors).map(([k, v]) => [
+              k,
+              Array.isArray(v) ? v[0] : v,
+            ])
+          )
+        );
+      }
       setError(err.message || "Failed to save doctor.");
     } finally {
       setSaving(false);
     }
   };
 
-  const inputClass =
-    "w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500";
+  const inputClass = (field) =>
+    `w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 ${
+      fieldErrors[field]
+        ? "border-red-400 focus:ring-red-400 focus:border-red-400"
+        : "border-gray-300 focus:ring-teal-500 focus:border-teal-500"
+    }`;
   const labelClass = "block text-sm font-medium text-gray-700 mb-1.5";
+  const errorClass = "text-red-500 text-xs mt-1";
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
@@ -71,9 +156,9 @@ export default function AddDoctorModal({ doctor, onClose, onSaved }) {
               value={form.name}
               onChange={handleChange}
               placeholder="Doctor name"
-              required
-              className={inputClass}
+              className={inputClass("name")}
             />
+            {fieldErrors.name && <p className={errorClass}>{fieldErrors.name}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -84,9 +169,11 @@ export default function AddDoctorModal({ doctor, onClose, onSaved }) {
                 value={form.registration_no}
                 onChange={handleChange}
                 placeholder="e.g. KMC-12345"
-                required
-                className={inputClass}
+                className={inputClass("registration_no")}
               />
+              {fieldErrors.registration_no && (
+                <p className={errorClass}>{fieldErrors.registration_no}</p>
+              )}
             </div>
             <div>
               <label className={labelClass}>Phone</label>
@@ -95,9 +182,11 @@ export default function AddDoctorModal({ doctor, onClose, onSaved }) {
                 value={form.phone}
                 onChange={handleChange}
                 placeholder="10-digit number"
-                required
-                className={inputClass}
+                maxLength={10}
+                inputMode="numeric"
+                className={inputClass("phone")}
               />
+              {fieldErrors.phone && <p className={errorClass}>{fieldErrors.phone}</p>}
             </div>
           </div>
 
@@ -109,8 +198,11 @@ export default function AddDoctorModal({ doctor, onClose, onSaved }) {
                 value={form.qualifications}
                 onChange={handleChange}
                 placeholder="MBBS, MD"
-                className={inputClass}
+                className={inputClass("qualifications")}
               />
+              {fieldErrors.qualifications && (
+                <p className={errorClass}>{fieldErrors.qualifications}</p>
+              )}
             </div>
             <div>
               <label className={labelClass}>Specialization</label>
@@ -119,8 +211,11 @@ export default function AddDoctorModal({ doctor, onClose, onSaved }) {
                 value={form.specialization}
                 onChange={handleChange}
                 placeholder="Cardiology"
-                className={inputClass}
+                className={inputClass("specialization")}
               />
+              {fieldErrors.specialization && (
+                <p className={errorClass}>{fieldErrors.specialization}</p>
+              )}
             </div>
           </div>
 
@@ -132,8 +227,9 @@ export default function AddDoctorModal({ doctor, onClose, onSaved }) {
                 value={form.email}
                 onChange={handleChange}
                 placeholder="doctor@email.com"
-                className={inputClass}
+                className={inputClass("email")}
               />
+              {fieldErrors.email && <p className={errorClass}>{fieldErrors.email}</p>}
             </div>
             <div>
               <label className={labelClass}>Hospital / Clinic</label>
@@ -142,7 +238,7 @@ export default function AddDoctorModal({ doctor, onClose, onSaved }) {
                 value={form.hospital_clinic}
                 onChange={handleChange}
                 placeholder="Hospital or clinic name"
-                className={inputClass}
+                className={inputClass("hospital_clinic")}
               />
             </div>
           </div>
@@ -155,7 +251,7 @@ export default function AddDoctorModal({ doctor, onClose, onSaved }) {
               onChange={handleChange}
               placeholder="Address"
               rows={2}
-              className={inputClass}
+              className={inputClass("address")}
             />
           </div>
 
@@ -167,7 +263,7 @@ export default function AddDoctorModal({ doctor, onClose, onSaved }) {
               onChange={handleChange}
               placeholder="Any additional notes"
               rows={2}
-              className={inputClass}
+              className={inputClass("notes")}
             />
           </div>
 

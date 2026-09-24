@@ -264,6 +264,7 @@ export default function Report() {
                 Age: ${patient.age} Years<br>
                 Sex: ${patient.gender}<br>
                 PID: ${patient.regNo}
+                 ${patient.phone ? `<br>Phone: ${patient.phone}` : ""}
             </div>
         </div>
 
@@ -407,6 +408,7 @@ export default function Report() {
               <p>Age: {patient.age} Years</p>
               <p>Sex: {patient.gender}</p>
               <p>PID: {patient.regNo}</p>
+               {patient.phone && <p>Phone: {patient.phone}</p>}
             </div>
           </div>
 

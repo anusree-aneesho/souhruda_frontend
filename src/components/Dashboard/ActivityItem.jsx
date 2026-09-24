@@ -7,6 +7,7 @@ import {
   Clock,
   FileText,
   MapPin,
+  MessageCircle,
   UserPlus,
 } from "lucide-react";
 import { useHomeCollectionModal } from "../../Context/HomeCollectionModalContext";
@@ -14,8 +15,8 @@ import { useHomeCollectionModal } from "../../Context/HomeCollectionModalContext
 function getIconMeta(text = "") {
   const t = text.toLowerCase();
 
-  if (t.includes("registered")) {
-    return { Icon: UserPlus, bg: "bg-purple-50", color: "text-purple-600" };
+  if (t.includes("via whatsapp")) {
+    return { Icon: MessageCircle, bg: "bg-green-50", color: "text-green-600" };
   }
   if (t.includes("assigned to home collection")) {
     return { Icon: MapPin, bg: "bg-blue-50", color: "text-blue-600" };

@@ -9,6 +9,10 @@ export default function RequestInfoBar({ hc }) {
         <p className="text-sm font-semibold text-gray-900">{hc.patient.name}</p>
       </div>
       <div>
+        <p className="text-xs text-gray-400 tracking-wide">REFERRED BY</p>
+        <p className="text-sm font-semibold text-gray-900">{hc.referredBy}</p>
+      </div>
+      <div>
         <p className="text-xs text-gray-400 tracking-wide">SLOT</p>
         <p className="text-sm font-semibold text-gray-900">{hc.slot}</p>
       </div>

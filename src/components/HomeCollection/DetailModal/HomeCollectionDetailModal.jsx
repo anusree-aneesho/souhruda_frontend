@@ -39,6 +39,7 @@ function mapDetail(r) {
     id: r.hc_code,
     patient: r.patient || { name: "—" },
     status: formatStatus(r.status),
+    referredBy: r.referred_by || "—",
     slot: [r.slot_date, r.slot_label].filter(Boolean).join(" · "),
     distance: r.distance_km != null ? `${r.distance_km} km from lab` : "—",
     address: r.address_line,

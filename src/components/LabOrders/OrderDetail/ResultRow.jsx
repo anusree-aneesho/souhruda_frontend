@@ -19,7 +19,13 @@ export default function ResultRow({ test, result, flag, onResultChange }) {
         />
       </td>
       <td className="py-3"><StatusBadge status={flag} /></td>
-      <td className="py-3 text-sm text-gray-900">₹{test.price.toFixed(2)}</td>
+      <td className="py-3 text-sm">
+        {test.packageId != null ? (
+          <span className="text-teal-600 text-xs font-medium">In package</span>
+        ) : (
+          <span className="text-gray-900">₹{test.price.toFixed(2)}</span>
+        )}
+      </td>
     </tr>
   );
 }

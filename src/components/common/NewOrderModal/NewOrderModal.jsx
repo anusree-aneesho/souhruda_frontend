@@ -17,8 +17,10 @@ import {
   updatePatientApi,
   createHomeCollectionRequestApi,
   createOrderApi,
+  getTestPackages,
 } from "../../../api/api";
 import { getDoctorsApi } from "../../../api/api";
+import { computeOrderPricing } from "../../../utils/orderPricing";
 
 
 function mapPatient(p) {
@@ -116,6 +118,7 @@ export default function NewOrderModal() {
   const [createdPatient, setCreatedPatient] = useState(null); // holds the freshly-created patient (from step 1)
   const [activeCategory, setActiveCategory] = useState(null);
   const [selectedTests, setSelectedTests] = useState([]);
+  const [appliedPackageIds, setAppliedPackageIds] = useState([]); // packages the staff explicitly applied
   const [paymentDone, setPaymentDone] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -125,6 +128,7 @@ export default function NewOrderModal() {
   const [isLoadingPatientToEdit, setIsLoadingPatientToEdit] = useState(false);
 
   const [doctors, setDoctors] = useState([]); 
+  const [packages, setPackages] = useState([]); // active test packages, for package-aware pricing
   const [referredBy, setReferredBy] = useState("");
 
   const [referredByTouched, setReferredByTouched] = useState(false);
@@ -207,6 +211,23 @@ export default function NewOrderModal() {
   };
 }, [isOpen]);
 
+useEffect(() => {
+  if (!isOpen) return;
+  let cancelled = false;
+  (async () => {
+    try {
+      const res = await getTestPackages();
+      // Only active packages are ever offered for selection / pricing.
+      if (!cancelled) setPackages((res.data || []).filter((p) => p.is_active));
+    } catch (err) {
+      console.error("Failed to load test packages:", err.message);
+    }
+  })();
+  return () => {
+    cancelled = true;
+  };
+}, [isOpen]);
+
   const [address, setAddress] = useState("");
   const [pinnedLocation, setPinnedLocation] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
@@ -224,6 +245,7 @@ export default function NewOrderModal() {
     setCreatedPatient(null);
     setActiveCategory(null);
     setSelectedTests([]);
+    setAppliedPackageIds([]);
     setPaymentDone(false);
     setAddress("");
     setPinnedLocation(null);
@@ -246,6 +268,18 @@ export default function NewOrderModal() {
     setSelectedTests((prev) =>
       prev.some((t) => t.id === test.id) ? prev.filter((t) => t.id !== test.id) : [...prev, test]
     );
+  }
+
+  // Applying a package never changes which tests are selected — it only
+  // marks the package as the pricing to use for the tests it covers (the
+  // "Apply Package" button only appears once every required test is already
+  // ticked). The staff stays in full control of the price.
+  function applyPackageId(packageId) {
+    setAppliedPackageIds((prev) => (prev.includes(packageId) ? prev : [...prev, packageId]));
+  }
+
+  function removePackageIds(packageIds) {
+    setAppliedPackageIds((prev) => prev.filter((id) => !packageIds.includes(id)));
   }
 
   function handlePinLocation() {
@@ -349,12 +383,14 @@ export default function NewOrderModal() {
         return;
       }
 
+      const { appliedPackages } = computeOrderPricing(selectedTests, packages, appliedPackageIds);
+
       const payload = {
          patient_id: patientId,
          tests: selectedTests.map((t) => ({
          lab_test_id: t.id,
-         price: t.price,
         })),
+        package_ids: appliedPackages.map((p) => p.id),
         referred_by: referredBy,
         payment_received: paymentDone,
       };
@@ -444,6 +480,10 @@ const isNextDisabled =
             onCategoryChange={setActiveCategory}
             selectedTests={selectedTests}
             onToggleTest={toggleTest}
+            packages={packages}
+            appliedPackageIds={appliedPackageIds}
+            onApplyPackageId={applyPackageId}
+            onRemovePackageIds={removePackageIds}
             doctors={doctors}
             referredBy={referredBy}
             onReferredByChange={(val) => {
@@ -471,6 +511,8 @@ const isNextDisabled =
           <ConfirmStep
             patient={currentPatient}
             selectedTests={selectedTests}
+            packages={packages}
+            appliedPackageIds={appliedPackageIds}
             paymentDone={paymentDone}
             onPaymentDoneChange={setPaymentDone}
           />
@@ -480,6 +522,8 @@ const isNextDisabled =
           <>
             <PaymentStep
               selectedTests={selectedTests}
+              packages={packages}
+              appliedPackageIds={appliedPackageIds}
               paymentMethod={paymentMethod}
               onPaymentMethodChange={setPaymentMethod}
             />

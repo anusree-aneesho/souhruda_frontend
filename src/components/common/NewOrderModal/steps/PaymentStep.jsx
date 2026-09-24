@@ -1,5 +1,6 @@
 // src/components/common/NewOrderModal/steps/PaymentStep.jsx
 import { useMemo, useState } from "react";
+import { computeOrderPricing } from "../../../../utils/orderPricing";
 
 const HOME_VISIT_FEE = 50;
 const paymentMethods = ["UPI", "Cash", "Card"];
@@ -25,8 +26,8 @@ function QrPattern({ seed = 1 }) {
   );
 }
 
-export default function PaymentStep({ selectedTests, paymentMethod, onPaymentMethodChange }) {
-  const testsTotal = selectedTests.reduce((sum, t) => sum + t.price, 0);
+export default function PaymentStep({ selectedTests, packages = [], appliedPackageIds = [], paymentMethod, onPaymentMethodChange }) {
+  const testsTotal = computeOrderPricing(selectedTests, packages, appliedPackageIds).total;
   const total = testsTotal + HOME_VISIT_FEE;
 
   return (

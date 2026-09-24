@@ -527,6 +527,7 @@ export default function Report() {
           orderId={orderId}
           patient={patient}
           tests={testsWithResults}
+          billTotal={order?.billTotal}
           paymentDone={paymentDone}
           onClose={() => setBillOpen(false)}
         />

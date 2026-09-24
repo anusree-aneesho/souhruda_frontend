@@ -38,11 +38,21 @@ function mapOrder(o) {
   rangeHigh: item.resolved_range_high != null ? Number(item.resolved_range_high) : null,
   price: Number(item.price_at_order),
   result: item.result_value ?? "",
+  // Which package (if any) this test was actually billed under — set
+  // server-side at order creation (OrderService::priceTests()), not
+  // re-detected here, so it always matches what the patient was charged.
+  packageId: item.test_package_id ?? null,
+  packageName: item.test_package?.name ?? null,
+  packagePrice: item.test_package ? Number(item.test_package.price) : null,
 };
     }),
     orderedAt: o.ordered_at,
     paymentDone: Boolean(o.payment_received),
     referredBy: o.referred_by || "Self",
+    // Authoritative total the patient is actually billed, computed and
+    // stored server-side — never re-summed from individual test prices,
+    // so it stays correct when a package discount applied.
+    billTotal: o.bill_total != null ? Number(o.bill_total) : null,
   };
 }
 
@@ -93,7 +103,8 @@ export default function OrderDetail() {
               orderedAt: mapped.orderedAt,
               results: Object.fromEntries(mapped.tests.map((t) => [t.id, t.result || ""])),
               paymentDone: mapped.paymentDone,
-              referredBy: mapped.referredBy, 
+              referredBy: mapped.referredBy,
+              billTotal: mapped.billTotal,
             },
           });
           return;
@@ -118,6 +129,7 @@ export default function OrderDetail() {
   const tests = order?.tests || [];
   const orderedAt = order?.orderedAt || "-";
   const paymentDone = Boolean(order?.paymentDone);
+  const billTotal = order?.billTotal;
 
   const flags = useMemo(
     () => Object.fromEntries(tests.map((t) => [t.id, calculateFlag(t.range, results[t.id])])),
@@ -140,7 +152,7 @@ export default function OrderDetail() {
 
     await completeOrderApi(orderId, resultsPayload);
     navigate(`/lab-orders/${orderId}/report`, {
-      state: { patient, tests, orderedAt, results, paymentDone, referredBy: order?.referredBy || "Self" }  // 👈 add referredBy
+      state: { patient, tests, orderedAt, results, paymentDone, referredBy: order?.referredBy || "Self", billTotal }
     });
   } catch (err) {
     setSaveError(err.message);
@@ -198,6 +210,7 @@ export default function OrderDetail() {
       />
       <ResultsTable
       tests={tests}
+      billTotal={billTotal}
       results={results}
       flags={flags}
       onResultChange={handleResultChange}

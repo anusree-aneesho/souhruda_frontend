@@ -3,9 +3,30 @@ import { useState, useEffect, useRef } from "react";
 import { CheckCircle2, Download } from "lucide-react";
 import ModalShell from "../../common/Modal/ModalShell";
 import { getOrderBillUrlApi, getSettingsApi, getGstSettingsApi } from "../../../api/api";
+import { groupTestsByPackage } from "../../../utils/orderPricing";
 
-export default function BillModal({ orderId, patient, tests, paymentDone, onClose }) {
-  const subtotal = tests.reduce((sum, t) => sum + t.price, 0);
+export default function BillModal({ orderId, patient, tests, billTotal, paymentDone, onClose }) {
+  // Group by the package each test was actually billed under — same
+  // grouping used on the Confirm Order step and the order-detail Bill
+  // section — instead of listing every test flat at its own price.
+  const { packageGroups, individualTests } = groupTestsByPackage(tests);
+
+  // The offer/savings note for each applied package: what it would have
+  // cost buying the tests individually vs. the package price.
+  const offers = packageGroups.map((pkg) => {
+    const individualTotal = pkg.tests.reduce((sum, t) => sum + (Number(t.price) || 0), 0);
+    return {
+      id: pkg.id,
+      name: pkg.name,
+      savings: Math.max(0, individualTotal - pkg.price),
+    };
+  });
+
+  // billTotal comes from the server (order.bill_total) — the amount the
+  // patient was actually charged. Fall back to summing catalog prices only
+  // if it's ever missing (e.g. an older order), so the modal never breaks.
+  const fallbackSubtotal = tests.reduce((sum, t) => sum + t.price, 0);
+  const subtotal = billTotal != null ? billTotal : fallbackSubtotal;
 
   const [labInfo, setLabInfo] = useState(null);
   const [gstInfo, setGstInfo] = useState(null);
@@ -68,7 +89,20 @@ export default function BillModal({ orderId, patient, tests, paymentDone, onClos
       .join(", ");
     const contactLine = [labInfo.phone, labInfo.email].filter(Boolean).join("  ·  ");
 
-    const rows = tests
+    const packageRowsHtml = packageGroups
+      .map(
+        (pkg) => `
+        <tr>
+          <td>
+            ${pkg.name} <span class="tag">Package</span>
+            <div class="included-tests">${pkg.tests.map((t) => t.name).join(", ")}</div>
+          </td>
+          <td class="amount">${pkg.price.toFixed(2)}</td>
+        </tr>`
+      )
+      .join("");
+
+    const individualRowsHtml = individualTests
       .map(
         (t) => `
         <tr>
@@ -77,6 +111,22 @@ export default function BillModal({ orderId, patient, tests, paymentDone, onClos
         </tr>`
       )
       .join("");
+
+    const offersHtml = offers.length
+      ? `
+    <div class="offers">
+      <div class="offers-title">Offers Applied</div>
+      ${offers
+        .map(
+          (o) => `
+        <div class="offer-row">
+          <span>${o.name}</span>
+          <span>${o.savings > 0 ? `You saved Rs. ${o.savings.toFixed(2)}` : "Applied"}</span>
+        </div>`
+        )
+        .join("")}
+    </div>`
+      : "";
 
     const html = `
 <!DOCTYPE html>
@@ -127,6 +177,11 @@ export default function BillModal({ orderId, patient, tests, paymentDone, onClos
   table.items th.amount, table.items td.amount { text-align: right; }
   table.items tbody td { padding: 10px 12px; font-size: 12.5px; border-bottom: 1px solid #f3f4f6; }
   table.items tbody tr:nth-child(even) td { background: #fafafa; }
+  table.items .tag { font-size: 9.5px; font-weight: 600; color: #0d9488; text-transform: uppercase; letter-spacing: 0.03em; margin-left: 6px; }
+  table.items .included-tests { font-size: 10.5px; color: #9ca3af; margin-top: 2px; }
+  .offers { background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 8px; padding: 10px 14px; margin: 10px 0 14px; }
+  .offers .offers-title { font-size: 9.5px; font-weight: 700; color: #0f766e; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .offers .offer-row { font-size: 11.5px; color: #115e59; display: flex; justify-content: space-between; }
   .totals { width: 100%; margin-top: 6px; }
   .totals td { padding: 5px 12px; font-size: 12px; }
   .totals .label { color: #6b7280; text-align: right; }
@@ -181,8 +236,10 @@ export default function BillModal({ orderId, patient, tests, paymentDone, onClos
 
   <table class="items">
     <thead><tr><th>Test</th><th class="amount">Amount (Rs.)</th></tr></thead>
-    <tbody>${rows}</tbody>
+    <tbody>${packageRowsHtml}${individualRowsHtml}</tbody>
   </table>
+
+  ${offersHtml}
 
   <table class="totals">
     ${
@@ -280,12 +337,26 @@ export default function BillModal({ orderId, patient, tests, paymentDone, onClos
           )}
         </div>
 
-        {/* ── Items list ─────────────────────────────────────── */}
+        {/* ── Items list — grouped by applied package, same as Confirm
+              Order, instead of every test flat ────────────────── */}
         <div className="flex items-center justify-between border-b border-gray-100 pb-2 mb-1">
           <span className="text-xs font-medium text-gray-400 tracking-wide">ITEM</span>
           <span className="text-xs font-medium text-gray-400 tracking-wide">AMOUNT</span>
         </div>
-        {tests.map((test) => (
+        {packageGroups.map((pkg) => (
+          <div key={`pkg-${pkg.id}`} className="py-2 border-b border-gray-50">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-900">
+                {pkg.name} <span className="text-xs text-gray-400">(package)</span>
+              </span>
+              <span className="text-sm text-gray-700">Rs. {pkg.price.toFixed(2)}</span>
+            </div>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {pkg.tests.map((t) => t.name).join(", ")}
+            </p>
+          </div>
+        ))}
+        {individualTests.map((test) => (
           <div
             key={test.id}
             className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
@@ -294,6 +365,23 @@ export default function BillModal({ orderId, patient, tests, paymentDone, onClos
             <span className="text-sm text-gray-700">Rs. {test.price.toFixed(2)}</span>
           </div>
         ))}
+
+        {/* ── Offers applied ─────────────────────────────────── */}
+        {offers.length > 0 && (
+          <div className="mt-3 bg-teal-50 border border-teal-100 rounded-lg px-3 py-2.5">
+            <p className="text-[9px] font-semibold uppercase tracking-wide text-teal-700 mb-1">
+              Offers Applied
+            </p>
+            {offers.map((offer) => (
+              <div key={offer.id} className="flex items-center justify-between text-xs text-teal-800">
+                <span>{offer.name}</span>
+                <span className="font-medium">
+                  {offer.savings > 0 ? `You saved ₹${offer.savings.toFixed(2)}` : "Applied"}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* ── GST breakdown ──────────────────────────────────── */}
         {gstEnabled && (

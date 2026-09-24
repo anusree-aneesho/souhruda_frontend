@@ -1,7 +1,16 @@
 // src/components/NewOrderModal/steps/SelectTestsStep.jsx
 import { useEffect, useState, useMemo, useRef } from "react";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, PartyPopper, Lightbulb, CheckCircle2, X } from "lucide-react";
 import { getTestCategories, getLabTests } from "../../../../api/api";
+import { computeOrderPricing, matchPackages } from "../../../../utils/orderPricing";
+import Toast from "../../../common/Toast/Toast";
+import { useToast } from "../../../common/Toast/useToast";
+
+function joinWithAnd(names) {
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
 
 function mapCategory(c) {
   return { id: c.id, name: c.name };
@@ -18,7 +27,20 @@ function mapTest(t, categoryId) {
   };
 }
 
-export default function SelectTestsStep({ activeCategory, onCategoryChange, selectedTests, onToggleTest, doctors, referredBy, onReferredByChange, referredByError })
+export default function SelectTestsStep({
+  activeCategory,
+  onCategoryChange,
+  selectedTests,
+  onToggleTest,
+  packages = [],
+  appliedPackageIds = [],
+  onApplyPackageId,
+  onRemovePackageIds,
+  doctors,
+  referredBy,
+  onReferredByChange,
+  referredByError,
+})
 {
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
@@ -138,7 +160,35 @@ export default function SelectTestsStep({ activeCategory, onCategoryChange, sele
     updateScrollHint();
   }, [visibleTests, testsLoading]);
 
-  const totalPrice = selectedTests.reduce((sum, t) => sum + t.price, 0);
+  const { toast, showToast, hideToast } = useToast();
+
+  const { fullMatches, partialMatches } = useMemo(
+    () => matchPackages(selectedTests, packages),
+    [selectedTests, packages]
+  );
+
+  const pricing = useMemo(
+    () => computeOrderPricing(selectedTests, packages, appliedPackageIds),
+    [selectedTests, packages, appliedPackageIds]
+  );
+
+  const appliedIdSet = useMemo(() => new Set(appliedPackageIds), [appliedPackageIds]);
+  const unappliedFullMatches = fullMatches.filter((m) => !appliedIdSet.has(m.id));
+  const appliedFullMatches = fullMatches.filter((m) => appliedIdSet.has(m.id));
+
+  // If a required test gets unticked after a package was applied, the match
+  // breaks — drop it from applied state and tell the staff why, rather than
+  // silently keeping the discounted price.
+  useEffect(() => {
+    if (appliedPackageIds.length === 0) return;
+    const fullMatchIds = new Set(fullMatches.map((m) => m.id));
+    const broken = appliedPackageIds.filter((id) => !fullMatchIds.has(id));
+    if (broken.length > 0) {
+      onRemovePackageIds(broken);
+      showToast("Package removed — one or more required tests were deselected.", "error");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTests]);
 
   return (
     <div className="px-6 py-5 space-y-4">
@@ -165,6 +215,73 @@ export default function SelectTestsStep({ activeCategory, onCategoryChange, sele
             <p className="text-xs text-red-500 mt-1">This field is required.</p>
           )}
           </div>
+      {(unappliedFullMatches.length > 0 || appliedFullMatches.length > 0 || partialMatches.length > 0) && (
+        <div className="space-y-2">
+          {appliedFullMatches.map((pkg) => (
+            <div
+              key={`applied-${pkg.id}`}
+              className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 flex items-start justify-between gap-3"
+            >
+              <div className="flex items-start gap-2">
+                <CheckCircle2 size={16} className="text-green-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-green-800">{pkg.name} applied</p>
+                  <p className="text-xs text-green-700 mt-0.5">
+                    Package price: ₹{pkg.price.toFixed(2)}
+                    {pkg.savings > 0 && <> · You save ₹{pkg.savings.toFixed(2)}</>}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onRemovePackageIds([pkg.id])}
+                title="Remove package"
+                className="text-green-600 hover:text-green-800 shrink-0 cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          ))}
+
+          {unappliedFullMatches.map((pkg) => (
+            <div key={`match-${pkg.id}`} className="rounded-lg border border-teal-200 bg-teal-50 px-4 py-3">
+              <p className="text-sm font-semibold text-teal-800 flex items-center gap-1.5">
+                <PartyPopper size={16} className="shrink-0" />
+                These tests match the {pkg.name}
+              </p>
+              <div className="flex items-center justify-between mt-1.5">
+                <p className="text-sm text-teal-700">
+                  <span className="font-bold">₹{pkg.price.toFixed(2)}</span>
+                  {pkg.savings > 0 && <> — Save ₹{pkg.savings.toFixed(2)}</>}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onApplyPackageId(pkg.id)}
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 transition-colors cursor-pointer"
+                >
+                  Apply Package
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {partialMatches.map((pkg) => (
+            <div key={`partial-${pkg.id}`} className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-sm font-medium text-amber-800 flex items-center gap-1.5">
+                <Lightbulb size={16} className="shrink-0" />
+                Add {joinWithAnd(pkg.missingTests.map((t) => t.name))} to unlock {pkg.name}
+              </p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                ₹{pkg.price.toFixed(2)}
+                {pkg.savings > 0 && <> · Save ₹{pkg.savings.toFixed(2)}</>}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
+
       {categories.length > 4 && (
         <div className="relative">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -276,7 +393,11 @@ export default function SelectTestsStep({ activeCategory, onCategoryChange, sele
                   {test.range && (
                     <span className="text-xs text-gray-400 shrink-0 hidden sm:inline">{test.range} {test.unit}</span>
                   )}
-                  <span className="text-sm font-semibold text-teal-600 shrink-0 w-16 text-right">₹{test.price.toFixed(2)}</span>
+                  {test.id in pricing.packageByTestId ? (
+                    <span className="text-xs font-medium text-teal-600 shrink-0 w-20 text-right">In package</span>
+                  ) : (
+                    <span className="text-sm font-semibold text-teal-600 shrink-0 w-16 text-right">₹{test.price.toFixed(2)}</span>
+                  )}
                 </label>
               );
             })
@@ -288,9 +409,16 @@ export default function SelectTestsStep({ activeCategory, onCategoryChange, sele
         )}
       </div>
 
-      <div className="flex items-center justify-between bg-teal-50 rounded-lg px-4 py-3">
-        <span className="text-sm font-medium text-teal-700">{selectedTests.length} test(s) selected</span>
-        <span className="text-base font-bold text-teal-700">₹{totalPrice.toFixed(2)}</span>
+      <div className="bg-teal-50 rounded-lg px-4 py-3 space-y-1">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-teal-700">
+            {pricing.appliedPackages.length > 0
+              ? pricing.appliedPackages.map((p) => p.name).join(" + ") +
+                (pricing.individualTests.length > 0 ? ` + ${pricing.individualTests.length} test(s)` : "")
+              : `${selectedTests.length} test(s) selected`}
+          </span>
+          <span className="text-base font-bold text-teal-700">₹{pricing.total.toFixed(2)}</span>
+        </div>
       </div>
     </div>
   );

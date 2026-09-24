@@ -1,6 +1,9 @@
 // src/components/NewOrderModal/steps/ConfirmStep.jsx
-export default function ConfirmStep({ patient, selectedTests, paymentDone, onPaymentDoneChange }) {
-  const total = selectedTests.reduce((sum, t) => sum + t.price, 0);
+import { computeOrderPricing } from "../../../../utils/orderPricing";
+
+export default function ConfirmStep({ patient, selectedTests, packages = [], appliedPackageIds = [], paymentDone, onPaymentDoneChange }) {
+  const pricing = computeOrderPricing(selectedTests, packages, appliedPackageIds);
+  const total = pricing.total;
 
   return (
     <div className="px-6 py-5 space-y-4">
@@ -13,7 +16,23 @@ export default function ConfirmStep({ patient, selectedTests, paymentDone, onPay
           <span className="text-xs font-medium text-gray-400 tracking-wide">TEST</span>
           <span className="text-xs font-medium text-gray-400 tracking-wide">PRICE</span>
         </div>
-        {selectedTests.map((test) => (
+
+        {pricing.appliedPackages.map((pkg) => (
+          <div key={`pkg-${pkg.id}`} className="py-2 border-b border-gray-50">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-2 text-sm font-medium text-gray-900">
+                <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
+                {pkg.name} <span className="text-xs text-gray-400 font-normal">(package)</span>
+              </span>
+              <span className="text-sm text-gray-700">₹{pkg.price.toFixed(2)}</span>
+            </div>
+            <p className="pl-3.5 text-xs text-gray-400 mt-0.5">
+              {pkg.tests.map((t) => t.name).join(", ")}
+            </p>
+          </div>
+        ))}
+
+        {pricing.individualTests.map((test) => (
           <div key={test.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
             <span className="flex items-center gap-2 text-sm text-gray-900">
               <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />

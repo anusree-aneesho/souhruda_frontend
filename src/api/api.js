@@ -598,6 +598,15 @@ export async function getStatisticsSummaryApi() {
   return request("/statistics/summary");
 }
 
-export async function getStatisticsRankingsApi() {
-  return request("/statistics/rankings");
+export async function getStatisticsRankingsApi(limit = 5) {
+    return request(`/statistics/rankings?limit=${limit}`);
+}
+
+export async function getStatisticsCollectionTypesApi() {
+    return request("/statistics/collection-types");
+}
+
+export async function getStatisticsAttentionAlertsApi() {
+  const res = await api.get("/statistics/attention-alerts");
+  return res.data;
 }

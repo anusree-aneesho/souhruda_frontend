@@ -16,6 +16,7 @@ import {
   createPatientApi,
   updatePatientApi,
   createHomeCollectionRequestApi,
+  quoteHomeCollectionApi,
   createOrderApi,
   getTestPackages,
 } from "../../../api/api";
@@ -64,8 +65,6 @@ function ageFromDOB(dob) {
   return age;
 }
 
-const LAB_FALLBACK = { lat: 11.2588, lng: 75.7804 };
-
 const emptyNewPatient = {
   name: "",
   dateOfBirth: "",
@@ -75,18 +74,6 @@ const emptyNewPatient = {
   email: "",
   address: "",
 };
-
-function haversineKm(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
 
 function buildNewPatientPayload(newPatientData) {
   const [firstName, ...rest] = newPatientData.name.trim().split(" ");
@@ -282,26 +269,49 @@ useEffect(() => {
     setAppliedPackageIds((prev) => prev.filter((id) => !packageIds.includes(id)));
   }
 
+  // Pin the location, then ask the backend for the real distance + home visit
+  // fee (same code path that runs at booking time) instead of estimating here.
+  async function pinAt(lat, lng) {
+    const location = { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) };
+    try {
+      const quote = await quoteHomeCollectionApi(location.lat, location.lng);
+      setPinnedLocation({
+        ...location,
+        distanceKm: quote.distance_km,
+        collectionCharge: Number(quote.collection_charge),
+        feeBreakdown: quote.fee_breakdown,
+        maxRadiusKm: quote.max_radius_km,
+        withinRadius: quote.within_radius,
+      });
+    } catch (err) {
+      setPinnedLocation(null);
+      setBookingError(err.message || "Couldn't calculate the home visit fee for this location.");
+    } finally {
+      setIsLocating(false);
+    }
+  }
+
+  // Uses the device's real position. If it can't be read we say so instead of
+  // silently pinning the lab (which would show 0 km and a base-fee-only price).
   function handlePinLocation() {
+    setBookingError("");
+    setPinnedLocation(null);
+
     if (!navigator.geolocation) {
-      setPinnedLocation({ lat: LAB_FALLBACK.lat, lng: LAB_FALLBACK.lng, distanceKm: null });
+      setBookingError("This browser doesn't support location access.");
       return;
     }
 
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setPinnedLocation({
-          lat: Number(latitude.toFixed(6)),
-          lng: Number(longitude.toFixed(6)),
-          distanceKm: haversineKm(latitude, longitude, LAB_FALLBACK.lat, LAB_FALLBACK.lng).toFixed(1),
-        });
+      (pos) => pinAt(pos.coords.latitude, pos.coords.longitude),
+      (err) => {
         setIsLocating(false);
-      },
-      () => {
-        setPinnedLocation({ lat: LAB_FALLBACK.lat, lng: LAB_FALLBACK.lng, distanceKm: null });
-        setIsLocating(false);
+        setBookingError(
+          err.code === 1
+            ? "Location permission was blocked. Allow location access for this site and try again."
+            : "Couldn't get the location. Please try again."
+        );
       },
       { enableHighAccuracy: true, timeout: 8000 }
     );
@@ -414,6 +424,11 @@ useEffect(() => {
       return;
     }
 
+    if (!pinnedLocation.withinRadius) {
+      setBookingError(`This location is outside our ${pinnedLocation.maxRadiusKm} km home collection area.`);
+      return;
+    }
+
     setIsBooking(true);
     setBookingError("");
 
@@ -426,9 +441,12 @@ useEffect(() => {
         return;
       }
 
+      const { appliedPackages } = computeOrderPricing(selectedTests, packages, appliedPackageIds);
+
       const payload = {
         patient_id: patientId,
         tests: selectedTests.map((t) => t.id),
+        package_ids: appliedPackages.map((p) => p.id),
         address_line: address,
         latitude: pinnedLocation.lat,
         longitude: pinnedLocation.lng,
@@ -452,7 +470,7 @@ const isNextDisabled =
   (step === 1 && patientType === "new" && (!newPatientData.name.trim() || !newPatientData.dateOfBirth)) ||
   (step === 1 && isCreatingPatient) ||
   (step === 2 && (selectedTests.length === 0 || !currentPatient || !referredBy)) ||
-  (isHomeCollection && step === 3 && (!address.trim() || !preferredDate || !pinnedLocation));
+  (isHomeCollection && step === 3 && (!address.trim() || !preferredDate || !pinnedLocation || !pinnedLocation.withinRadius));
 
   if (!isOpen) return null;
 
@@ -501,6 +519,7 @@ const isNextDisabled =
             pinnedLocation={pinnedLocation}
             onPinLocation={handlePinLocation}
             isLocating={isLocating}
+            locationError={bookingError}
             preferredDate={preferredDate}
             onPreferredDateChange={setPreferredDate}
             timeSlot={timeSlot}
@@ -524,6 +543,8 @@ const isNextDisabled =
               selectedTests={selectedTests}
               packages={packages}
               appliedPackageIds={appliedPackageIds}
+              collectionCharge={pinnedLocation?.collectionCharge ?? 0}
+              feeBreakdown={pinnedLocation?.feeBreakdown}
               paymentMethod={paymentMethod}
               onPaymentMethodChange={setPaymentMethod}
             />

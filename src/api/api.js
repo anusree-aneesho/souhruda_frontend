@@ -594,14 +594,18 @@ export async function getYearlyReportApi(year) {
 
 // ── Statistics ──────────────────────────────────────
 
-export async function getStatisticsSummaryApi() {
-  return request("/statistics/summary");
-}
-
 export async function getOrdersForRangeApi(range = "today") {
   return request(`/statistics/orders-for-range?range=${range}`);
 }
 
-export async function getStatisticsRankingsApi() {
-  return request("/statistics/rankings");
+export async function getStatisticsRankingsApi(limit = 5) {
+  return request(`/statistics/rankings?limit=${limit}`);
+}
+
+export async function getStatisticsCollectionTypesApi() {
+  return request("/statistics/collection-types");
+}
+
+export async function getStatisticsAttentionAlertsApi() {
+  return request("/statistics/attention-alerts");
 }

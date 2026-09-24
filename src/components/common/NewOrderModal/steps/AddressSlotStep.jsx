@@ -21,7 +21,7 @@ function todayLocalDate() {
 
 export default function AddressSlotStep({
   address, onAddressChange,
-  pinnedLocation, onPinLocation,
+  pinnedLocation, onPinLocation, isLocating, locationError,
   preferredDate, onPreferredDateChange,
   timeSlot, onTimeSlotChange,
 }) {
@@ -66,14 +66,21 @@ export default function AddressSlotStep({
           className="flex items-center gap-2 rounded-lg border border-gray-200 px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
         >
           <MapPin size={15} className="text-red-500" />
-          Pin exact location on map
+          {isLocating ? "Locating…" : "Pin exact location on map"}
         </button>
         {pinnedLocation && (
           <p className="text-xs text-gray-400 mt-1.5">
             Pinned: {pinnedLocation.lat}, {pinnedLocation.lng} ·{" "}
-            <span className="font-semibold text-teal-600">{pinnedLocation.distanceKm} km</span> from lab
+            <span className="font-semibold text-teal-600">{pinnedLocation.distanceKm} km</span> from lab · home visit fee{" "}
+            <span className="font-semibold text-teal-600">₹{pinnedLocation.collectionCharge.toFixed(2)}</span>
           </p>
         )}
+        {pinnedLocation && !pinnedLocation.withinRadius && (
+          <p className="text-xs text-red-600 mt-1">
+            This location is outside our {pinnedLocation.maxRadiusKm} km home collection area.
+          </p>
+        )}
+        {locationError && <p className="text-xs text-red-600 mt-1">{locationError}</p>}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

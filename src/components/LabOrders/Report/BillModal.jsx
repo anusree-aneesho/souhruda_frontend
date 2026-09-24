@@ -5,7 +5,7 @@ import ModalShell from "../../common/Modal/ModalShell";
 import { getOrderBillUrlApi, getSettingsApi, getGstSettingsApi } from "../../../api/api";
 import { groupTestsByPackage } from "../../../utils/orderPricing";
 
-export default function BillModal({ orderId, patient, tests, billTotal, paymentDone, onClose }) {
+export default function BillModal({ orderId, patient, tests, billTotal, homeVisitFee = 0, paymentDone, onClose }) {
   // Group by the package each test was actually billed under — same
   // grouping used on the Confirm Order step and the order-detail Bill
   // section — instead of listing every test flat at its own price.
@@ -26,7 +26,9 @@ export default function BillModal({ orderId, patient, tests, billTotal, paymentD
   // patient was actually charged. Fall back to summing catalog prices only
   // if it's ever missing (e.g. an older order), so the modal never breaks.
   const fallbackSubtotal = tests.reduce((sum, t) => sum + t.price, 0);
-  const subtotal = billTotal != null ? billTotal : fallbackSubtotal;
+  const testsSubtotal = billTotal != null ? billTotal : fallbackSubtotal;
+  // Home collection orders: the home visit fee is billed on top of the tests.
+  const subtotal = testsSubtotal + Number(homeVisitFee || 0);
 
   const [labInfo, setLabInfo] = useState(null);
   const [gstInfo, setGstInfo] = useState(null);
@@ -245,6 +247,12 @@ export default function BillModal({ orderId, patient, tests, billTotal, paymentD
 
   <table class="totals">
     ${
+      homeVisitFee > 0
+        ? `<tr><td class="label" style="width:auto;">Tests total</td><td class="value">Rs. ${testsSubtotal.toFixed(2)}</td></tr>
+           <tr><td class="label" style="width:auto;">Home visit fee</td><td class="value">Rs. ${Number(homeVisitFee).toFixed(2)}</td></tr>`
+        : ""
+    }
+    ${
       gstEnabled
         ? `<tr><td class="label" style="width:auto;">Subtotal</td><td class="value">Rs. ${subtotal.toFixed(2)}</td></tr>
            <tr><td class="label" style="width:auto;">GST (${gstRate}%)</td><td class="value">Rs. ${gstAmount.toFixed(2)}</td></tr>`
@@ -387,6 +395,20 @@ export default function BillModal({ orderId, patient, tests, billTotal, paymentD
                 </span>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ── Home visit fee (home collection orders) ────────── */}
+        {homeVisitFee > 0 && (
+          <div className="mt-3 space-y-1">
+            <div className="flex items-center justify-between text-sm text-gray-600">
+              <span>Tests total</span>
+              <span>Rs. {testsSubtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm text-gray-600">
+              <span>Home visit fee</span>
+              <span>Rs. {Number(homeVisitFee).toFixed(2)}</span>
+            </div>
           </div>
         )}
 

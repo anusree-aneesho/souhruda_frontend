@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   Briefcase,
   IndianRupee,
@@ -10,15 +11,7 @@ import {
   LineChart,
   AlertTriangle,
 } from "lucide-react";
-
-const statCards = [
-  { label: "Total Orders", value: "1,010", icon: Briefcase, bg: "bg-blue-50", color: "text-blue-600" },
-  { label: "Total Revenue", value: "₹15,12,295.93", icon: IndianRupee, bg: "bg-green-50", color: "text-green-600" },
-  { label: "Completed Orders", value: "496", icon: CheckCircle2, bg: "bg-purple-50", color: "text-purple-600" },
-  { label: "Pending Orders", value: "155", icon: Clock, bg: "bg-amber-50", color: "text-amber-600" },
-  { label: "Cancelled Orders", value: "359", icon: XCircle, bg: "bg-red-50", color: "text-red-600" },
-  { label: "Average Order Value", value: "₹1,497.32", icon: TrendingUp, bg: "bg-teal-50", color: "text-teal-600" },
-];
+import { getStatisticsSummaryApi } from "../../api/api";
 
 const rangeOptions = ["Today", "Yesterday", "1 Week", "1 Month", "1 Year"];
 
@@ -152,6 +145,63 @@ function RankedList({ title, rows, unit = "" }) {
 }
 
 export default function Statistics() {
+  const [summary, setSummary] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await getStatisticsSummaryApi();
+        if (!cancelled) setSummary(res);
+      } catch (err) {
+        if (!cancelled) setSummaryError(err.message || "Couldn't load order statistics.");
+        console.error("Failed to load statistics summary:", err.message);
+      } finally {
+        if (!cancelled) setSummaryLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Row 1 — Total/Completed/Pending/Cancelled come from the API now.
+  // Total Revenue and Average Order Value stay hardcoded until wired up separately.
+  const statCards = [
+    {
+      label: "Total Orders",
+      value: summaryLoading ? "…" : (summary?.totalOrders ?? 0).toLocaleString(),
+      icon: Briefcase,
+      bg: "bg-blue-50",
+      color: "text-blue-600",
+    },
+    { label: "Total Revenue", value: "₹15,12,295.93", icon: IndianRupee, bg: "bg-green-50", color: "text-green-600" },
+    {
+      label: "Completed Orders",
+      value: summaryLoading ? "…" : (summary?.completedOrders ?? 0).toLocaleString(),
+      icon: CheckCircle2,
+      bg: "bg-purple-50",
+      color: "text-purple-600",
+    },
+    {
+      label: "Pending Orders",
+      value: summaryLoading ? "…" : (summary?.pendingOrders ?? 0).toLocaleString(),
+      icon: Clock,
+      bg: "bg-amber-50",
+      color: "text-amber-600",
+    },
+    {
+      label: "Cancelled Orders",
+      value: summaryLoading ? "…" : (summary?.cancelledOrders ?? 0).toLocaleString(),
+      icon: XCircle,
+      bg: "bg-red-50",
+      color: "text-red-600",
+    },
+    { label: "Average Order Value", value: "₹1,497.32", icon: TrendingUp, bg: "bg-teal-50", color: "text-teal-600" },
+  ];
+
   const topDoctors = [
     { label: "Self", count: 890 },
     { label: "Dr.geethu", count: 42 },
@@ -191,6 +241,10 @@ export default function Statistics() {
           Export
         </button>
       </div>
+
+      {summaryError && (
+        <p className="text-sm text-red-500">{summaryError}</p>
+      )}
 
       {/* Row 1 — top-level totals */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">

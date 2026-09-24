@@ -589,3 +589,14 @@ export async function getYearlyReportApi(year) {
   const qs = params.toString();
   return request(`/reports/yearly${qs ? `?${qs}` : ""}`);
 }
+
+
+// ── Statistics ──────────────────────────────────────
+
+export async function getStatisticsSummaryApi() {
+  return request("/statistics/summary");
+}
+
+export async function getStatisticsRankingsApi() {
+  return request("/statistics/rankings");
+}

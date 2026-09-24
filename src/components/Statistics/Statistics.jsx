@@ -220,14 +220,14 @@ export default function Statistics() {
   ];
 
   const statusSegments = [
-    { label: "Completed", pct: 65.2, count: 478, colorHex: "#22c55e" },
-    { label: "Pending", pct: 12.6, count: 92, colorHex: "#fbbf24" },
-    { label: "Cancelled", pct: 22.2, count: 163, colorHex: "#f87171" },
+    { label: "Completed", pct: 65.2, count: 478, colorHex: "#22C55E" },
+    { label: "Pending", pct: 12.6, count: 92, colorHex: "#FBBF24" },
+    { label: "Cancelled", pct: 22.2, count: 163, colorHex: "#F87171" },
   ];
 
   const collectionSegments = [
-    { label: "Walk-in", pct: 72.6, count: 733, colorHex: "#0d9488" },
-    { label: "Home Collection", pct: 27.4, count: 277, colorHex: "#a78bfa" },
+    { label: "Walk-in", pct: 72.6, count: 733, colorHex: "#0D9488" },
+    { label: "Home Collection", pct: 27.4, count: 277, colorHex: "#A78BFA" },
   ];
 
   return (

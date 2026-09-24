@@ -26,12 +26,11 @@ function validate(formData) {
   if (formData.website && !/^https?:\/\/.+\..+/.test(formData.website)) {
     errors.website = "Website must start with http:// or https://.";
   }
-  if (formData.homeVisitFee !== "" && Number(formData.homeVisitFee) < 0) {
-    errors.homeVisitFee = "Fee cannot be negative.";
-  }
-  if (formData.freeRadius !== "" && Number(formData.freeRadius) < 0) {
-    errors.freeRadius = "Radius cannot be negative.";
-  }
+  ["baseFee", "perKmRate", "freeRadius", "maxDistanceKm"].forEach((key) => {
+    if (formData[key] !== "" && Number(formData[key]) < 0) {
+      errors[key] = "Value cannot be negative.";
+    }
+  });
 
   return errors;
 }
@@ -72,8 +71,10 @@ export default function SettingsForm() {
           licenseNo: s.license_no || "",
           workingHours: s.working_hours || "",
           footerNote: s.footer_note || "",
-          homeVisitFee: s.home_visit_fee ?? "",
+          baseFee: s.base_fee ?? "",
+          perKmRate: s.per_km_rate ?? "",
           freeRadius: s.free_radius ?? "",
+          maxDistanceKm: s.max_distance_km ?? "",
         });
       } catch (err) {
         setError(err.message || "Failed to load settings.");
@@ -123,8 +124,10 @@ export default function SettingsForm() {
         license_no: formData.licenseNo,
         working_hours: formData.workingHours,
         footer_note: formData.footerNote,
-        home_visit_fee: Number(formData.homeVisitFee) || 0,
+        base_fee: Number(formData.baseFee) || 0,
+        per_km_rate: Number(formData.perKmRate) || 0,
         free_radius: Number(formData.freeRadius) || 0,
+        max_distance_km: Number(formData.maxDistanceKm) || 0,
       });
       showToast("Settings saved successfully.");
     } catch (err) {
@@ -193,9 +196,14 @@ export default function SettingsForm() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <FormField label="Home Visit Fee (₹)" name="homeVisitFee" type="number" value={formData.homeVisitFee} onChange={handleChange} error={fieldErrors.homeVisitFee} />
+        <FormField label="Base Fee (₹)" name="baseFee" type="number" value={formData.baseFee} onChange={handleChange} error={fieldErrors.baseFee} />
+        <FormField label="Per KM Rate (₹/km)" name="perKmRate" type="number" value={formData.perKmRate} onChange={handleChange} error={fieldErrors.perKmRate} />
         <FormField label="Free Radius (km)" name="freeRadius" type="number" value={formData.freeRadius} onChange={handleChange} error={fieldErrors.freeRadius} />
+        <FormField label="Maximum Distance (km)" name="maxDistanceKm" type="number" value={formData.maxDistanceKm} onChange={handleChange} error={fieldErrors.maxDistanceKm} />
       </div>
+      <p className="text-xs text-gray-400 -mt-2">
+        Home collection fee = Base Fee + Per KM Rate × km beyond the Free Radius. Addresses farther than the Maximum Distance can't be booked.
+      </p>
 
       {canEdit && (
         <button

@@ -25,7 +25,7 @@ function QrPattern({ seed = 1 }) {
   );
 }
 
-export default function PaymentStep({ selectedTests, packages = [], appliedPackageIds = [], collectionCharge = 0, paymentMethod, onPaymentMethodChange }) {
+export default function PaymentStep({ selectedTests, packages = [], appliedPackageIds = [], collectionCharge = 0, feeBreakdown = null, paymentMethod, onPaymentMethodChange }) {
   const testsTotal = computeOrderPricing(selectedTests, packages, appliedPackageIds).total;
   // Home visit fee comes from the backend quote (base fee + per-km rate), not a hardcoded value.
   const total = testsTotal + collectionCharge;
@@ -41,6 +41,14 @@ export default function PaymentStep({ selectedTests, packages = [], appliedPacka
           <span className="text-gray-500">Home visit fee</span>
           <span className="text-gray-900">₹{collectionCharge.toFixed(2)}</span>
         </div>
+        {feeBreakdown && (
+          <p className="text-xs text-gray-400 -mt-1">
+            Base fee ₹{Number(feeBreakdown.base_fee).toFixed(2)}
+            {feeBreakdown.chargeable_km > 0
+              ? ` + ${feeBreakdown.chargeable_km} km beyond the ${feeBreakdown.free_radius_km} km free radius × ₹${Number(feeBreakdown.per_km_rate).toFixed(2)}/km = ₹${Number(feeBreakdown.extra_charge).toFixed(2)}`
+              : ` · within the ${feeBreakdown.free_radius_km} km free radius, no distance charge`}
+          </p>
+        )}
       </div>
 
       <div className="flex items-center justify-between bg-teal-50 rounded-lg px-4 py-3">

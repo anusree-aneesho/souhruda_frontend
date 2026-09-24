@@ -231,6 +231,7 @@ export default function OrderDetail() {
       <ResultsTable
       tests={tests}
       billTotal={billTotal}
+      homeVisitFee={homeVisitFee}
       results={results}
       flags={flags}
       onResultChange={handleResultChange}

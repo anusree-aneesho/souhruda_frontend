@@ -2,14 +2,16 @@
 import ResultRow from "./ResultRow";
 import { groupTestsByPackage } from "../../../utils/orderPricing";
 
-export default function ResultsTable({ tests, billTotal, results, flags, onResultChange, onSaveClose, onMarkCompleted, savingAction }) {
+export default function ResultsTable({ tests, billTotal, homeVisitFee = 0, results, flags, onResultChange, onSaveClose, onMarkCompleted, savingAction }) {
   const { packageGroups, individualTests } = groupTestsByPackage(tests);
 
   // billTotal comes from the server (order.bill_total) — the amount the
   // patient was actually charged. Fall back to summing catalog prices only
   // if it's ever missing (e.g. an older order), so the page never breaks.
   const fallbackTotal = tests.reduce((sum, t) => sum + t.price, 0);
-  const total = billTotal != null ? billTotal : fallbackTotal;
+  const testsTotal = billTotal != null ? billTotal : fallbackTotal;
+  // Home collection orders: the home visit fee is billed on top of the tests.
+  const total = testsTotal + Number(homeVisitFee || 0);
 
   const allResultsEntered = tests.every((t) => (results[t.id] || "").trim() !== "");
   const isSaving = savingAction !== null;
@@ -90,6 +92,16 @@ export default function ResultsTable({ tests, billTotal, results, flags, onResul
             <span className="text-sm text-gray-700">₹{test.price.toFixed(2)}</span>
           </div>
         ))}
+
+        {homeVisitFee > 0 && (
+          <div className="flex items-center justify-between py-2 border-t border-gray-100">
+            <span className="flex items-center gap-2 text-sm text-gray-900">
+              <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
+              Home visit fee
+            </span>
+            <span className="text-sm text-gray-700">₹{Number(homeVisitFee).toFixed(2)}</span>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">

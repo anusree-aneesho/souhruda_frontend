@@ -65,8 +65,6 @@ function ageFromDOB(dob) {
   return age;
 }
 
-const LAB_FALLBACK = { lat: 11.2588, lng: 75.7804 };
-
 const emptyNewPatient = {
   name: "",
   dateOfBirth: "",
@@ -281,6 +279,7 @@ useEffect(() => {
         ...location,
         distanceKm: quote.distance_km,
         collectionCharge: Number(quote.collection_charge),
+        feeBreakdown: quote.fee_breakdown,
         maxRadiusKm: quote.max_radius_km,
         withinRadius: quote.within_radius,
       });
@@ -292,19 +291,28 @@ useEffect(() => {
     }
   }
 
+  // Uses the device's real position. If it can't be read we say so instead of
+  // silently pinning the lab (which would show 0 km and a base-fee-only price).
   function handlePinLocation() {
     setBookingError("");
+    setPinnedLocation(null);
 
     if (!navigator.geolocation) {
-      setIsLocating(true);
-      pinAt(LAB_FALLBACK.lat, LAB_FALLBACK.lng);
+      setBookingError("This browser doesn't support location access.");
       return;
     }
 
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => pinAt(pos.coords.latitude, pos.coords.longitude),
-      () => pinAt(LAB_FALLBACK.lat, LAB_FALLBACK.lng),
+      (err) => {
+        setIsLocating(false);
+        setBookingError(
+          err.code === 1
+            ? "Location permission was blocked. Allow location access for this site and try again."
+            : "Couldn't get the location. Please try again."
+        );
+      },
       { enableHighAccuracy: true, timeout: 8000 }
     );
   }
@@ -536,6 +544,7 @@ const isNextDisabled =
               packages={packages}
               appliedPackageIds={appliedPackageIds}
               collectionCharge={pinnedLocation?.collectionCharge ?? 0}
+              feeBreakdown={pinnedLocation?.feeBreakdown}
               paymentMethod={paymentMethod}
               onPaymentMethodChange={setPaymentMethod}
             />

@@ -12,6 +12,16 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { getStatisticsSummaryApi } from "../../api/api";
+import OrdersTrendSection from "./OrdersTrendSection";
+
+const statCards = [
+  { label: "Total Orders", value: "1,010", icon: Briefcase, bg: "bg-blue-50", color: "text-blue-600" },
+  { label: "Total Revenue", value: "₹15,12,295.93", icon: IndianRupee, bg: "bg-green-50", color: "text-green-600" },
+  { label: "Completed Orders", value: "496", icon: CheckCircle2, bg: "bg-purple-50", color: "text-purple-600" },
+  { label: "Pending Orders", value: "155", icon: Clock, bg: "bg-amber-50", color: "text-amber-600" },
+  { label: "Cancelled Orders", value: "359", icon: XCircle, bg: "bg-red-50", color: "text-red-600" },
+  { label: "Average Order Value", value: "₹1,497.32", icon: TrendingUp, bg: "bg-teal-50", color: "text-teal-600" },
+];
 
 const rangeOptions = ["Today", "Yesterday", "1 Week", "1 Month", "1 Year"];
 
@@ -282,11 +292,7 @@ export default function Statistics() {
       </div>
 
       {/* Row 3 — trends + status donut */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <TrendCard title="Orders Over Time" />
-        <TrendCard title="Revenue Over Time (₹)" />
-        <DonutCard title="Order Status Distribution" total={733} segments={statusSegments} />
-      </div>
+      <OrdersTrendSection />
 
       {/* Row 4 — ranked lists */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

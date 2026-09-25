@@ -42,7 +42,14 @@ export default function AppRoutes() {
           <Route path="/test-master" element={<TestMaster />} />
           <Route path="/patients" element={<Patients />} />
           <Route path="/follow-ups" element={<FollowUps />} />
-          <Route path="/reports" element={<Reports />} />
+
+          <Route
+            path="/reports"
+            element={<Navigate to="/reports/patients" replace />}
+          />
+          <Route path="/reports/:categoryKey" element={<Reports />} />
+          <Route path="/reports/:categoryKey/:itemKey" element={<Reports />} />
+
           <Route path="/statistics" element={<Statistics />} />
           <Route path="/lab-orders/:orderId" element={<OrderDetail />} />
           <Route path="/lab-orders/:orderId/report" element={<Report />} />

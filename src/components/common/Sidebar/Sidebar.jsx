@@ -5,6 +5,7 @@ import SidebarFooterHint from "./SidebarFooterHint";
 import SidebarNavDropdown from "./SidebarNavDropdown";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../Context/AuthContext";
+import { REPORT_CATEGORIES } from "../../Reports/reportConfig";
 import { LogOut } from "lucide-react";
 import {
   LayoutDashboard,
@@ -35,8 +36,17 @@ const allNavItems = [
   { label: "Patients", icon: Users, path: "/patients" },
   { label: "Follow-ups", icon: Clock, path: "/follow-ups" },
   { label: "Statistics", icon: BarChart3, path: "/statistics" },
-  { label: "Reports", icon: FileText, path: "/reports" },
+  // Reports is rendered separately below as a dropdown, not a flat link.
 ];
+
+// One sidebar sub-item per category — NOT per individual report.
+// Clicking a category opens its report list as page content (ReportItemGrid),
+// not further sidebar nesting.
+const reportSubItems = REPORT_CATEGORIES.map((category) => ({
+  label: category.title,
+  path: `/reports/${category.key}`,
+  icon: category.icon,
+}));
 
 // `roles` = who can see the item. Leave it out to show the item to everyone.
 const settingsSubItems = [
@@ -97,10 +107,17 @@ export default function Sidebar() {
     <aside className="sticky top-0 h-screen w-64 shrink-0 border-r border-gray-200 bg-white flex flex-col">
       <SidebarLogo />
 
-      <nav className="flex-1 px-3 space-y-1">
+      <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
         {navItems.map((item) => (
           <SidebarNavItem key={item.path} {...item} />
         ))}
+
+        <SidebarNavDropdown
+          label="Reports"
+          icon={FileText}
+          basePath="/reports"
+          children={reportSubItems}
+        />
 
         <SidebarNavDropdown
           label="Settings"

@@ -292,6 +292,169 @@ function RankingsModal({ type, data, loading, onClose }) {
   );
 }
 
+// ─────────────────────────────────────────────────────────────
+// AttentionModal — "View All" popup for Attention Needed
+// Two tabs: Critical Results, Follow-ups Due
+// ─────────────────────────────────────────────────────────────
+
+function AttentionModal({ open, alerts, loading, onClose }) {
+  const [tab, setTab] = useState("critical");
+
+  if (!open) {
+    return null;
+  }
+
+  const criticalResults = alerts?.criticalResults ?? [];
+  const followUps = alerts?.followUps ?? [];
+
+  const formatDate = (value) => {
+    if (!value) return "-";
+    try {
+      return new Date(value).toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return value;
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100">
+          <h2 className="text-lg font-bold text-gray-900">Attention Needed</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 px-4 pt-3">
+          <button
+            type="button"
+            onClick={() => setTab("critical")}
+            className={`px-3 py-2 text-sm font-medium rounded-t-lg transition ${
+              tab === "critical"
+                ? "text-red-600 border-b-2 border-red-500"
+                : "text-gray-400 hover:text-gray-600"
+            }`}
+          >
+            Critical Results ({criticalResults.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("followups")}
+            className={`px-3 py-2 text-sm font-medium rounded-t-lg transition ${
+              tab === "followups"
+                ? "text-amber-600 border-b-2 border-amber-500"
+                : "text-gray-400 hover:text-gray-600"
+            }`}
+          >
+            Follow-ups Due ({followUps.length})
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="max-h-[420px] overflow-y-auto px-4 py-3 border-t border-gray-100">
+          {loading ? (
+            <div className="py-10 text-center">
+              <div className="inline-block w-5 h-5 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-gray-400 mt-3">Loading…</p>
+            </div>
+          ) : tab === "critical" ? (
+            criticalResults.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-10">No critical results flagged today.</p>
+            ) : (
+              <div className="space-y-1">
+                {criticalResults.map((row, index) => (
+                  <div
+                    key={`${row.order_id}-${row.test_name}-${index}`}
+                    className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+                      <AlertTriangle size={15} className="text-red-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-800 truncate">
+                        {row.patient_name}
+                        {row.patient_number && (
+                          <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-400 truncate">
+                        {row.test_name} · Order #{row.order_id}
+                      </p>
+                    </div>  
+                    <div className="text-right shrink-0">
+                      <p
+                        className={`text-sm font-semibold ${
+                          row.flag === "high" ? "text-red-600" : "text-blue-600"
+                        }`}
+                      >
+                        {row.result} {row.result_unit || ""}
+                      </p>
+                      <p className="text-[11px] text-gray-400 uppercase">{row.flag}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : followUps.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-10">No follow-ups due this week.</p>
+          ) : (
+            <div className="space-y-1">
+              {followUps.map((row) => (
+                <div
+                  key={row.id}
+                  className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+                    <Clock size={15} className="text-amber-500" />
+                  </div>
+                 <div className="flex-1 min-w-0">
+  <p className="text-sm text-gray-800 truncate">
+    {row.patient_name}
+    {row.patient_number && (
+      <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
+    )}
+  </p>
+  <p className="text-xs text-gray-400 truncate">
+    {row.test_name} · Order #{row.order_id}
+  </p>
+</div>
+                  <span className="text-xs text-gray-500 shrink-0">{formatDate(row.due_at)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end px-6 py-4 border-t border-gray-100 bg-gray-50">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Statistics() {
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
@@ -306,6 +469,7 @@ export default function Statistics() {
 
   const [alerts, setAlerts] = useState(null);
   const [alertsLoading, setAlertsLoading] = useState(true);
+  const [attentionModalOpen, setAttentionModalOpen] = useState(false);
 
   const [viewAllType, setViewAllType] = useState(null);
   const [allRankings, setAllRankings] = useState(null);
@@ -589,7 +753,13 @@ export default function Statistics() {
         <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-900">Attention Needed</h3>
-            <a href="#" className="text-xs text-teal-600 font-medium hover:underline">View All</a>
+            <button
+              type="button"
+              onClick={() => setAttentionModalOpen(true)}
+              className="text-xs text-teal-600 font-medium hover:underline cursor-pointer"
+            >
+              View All
+            </button>
           </div>
           <div className="space-y-3">
             <div className="flex items-center gap-3 text-sm">
@@ -619,6 +789,13 @@ export default function Statistics() {
         data={allRankings}
         loading={allRankingsLoading}
         onClose={() => setViewAllType(null)}
+      />
+
+      <AttentionModal
+        open={attentionModalOpen}
+        alerts={alerts}
+        loading={alertsLoading}
+        onClose={() => setAttentionModalOpen(false)}
       />
     </div>
   );

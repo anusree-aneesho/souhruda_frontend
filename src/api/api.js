@@ -619,6 +619,5 @@ export async function getStatisticsCollectionTypesApi() {
 }
 
 export async function getStatisticsAttentionAlertsApi() {
-  const res = await api.get("/statistics/attention-alerts");
-  return res.data;
+  return request("/statistics/attention-alerts");
 }

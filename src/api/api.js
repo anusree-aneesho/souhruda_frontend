@@ -599,7 +599,6 @@ export async function getYearlyReportApi(year) {
   return request(`/reports/yearly${qs ? `?${qs}` : ""}`);
 }
 
-
 // ── Statistics ──────────────────────────────────────
 
 export async function getStatisticsSummaryApi() {
@@ -611,14 +610,37 @@ export async function getOrdersForRangeApi(range = "today") {
 }
 
 export async function getStatisticsRankingsApi(limit = 5) {
-    return request(`/statistics/rankings?limit=${limit}`);
+  return request(`/statistics/rankings?limit=${limit}`);
 }
 
 export async function getStatisticsCollectionTypesApi() {
-    return request("/statistics/collection-types");
+  return request("/statistics/collection-types");
 }
 
 export async function getStatisticsAttentionAlertsApi() {
-  const res = await api.get("/statistics/attention-alerts");
-  return res.data;
+  return request("/statistics/attention-alerts");
+}
+
+export async function getOrderStatusDistributionApi(range = "1 Year") {
+  const params = new URLSearchParams({ range });
+
+  return request(
+    `/statistics/order-status-distribution?${params.toString()}`
+  );
+}
+
+export async function getOrdersOverTimeApi(range = "1 Year") {
+  const params = new URLSearchParams({ range });
+
+  return request(
+    `/statistics/orders-over-time?${params.toString()}`
+  );
+}
+
+export async function getRevenueOverTimeApi(range = "1 Year") {
+  const params = new URLSearchParams({ range });
+
+  return request(
+    `/statistics/revenue-over-time?${params.toString()}`
+  );
 }

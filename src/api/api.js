@@ -243,6 +243,15 @@ export async function createHomeCollectionRequestApi(payload) {
   });
 }
 
+// Fee preview for a pinned location — same distance/fee code the backend
+// uses when booking, so the modal never shows a different price than the one stored.
+export async function quoteHomeCollectionApi(latitude, longitude) {
+  return request("/home-collection-requests/quote", {
+    method: "POST",
+    body: JSON.stringify({ latitude, longitude }),
+  });
+}
+
 export async function getHomeCollectionRequestApi(hcCode) {
   return request(`/home-collection-requests/${hcCode}`);
 }
@@ -426,7 +435,6 @@ export async function getOrdersApi(params = {}) {
   if (!params.today && params.status && params.status !== "All") query.set("status", params.status);
   if (params.q) query.set("q", params.q);
   if (params.page) query.set("page", params.page);
-  if (params.per_page) query.set("per_page", params.per_page);
 
   const qs = query.toString();
   return request(`/orders${qs ? `?${qs}` : ""}`);
@@ -594,18 +602,23 @@ export async function getYearlyReportApi(year) {
 
 // ── Statistics ──────────────────────────────────────
 
+export async function getStatisticsSummaryApi() {
+  return request("/statistics/summary");
+}
+
 export async function getOrdersForRangeApi(range = "today") {
   return request(`/statistics/orders-for-range?range=${range}`);
 }
 
 export async function getStatisticsRankingsApi(limit = 5) {
-  return request(`/statistics/rankings?limit=${limit}`);
+    return request(`/statistics/rankings?limit=${limit}`);
 }
 
 export async function getStatisticsCollectionTypesApi() {
-  return request("/statistics/collection-types");
+    return request("/statistics/collection-types");
 }
 
 export async function getStatisticsAttentionAlertsApi() {
-  return request("/statistics/attention-alerts");
+  const res = await api.get("/statistics/attention-alerts");
+  return res.data;
 }

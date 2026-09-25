@@ -1,12 +1,22 @@
 // src/components/Reports/HomeCollectionSummaryReport.jsx
-import { useState, useEffect, useCallback } from "react";
-import { MapPin, CheckCircle2, Hourglass, XCircle, Route, ClipboardList } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { MapPin, CheckCircle2, Hourglass, XCircle, Route, ClipboardList, X } from "lucide-react";
 import StatCard from "../common/StatCard";
 import ReportToolbar from "./shared/ReportToolbar";
 import { formatCurrency, todayIso, daysAgoIso } from "./shared/format";
 import { exportToCsv, exportToPdf } from "../../utils/reportExport";
 import { getHomeCollectionSummaryReportApi } from "../../api/api";
 import { HcStatusBadge, formatHcDate } from "./shared/hcStatus";
+
+const COMPLETED_STATUSES = ["collected", "processing", "report_ready", "sent"];
+const PENDING_STATUSES = ["requested", "assigned", "en_route"];
+
+const FILTER_LABELS = {
+  completed: "Completed",
+  pending: "Pending",
+  cancelled: "Cancelled",
+  distance: "Has recorded distance, sorted farthest first",
+};
 
 export default function HomeCollectionSummaryReport({ onBack }) {
   const [dateFrom, setDateFrom] = useState(daysAgoIso(30));
@@ -15,6 +25,8 @@ export default function HomeCollectionSummaryReport({ onBack }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // Which stat card is "active" and narrowing the table below. null = all rows.
+  const [activeFilter, setActiveFilter] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -35,7 +47,36 @@ export default function HomeCollectionSummaryReport({ onBack }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateFrom, dateTo, search]);
 
-  const rows = data?.rows || [];
+  // Reset the card filter whenever the underlying data changes (new date
+  // range or search) so it never silently filters against stale data.
+  useEffect(() => {
+    setActiveFilter(null);
+  }, [dateFrom, dateTo, search]);
+
+  const allRows = data?.rows || [];
+
+  const rows = useMemo(() => {
+    switch (activeFilter) {
+      case "completed":
+        return allRows.filter((r) => COMPLETED_STATUSES.includes(r.status));
+      case "pending":
+        return allRows.filter((r) => PENDING_STATUSES.includes(r.status));
+      case "cancelled":
+        return allRows.filter((r) => r.status === "cancelled");
+      case "distance":
+        return allRows
+          .filter((r) => r.distance_km != null)
+          .slice()
+          .sort((a, b) => b.distance_km - a.distance_km);
+      default:
+        return allRows;
+    }
+  }, [allRows, activeFilter]);
+
+  function toggleFilter(key) {
+    setActiveFilter((current) => (current === key ? null : key));
+  }
+
   const headers = ["HC Code", "Patient", "Slot Date", "Slot", "Technician", "Status", "Distance (km)", "Charge"];
   const csvRows = rows.map((r) => [
     r.hc_code,
@@ -47,6 +88,7 @@ export default function HomeCollectionSummaryReport({ onBack }) {
     r.distance_km ?? "",
     r.collection_charge,
   ]);
+  const exportSuffix = activeFilter ? `-${activeFilter}` : "";
 
   return (
     <div className="space-y-6">
@@ -59,7 +101,7 @@ export default function HomeCollectionSummaryReport({ onBack }) {
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search HC code or patient..."
-        onExportCsv={() => exportToCsv("home-collection-summary", headers, csvRows)}
+        onExportCsv={() => exportToCsv(`home-collection-summary${exportSuffix}`, headers, csvRows)}
         onExportPdf={() => exportToPdf("Home Collection Summary", headers, csvRows)}
       />
 
@@ -74,6 +116,8 @@ export default function HomeCollectionSummaryReport({ onBack }) {
           sublabel="In selected range"
           icon={MapPin}
           color="amber"
+          onClick={() => setActiveFilter(null)}
+          active={activeFilter === null}
         />
         <StatCard
           label="Completed"
@@ -81,6 +125,8 @@ export default function HomeCollectionSummaryReport({ onBack }) {
           sublabel={data?.summary ? `${data.summary.completion_rate}% completion rate` : undefined}
           icon={CheckCircle2}
           color="teal"
+          onClick={() => toggleFilter("completed")}
+          active={activeFilter === "completed"}
         />
         <StatCard
           label="Pending"
@@ -88,12 +134,16 @@ export default function HomeCollectionSummaryReport({ onBack }) {
           sublabel="Unassigned or in progress"
           icon={Hourglass}
           color="blue"
+          onClick={() => toggleFilter("pending")}
+          active={activeFilter === "pending"}
         />
         <StatCard
           label="Cancelled"
           value={data?.summary?.cancelled ?? "—"}
           icon={XCircle}
           color="gray"
+          onClick={() => toggleFilter("cancelled")}
+          active={activeFilter === "cancelled"}
         />
         <StatCard
           label="Avg. Distance"
@@ -101,8 +151,25 @@ export default function HomeCollectionSummaryReport({ onBack }) {
           sublabel={data?.summary ? formatCurrency(data.summary.total_collection_charge) + " total charges" : undefined}
           icon={Route}
           color="purple"
+          onClick={() => toggleFilter("distance")}
+          active={activeFilter === "distance"}
         />
       </div>
+
+      {activeFilter && (
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <span>
+            Showing <span className="font-medium text-gray-900">{FILTER_LABELS[activeFilter]}</span> only
+            ({rows.length} of {allRows.length})
+          </span>
+          <button
+            onClick={() => setActiveFilter(null)}
+            className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 hover:bg-gray-200 transition-colors"
+          >
+            <X size={12} /> Clear
+          </button>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
         <div className="overflow-x-auto">
@@ -133,8 +200,12 @@ export default function HomeCollectionSummaryReport({ onBack }) {
                   <td colSpan={7} className="px-4 py-14 text-center text-gray-400">
                     <div className="flex flex-col items-center gap-2">
                       <ClipboardList size={28} className="text-gray-300" />
-                      <span className="text-sm font-medium text-gray-500">No home collections in this range</span>
-                      <span className="text-xs text-gray-400">Try widening the dates or clearing your search.</span>
+                      <span className="text-sm font-medium text-gray-500">
+                        {activeFilter ? "No records match this filter" : "No home collections in this range"}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {activeFilter ? "Try clearing the filter." : "Try widening the dates or clearing your search."}
+                      </span>
                     </div>
                   </td>
                 </tr>

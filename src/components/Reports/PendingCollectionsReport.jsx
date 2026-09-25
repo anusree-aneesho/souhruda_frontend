@@ -1,17 +1,25 @@
 // src/components/Reports/PendingCollectionsReport.jsx
-import { useState, useEffect, useCallback } from "react";
-import { Hourglass, UserX, Truck, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Hourglass, UserX, Truck, AlertTriangle, CheckCircle2, X } from "lucide-react";
 import StatCard from "../common/StatCard";
 import ReportToolbar from "./shared/ReportToolbar";
 import { exportToCsv, exportToPdf } from "../../utils/reportExport";
 import { getHomeCollectionPendingReportApi } from "../../api/api";
 import { HcStatusBadge, formatHcDate } from "./shared/hcStatus";
 
+const FILTER_LABELS = {
+  unassigned: "Unassigned",
+  awaiting_pickup: "Awaiting Pickup",
+  overdue: "Overdue",
+};
+
 export default function PendingCollectionsReport({ onBack }) {
   const [search, setSearch] = useState("");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // Which stat card is "active" and narrowing the table below. null = all rows.
+  const [activeFilter, setActiveFilter] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -32,7 +40,29 @@ export default function PendingCollectionsReport({ onBack }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
-  const rows = data?.rows || [];
+  useEffect(() => {
+    setActiveFilter(null);
+  }, [search]);
+
+  const allRows = data?.rows || [];
+
+  const rows = useMemo(() => {
+    switch (activeFilter) {
+      case "unassigned":
+        return allRows.filter((r) => r.is_unassigned);
+      case "awaiting_pickup":
+        return allRows.filter((r) => !r.is_unassigned);
+      case "overdue":
+        return allRows.filter((r) => r.is_overdue);
+      default:
+        return allRows;
+    }
+  }, [allRows, activeFilter]);
+
+  function toggleFilter(key) {
+    setActiveFilter((current) => (current === key ? null : key));
+  }
+
   const headers = ["HC Code", "Patient", "Phone", "Slot Date", "Slot", "Status", "Technician", "Requested On"];
   const csvRows = rows.map((r) => [
     r.hc_code,
@@ -44,6 +74,7 @@ export default function PendingCollectionsReport({ onBack }) {
     r.technician_name || "Unassigned",
     r.requested_at,
   ]);
+  const exportSuffix = activeFilter ? `-${activeFilter}` : "";
 
   return (
     <div className="space-y-6">
@@ -52,7 +83,7 @@ export default function PendingCollectionsReport({ onBack }) {
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search HC code or patient..."
-        onExportCsv={() => exportToCsv("pending-collections", headers, csvRows)}
+        onExportCsv={() => exportToCsv(`pending-collections${exportSuffix}`, headers, csvRows)}
         onExportPdf={() => exportToPdf("Pending Collections", headers, csvRows)}
       />
 
@@ -65,13 +96,22 @@ export default function PendingCollectionsReport({ onBack }) {
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Pending" value={data?.summary?.total_pending ?? "—"} icon={Hourglass} color="amber" />
+        <StatCard
+          label="Total Pending"
+          value={data?.summary?.total_pending ?? "—"}
+          icon={Hourglass}
+          color="amber"
+          onClick={() => setActiveFilter(null)}
+          active={activeFilter === null}
+        />
         <StatCard
           label="Unassigned"
           value={data?.summary?.unassigned ?? "—"}
           sublabel="Awaiting a technician"
           icon={UserX}
           color="gray"
+          onClick={() => toggleFilter("unassigned")}
+          active={activeFilter === "unassigned"}
         />
         <StatCard
           label="Awaiting Pickup"
@@ -79,6 +119,8 @@ export default function PendingCollectionsReport({ onBack }) {
           sublabel="Assigned or en route"
           icon={Truck}
           color="blue"
+          onClick={() => toggleFilter("awaiting_pickup")}
+          active={activeFilter === "awaiting_pickup"}
         />
         <StatCard
           label="Overdue"
@@ -86,8 +128,25 @@ export default function PendingCollectionsReport({ onBack }) {
           sublabel="Past their slot date"
           icon={AlertTriangle}
           color="gray"
+          onClick={() => toggleFilter("overdue")}
+          active={activeFilter === "overdue"}
         />
       </div>
+
+      {activeFilter && (
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <span>
+            Showing <span className="font-medium text-gray-900">{FILTER_LABELS[activeFilter]}</span> only
+            ({rows.length} of {allRows.length})
+          </span>
+          <button
+            onClick={() => setActiveFilter(null)}
+            className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 hover:bg-gray-200 transition-colors"
+          >
+            <X size={12} /> Clear
+          </button>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
         <div className="overflow-x-auto">
@@ -117,8 +176,14 @@ export default function PendingCollectionsReport({ onBack }) {
                   <td colSpan={6} className="px-4 py-14 text-center text-gray-400">
                     <div className="flex flex-col items-center gap-2">
                       <CheckCircle2 size={28} className="text-gray-300" />
-                      <span className="text-sm font-medium text-gray-500">Nothing pending right now</span>
-                      <span className="text-xs text-gray-400">Every request has been picked up or completed.</span>
+                      <span className="text-sm font-medium text-gray-500">
+                        {activeFilter ? "No records match this filter" : "Nothing pending right now"}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {activeFilter
+                          ? "Try clearing the filter."
+                          : "Every request has been picked up or completed."}
+                      </span>
                     </div>
                   </td>
                 </tr>

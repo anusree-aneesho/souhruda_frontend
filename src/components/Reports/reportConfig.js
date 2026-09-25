@@ -42,6 +42,10 @@ import DayToDayReport from "./DayToDayReport";
 import WeeklyReport from "./WeeklyReport";
 import MonthlyReport from "./MonthlyReport";
 import YearlyReport from "./YearlyReport";
+import HomeCollectionSummaryReport from "./HomeCollectionSummaryReport";
+import TechnicianCollectionReport from "./TechnicianCollectionReport";
+import PendingCollectionsReport from "./PendingCollectionsReport";
+import CancelledCollectionsReport from "./CancelledCollectionsReport";
 
 export const REPORT_CATEGORIES = [
   {
@@ -123,28 +127,28 @@ export const REPORT_CATEGORIES = [
         title: "Collection Summary",
         description: "Requests, completions, and average distance.",
         icon: MapPin,
-        component: null,
+        component: HomeCollectionSummaryReport,
       },
       {
         key: "hc-technician",
         title: "Technician-wise Collection",
         description: "Jobs completed and on-time rate per technician.",
         icon: UserCheck2,
-        component: null,
+        component: TechnicianCollectionReport,
       },
       {
         key: "hc-pending",
         title: "Pending Collections",
         description: "Requests still unassigned or awaiting pickup.",
         icon: Hourglass,
-        component: null,
+        component: PendingCollectionsReport,
       },
       {
         key: "hc-cancelled",
         title: "Cancelled Collections",
         description: "Cancelled requests and the reasons behind them.",
         icon: XCircle,
-        component: null,
+        component: CancelledCollectionsReport,
       },
     ],
   },

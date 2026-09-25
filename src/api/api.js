@@ -599,6 +599,39 @@ export async function getYearlyReportApi(year) {
   return request(`/reports/yearly${qs ? `?${qs}` : ""}`);
 }
 
+export async function getHomeCollectionSummaryReportApi({ dateFrom, dateTo, q } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  if (q) params.append("q", q);
+  const qs = params.toString();
+  return request(`/reports/home-collection/summary${qs ? `?${qs}` : ""}`);
+}
+
+export async function getHomeCollectionTechniciansReportApi({ dateFrom, dateTo } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  const qs = params.toString();
+  return request(`/reports/home-collection/technicians${qs ? `?${qs}` : ""}`);
+}
+
+export async function getHomeCollectionPendingReportApi({ q } = {}) {
+  const params = new URLSearchParams();
+  if (q) params.append("q", q);
+  const qs = params.toString();
+  return request(`/reports/home-collection/pending${qs ? `?${qs}` : ""}`);
+}
+
+export async function getHomeCollectionCancelledReportApi({ dateFrom, dateTo, q } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  if (q) params.append("q", q);
+  const qs = params.toString();
+  return request(`/reports/home-collection/cancelled${qs ? `?${qs}` : ""}`);
+}
+
 // ── Statistics ──────────────────────────────────────
 
 export async function getStatisticsSummaryApi() {
@@ -645,4 +678,3 @@ export async function getRevenueOverTimeApi(range = "1 Year") {
     `/statistics/revenue-over-time?${params.toString()}`
   );
 }
-

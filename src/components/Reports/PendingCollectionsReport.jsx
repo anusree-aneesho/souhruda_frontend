@@ -6,6 +6,9 @@ import ReportToolbar from "./shared/ReportToolbar";
 import { exportToCsv, exportToPdf } from "../../utils/reportExport";
 import { getHomeCollectionPendingReportApi } from "../../api/api";
 import { HcStatusBadge, formatHcDate } from "./shared/hcStatus";
+import Pagination from "./shared/Pagination";
+
+const PAGE_SIZE = 7;
 
 const FILTER_LABELS = {
   unassigned: "Unassigned",
@@ -20,6 +23,7 @@ export default function PendingCollectionsReport({ onBack }) {
   const [error, setError] = useState("");
   // Which stat card is "active" and narrowing the table below. null = all rows.
   const [activeFilter, setActiveFilter] = useState(null);
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -44,6 +48,11 @@ export default function PendingCollectionsReport({ onBack }) {
     setActiveFilter(null);
   }, [search]);
 
+  // Back to page 1 whenever the filter or the underlying rows change.
+  useEffect(() => {
+    setPage(1);
+  }, [activeFilter, data]);
+
   const allRows = data?.rows || [];
 
   const rows = useMemo(() => {
@@ -58,6 +67,10 @@ export default function PendingCollectionsReport({ onBack }) {
         return allRows;
     }
   }, [allRows, activeFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedRows = rows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   function toggleFilter(key) {
     setActiveFilter((current) => (current === key ? null : key));
@@ -188,7 +201,7 @@ export default function PendingCollectionsReport({ onBack }) {
                   </td>
                 </tr>
               ) : (
-                rows.map((r, i) => (
+                pagedRows.map((r, i) => (
                   <tr
                     key={r.hc_code || i}
                     className={`border-b border-gray-50 last:border-0 odd:bg-white even:bg-gray-50/40 hover:bg-amber-50/40 transition-colors ${
@@ -226,8 +239,12 @@ export default function PendingCollectionsReport({ onBack }) {
         </div>
 
         {!loading && rows.length > 0 && (
-          <div className="border-t border-gray-100 bg-gray-50/60 px-4 py-2.5 text-xs text-gray-400">
-            Showing {rows.length} {rows.length === 1 ? "request" : "requests"}
+          <div className="border-t border-gray-100 bg-gray-50/60 px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap">
+            <span className="text-xs text-gray-400">
+              Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, rows.length)} of {rows.length}{" "}
+              {rows.length === 1 ? "request" : "requests"}
+            </span>
+            <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} />
           </div>
         )}
       </div>

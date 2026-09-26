@@ -1,11 +1,19 @@
 // src/components/Reports/TechnicianCollectionReport.jsx
-import { useState, useEffect, useCallback } from "react";
-import { UserCheck2, Users, CheckCircle2, Timer, UserRound } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { UserCheck2, Users, CheckCircle2, UserRound, X } from "lucide-react";
 import StatCard from "../common/StatCard";
 import ReportToolbar from "./shared/ReportToolbar";
 import { todayIso, daysAgoIso } from "./shared/format";
 import { exportToCsv, exportToPdf } from "../../utils/reportExport";
 import { getHomeCollectionTechniciansReportApi } from "../../api/api";
+import Pagination from "./shared/Pagination";
+
+const PAGE_SIZE = 7;
+
+const FILTER_LABELS = {
+  assigned: "Sorted by most jobs assigned",
+  completed: "Technicians with at least one completed job, sorted by most completed",
+};
 
 function RateBar({ value, colorClass }) {
   if (value == null) return <span className="text-gray-400">—</span>;
@@ -25,6 +33,10 @@ export default function TechnicianCollectionReport({ onBack }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // Which stat card is "active" and reshaping the table below. null = the
+  // API's own default order (busiest-completed-first).
+  const [activeFilter, setActiveFilter] = useState(null);
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -43,7 +55,41 @@ export default function TechnicianCollectionReport({ onBack }) {
     load();
   }, [load]);
 
-  const rows = data?.rows || [];
+  // Reset the card filter whenever the date range changes, so it never
+  // silently applies to stale data.
+  useEffect(() => {
+    setActiveFilter(null);
+  }, [dateFrom, dateTo]);
+
+  // Back to page 1 whenever the filter or the underlying rows change.
+  useEffect(() => {
+    setPage(1);
+  }, [activeFilter, data]);
+
+  const allRows = data?.rows || [];
+
+  const rows = useMemo(() => {
+    switch (activeFilter) {
+      case "assigned":
+        return allRows.slice().sort((a, b) => b.assigned - a.assigned);
+      case "completed":
+        return allRows
+          .filter((r) => r.completed > 0)
+          .slice()
+          .sort((a, b) => b.completed - a.completed);
+      default:
+        return allRows;
+    }
+  }, [allRows, activeFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedRows = rows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  function toggleFilter(key) {
+    setActiveFilter((current) => (current === key ? null : key));
+  }
+
   const headers = ["Technician", "Zone", "Assigned", "Completed", "Pending", "Completion Rate", "On-time Rate", "Avg. Distance (km)"];
   const csvRows = rows.map((r) => [
     r.technician_name,
@@ -55,6 +101,7 @@ export default function TechnicianCollectionReport({ onBack }) {
     r.on_time_rate != null ? `${r.on_time_rate}%` : "N/A",
     r.avg_distance_km ?? "",
   ]);
+  const exportSuffix = activeFilter ? `-${activeFilter}` : "";
 
   return (
     <div className="space-y-6">
@@ -64,7 +111,7 @@ export default function TechnicianCollectionReport({ onBack }) {
           { label: "Date From", value: dateFrom, onChange: setDateFrom, max: dateTo },
           { label: "Date To", value: dateTo, onChange: setDateTo, min: dateFrom },
         ]}
-        onExportCsv={() => exportToCsv("technician-wise-collection", headers, csvRows)}
+        onExportCsv={() => exportToCsv(`technician-wise-collection${exportSuffix}`, headers, csvRows)}
         onExportPdf={() => exportToPdf("Technician-wise Collection", headers, csvRows)}
       />
 
@@ -84,20 +131,41 @@ export default function TechnicianCollectionReport({ onBack }) {
           sublabel="With jobs in this range"
           icon={Users}
           color="amber"
+          onClick={() => setActiveFilter(null)}
+          active={activeFilter === null}
         />
         <StatCard
           label="Jobs Assigned"
           value={data?.summary?.total_assigned ?? "—"}
           icon={UserCheck2}
           color="blue"
+          onClick={() => toggleFilter("assigned")}
+          active={activeFilter === "assigned"}
         />
         <StatCard
           label="Jobs Completed"
           value={data?.summary?.total_completed ?? "—"}
           icon={CheckCircle2}
           color="teal"
+          onClick={() => toggleFilter("completed")}
+          active={activeFilter === "completed"}
         />
       </div>
+
+      {activeFilter && (
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <span>
+            <span className="font-medium text-gray-900">{FILTER_LABELS[activeFilter]}</span>{" "}
+            ({rows.length} of {allRows.length})
+          </span>
+          <button
+            onClick={() => setActiveFilter(null)}
+            className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 hover:bg-gray-200 transition-colors"
+          >
+            <X size={12} /> Clear
+          </button>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
         <div className="overflow-x-auto">
@@ -129,13 +197,17 @@ export default function TechnicianCollectionReport({ onBack }) {
                   <td colSpan={8} className="px-4 py-14 text-center text-gray-400">
                     <div className="flex flex-col items-center gap-2">
                       <UserRound size={28} className="text-gray-300" />
-                      <span className="text-sm font-medium text-gray-500">No technician jobs in this range</span>
-                      <span className="text-xs text-gray-400">Try widening the dates.</span>
+                      <span className="text-sm font-medium text-gray-500">
+                        {activeFilter ? "No technicians match this filter" : "No technician jobs in this range"}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {activeFilter ? "Try clearing the filter." : "Try widening the dates."}
+                      </span>
                     </div>
                   </td>
                 </tr>
               ) : (
-                rows.map((r, i) => (
+                pagedRows.map((r, i) => (
                   <tr
                     key={r.technician_id ?? i}
                     className="border-b border-gray-50 last:border-0 odd:bg-white even:bg-gray-50/40 hover:bg-amber-50/40 transition-colors"
@@ -173,8 +245,12 @@ export default function TechnicianCollectionReport({ onBack }) {
         </div>
 
         {!loading && rows.length > 0 && (
-          <div className="border-t border-gray-100 bg-gray-50/60 px-4 py-2.5 text-xs text-gray-400">
-            Showing {rows.length} {rows.length === 1 ? "technician" : "technicians"}
+          <div className="border-t border-gray-100 bg-gray-50/60 px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap">
+            <span className="text-xs text-gray-400">
+              Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, rows.length)} of {rows.length}{" "}
+              {rows.length === 1 ? "technician" : "technicians"}
+            </span>
+            <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} />
           </div>
         )}
       </div>

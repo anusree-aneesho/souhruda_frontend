@@ -63,6 +63,7 @@ export default function TestMaster() {
             criticalHigh: t.critical_high,
             followupWeeks: t.followup_weeks,
             criteria: t.criteria,
+            isActive: t.is_active,  
             demographicRanges: Object.fromEntries(
               (t.ranges || []).map((r) => [r.demographic_group, r.range_raw])
             ),
@@ -164,6 +165,7 @@ export default function TestMaster() {
       critical_high: testData.criticalHigh,
       followup_weeks: testData.followupWeeks,
       criteria: testData.criteria || null,
+      is_active: testData.isActive, 
       ranges,
     };
 
@@ -201,6 +203,7 @@ export default function TestMaster() {
             criticalHigh: saved.critical_high,
             followupWeeks: saved.followup_weeks,
             criteria: saved.criteria,
+            isActive: saved.is_active,   
             demographicRanges: Object.fromEntries(
               (saved.ranges || []).map((r) => [r.demographic_group, r.range_raw])
             ),

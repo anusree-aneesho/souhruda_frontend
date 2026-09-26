@@ -1,7 +1,7 @@
 // src/components/FollowUps/FollowUpsTable/FollowUpRow.jsx
 import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
 
-export default function FollowUpRow({ patient, test, due, status }) {
+export default function FollowUpRow({ patient, test, due, status, onView }) {
   return (
     <tr className="border-b border-gray-100 last:border-0">
       <td className="py-3 text-sm font-medium text-gray-900">{patient}</td>
@@ -9,6 +9,14 @@ export default function FollowUpRow({ patient, test, due, status }) {
       <td className="py-3 text-sm text-gray-500">{due}</td>
       <td className="py-3">
         <StatusBadge status={status} />
+      </td>
+      <td className="py-3 text-right">
+        <button
+          onClick={onView}
+          className="text-xs text-teal-600 font-medium hover:underline cursor-pointer"
+        >
+          View
+        </button>
       </td>
     </tr>
   );

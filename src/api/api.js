@@ -492,6 +492,21 @@ export async function markFollowUpReminderDoneApi(id) {
   });
 }
 
+export async function getFollowUpReminderApi(id) {
+  return request(`/follow-up-reminders/${id}`);
+}
+
+export async function rescheduleFollowUpReminderApi(id, dueDate) {
+  return request(`/follow-up-reminders/${id}/reschedule`, {
+    method: "PATCH",
+    body: JSON.stringify({ due_date: dueDate }),
+  });
+}
+
+export async function getPatientFollowUpRemindersApi(patientId) {
+  return request(`/follow-up-reminders?patient_id=${patientId}&per_page=50`);
+}
+
 // ── Staff Management ──────────────────────────────────────
 
 export async function addStaffApi(payload) {
@@ -552,6 +567,7 @@ export async function deleteDoctorApi(id) {
     method: "DELETE",
   });
 }
+
 // ── Reports ──────────────────────────────────────────────
 export async function getPatientsReportApi({ dateFrom, dateTo, q } = {}) {
   const params = new URLSearchParams();
@@ -599,11 +615,45 @@ export async function getYearlyReportApi(year) {
   return request(`/reports/yearly${qs ? `?${qs}` : ""}`);
 }
 
+
 export async function getTatReportApi({ dateFrom, dateTo }) {
   const params = new URLSearchParams();
   if (dateFrom) params.set("date_from", dateFrom);
   if (dateTo) params.set("date_to", dateTo);
   return request(`/reports/tat?${params.toString()}`);
+
+export async function getHomeCollectionSummaryReportApi({ dateFrom, dateTo, q } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  if (q) params.append("q", q);
+  const qs = params.toString();
+  return request(`/reports/home-collection/summary${qs ? `?${qs}` : ""}`);
+}
+
+export async function getHomeCollectionTechniciansReportApi({ dateFrom, dateTo } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  const qs = params.toString();
+  return request(`/reports/home-collection/technicians${qs ? `?${qs}` : ""}`);
+}
+
+export async function getHomeCollectionPendingReportApi({ q } = {}) {
+  const params = new URLSearchParams();
+  if (q) params.append("q", q);
+  const qs = params.toString();
+  return request(`/reports/home-collection/pending${qs ? `?${qs}` : ""}`);
+}
+
+export async function getHomeCollectionCancelledReportApi({ dateFrom, dateTo, q } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  if (q) params.append("q", q);
+  const qs = params.toString();
+  return request(`/reports/home-collection/cancelled${qs ? `?${qs}` : ""}`);
+
 }
 
 // ── Statistics ──────────────────────────────────────
@@ -626,7 +676,6 @@ export async function getStatisticsCollectionTypesApi() {
 
 export async function getStatisticsAttentionAlertsApi() {
   return request("/statistics/attention-alerts");
-
 }
 
 export async function getOrderStatusDistributionApi(range = "1 Year") {
@@ -653,8 +702,10 @@ export async function getRevenueOverTimeApi(range = "1 Year") {
   );
 }
 
+
 export async function markSampleCollectedApi(orderId) {
   return request(`/orders/${orderId}/mark-sample-collected`, {
     method: "PATCH",
   });
 }
+

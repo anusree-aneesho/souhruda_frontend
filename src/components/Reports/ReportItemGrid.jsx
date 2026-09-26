@@ -1,7 +1,12 @@
 // src/components/Reports/ReportItemGrid.jsx
 export default function ReportItemGrid({ category, onSelect }) {
+  // 4+ cards (Home Collection, Finance, etc.) get a 4-wide row; smaller
+  // categories (e.g. the 3-card Patient Reports) stay at 3-wide so cards
+  // don't stretch awkwardly across the row.
+  const gridCols = category.items.length >= 4 ? "lg:grid-cols-4" : "lg:grid-cols-3";
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className={`grid grid-cols-1 sm:grid-cols-2 ${gridCols} gap-4`}>
       {category.items.map(({ key, title, description, icon: Icon, component }) => (
         <button
           key={key}

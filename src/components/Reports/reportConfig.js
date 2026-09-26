@@ -46,6 +46,7 @@ import HomeCollectionSummaryReport from "./HomeCollectionSummaryReport";
 import TechnicianCollectionReport from "./TechnicianCollectionReport";
 import PendingCollectionsReport from "./PendingCollectionsReport";
 import CancelledCollectionsReport from "./CancelledCollectionsReport";
+import HomeCollectionQuickTable from "./HomeCollectionQuickTable";
 
 export const REPORT_CATEGORIES = [
   {
@@ -121,6 +122,9 @@ export const REPORT_CATEGORIES = [
     description: "Field pickups, technicians, and completion rates.",
     icon: MapPin,
     color: "bg-amber-50 text-amber-600",
+    // Shown under the report cards on the category's landing page, before a
+    // specific report is picked — see Reports.jsx.
+    quickView: HomeCollectionQuickTable,
     items: [
       {
         key: "hc-summary",

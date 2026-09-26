@@ -632,6 +632,10 @@ export async function getOrdersForRangeApi(range = "today") {
   return request(`/statistics/orders-for-range?range=${range}`);
 }
 
+export async function getNewPatientsForRangeApi(range = "today") {
+  return request(`/statistics/new-patients-for-range?range=${range}`);
+}
+
 export async function getStatisticsRankingsApi(limit = 5) {
   return request(`/statistics/rankings?limit=${limit}`);
 }
@@ -643,6 +647,18 @@ export async function getStatisticsCollectionTypesApi() {
 export async function getStatisticsAttentionAlertsApi() {
   return request("/statistics/attention-alerts");
 
+}
+
+export async function getStatisticsPatientsApi(range = "Today") {
+  return request(`/statistics/patients?range=${encodeURIComponent(range)}`);
+}
+
+export async function getStatisticsSampleProcessingApi(range = "Today") {
+  return request(`/statistics/sample-processing?range=${encodeURIComponent(range)}`);
+}
+
+export async function getStatisticsReportStatusApi(range = "Today") {
+  return request(`/statistics/report-status?range=${encodeURIComponent(range)}`);
 }
 
 export async function getOrderStatusDistributionApi(range = "1 Year") {

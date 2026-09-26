@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
-import { getOrdersForRangeApi } from "../../api/api";
+import { getOrdersForRangeApi, getNewPatientsForRangeApi } from "../../api/api";
 import {
   getStatisticsSummaryApi,
   getStatisticsRankingsApi,
   getStatisticsCollectionTypesApi,
   getStatisticsAttentionAlertsApi,
+  getStatisticsPatientsApi,
+  getStatisticsSampleProcessingApi,
+  getStatisticsReportStatusApi,
 } from "../../api/api";
 import {
   Briefcase,
@@ -12,11 +15,12 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
-  TrendingUp,
   Calendar,
   BadgeIndianRupee,
   LineChart,
   AlertTriangle,
+  Users,
+  UserPlus,
 } from "lucide-react";
 
 import OrdersTrendSection from "./OrdersTrendSection";
@@ -107,7 +111,7 @@ function TrendCard({ title }) {
   );
 }
 
-function DonutCard({ title, total, segments }) {
+function DonutCard({ title, total, segments, footerStat, range, onRangeChange, loading }) {
   let cumulative = 0;
   const gradientParts = segments.map((s) => {
     const start = cumulative;
@@ -121,6 +125,15 @@ function DonutCard({ title, total, segments }) {
         <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
         <a href="#" className="text-xs text-teal-600 font-medium hover:underline">View Report</a>
       </div>
+      {footerStat && (
+        <div className="flex items-center justify-between -mt-2 pb-1 border-b border-gray-50">
+          <span className="text-xs text-gray-500">{footerStat.label}</span>
+          <span className="text-sm font-bold text-gray-900">{footerStat.value}</span>
+        </div>
+      )}
+      {loading ? (
+        <p className="text-xs text-gray-400 text-center py-6">Loading…</p>
+      ) : (
       <div className="flex items-center gap-6">
         <div
           className="relative w-28 h-28 rounded-full flex items-center justify-center shrink-0"
@@ -143,6 +156,10 @@ function DonutCard({ title, total, segments }) {
           ))}
         </div>
       </div>
+      )}
+      {onRangeChange && (
+        <RangeFilter options={rangeOptions} active={range} onSelect={onRangeChange} />
+      )}
     </div>
   );
 }
@@ -476,6 +493,18 @@ export default function Statistics() {
   const [allRankings, setAllRankings] = useState(null);
   const [allRankingsLoading, setAllRankingsLoading] = useState(false);
 
+  const [patientStats, setPatientStats] = useState(null);
+  const [patientStatsLoading, setPatientStatsLoading] = useState(true);
+  const [patientRange, setPatientRange] = useState("Today");
+
+  const [sampleStats, setSampleStats] = useState(null);
+  const [sampleStatsLoading, setSampleStatsLoading] = useState(true);
+  const [sampleRange, setSampleRange] = useState("Today");
+
+  const [reportStats, setReportStats] = useState(null);
+  const [reportStatsLoading, setReportStatsLoading] = useState(true);
+  const [reportRange, setReportRange] = useState("Today");
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -493,7 +522,34 @@ export default function Statistics() {
       cancelled = true;
     };
   }, []);
+  const newPatientsRangeKeyMap = {
+  Yesterday: "yesterday",
+  "1 Week": "week",
+  "1 Month": "month",
+  "1 Year": "year",
+};
 
+const [newPatientsRange, setNewPatientsRange] = useState("Yesterday");
+const [newPatientsCount, setNewPatientsCount] = useState(null);
+const [newPatientsLoading, setNewPatientsLoading] = useState(true);
+
+useEffect(() => {
+  let cancelled = false;
+  setNewPatientsLoading(true);
+  (async () => {
+    try {
+      const res = await getNewPatientsForRangeApi(newPatientsRangeKeyMap[newPatientsRange]);
+      if (!cancelled) setNewPatientsCount(res.count);
+    } catch (err) {
+      console.error("Failed to load new patients for range:", err.message);
+    } finally {
+      if (!cancelled) setNewPatientsLoading(false);
+    }
+  })();
+  return () => {
+    cancelled = true;
+  };
+}, [newPatientsRange]);
   const rangeKeyMap = {
     Today: "today",
     Yesterday: "yesterday",
@@ -587,6 +643,60 @@ export default function Statistics() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    setPatientStatsLoading(true);
+    (async () => {
+      try {
+        const res = await getStatisticsPatientsApi(patientRange);
+        if (!cancelled) setPatientStats(res);
+      } catch (err) {
+        console.error("Failed to load patient statistics:", err.message);
+      } finally {
+        if (!cancelled) setPatientStatsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [patientRange]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSampleStatsLoading(true);
+    (async () => {
+      try {
+        const res = await getStatisticsSampleProcessingApi(sampleRange);
+        if (!cancelled) setSampleStats(res);
+      } catch (err) {
+        console.error("Failed to load sample processing statistics:", err.message);
+      } finally {
+        if (!cancelled) setSampleStatsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [sampleRange]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setReportStatsLoading(true);
+    (async () => {
+      try {
+        const res = await getStatisticsReportStatusApi(reportRange);
+        if (!cancelled) setReportStats(res);
+      } catch (err) {
+        console.error("Failed to load report status statistics:", err.message);
+      } finally {
+        if (!cancelled) setReportStatsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleViewAll = async (type) => {
     setViewAllType(type);
     setAllRankingsLoading(true);
@@ -613,6 +723,13 @@ export default function Statistics() {
     },
     { label: "Total Revenue", value: "₹15,12,295.93", icon: IndianRupee, bg: "bg-green-50", color: "text-green-600" },
     {
+      label: "Total Patients",
+      value: patientStatsLoading ? "…" : (patientStats?.totalPatients ?? 0).toLocaleString(),
+      icon: Users,
+      bg: "bg-indigo-50",
+      color: "text-indigo-600",
+    },
+    {
       label: "Completed Orders",
       value: summaryLoading ? "…" : (summary?.completedOrders ?? 0).toLocaleString(),
       icon: CheckCircle2,
@@ -633,7 +750,37 @@ export default function Statistics() {
       bg: "bg-red-50",
       color: "text-red-600",
     },
-    { label: "Average Order Value", value: "₹1,497.32", icon: TrendingUp, bg: "bg-teal-50", color: "text-teal-600" },
+  ];
+
+  const pct = (count, total) => (total > 0 ? Math.round((count / total) * 1000) / 10 : 0);
+
+  // Patient Mix — New vs Returning, among patients who ordered in the selected range
+  const newInRange = patientStats?.newPatients ?? 0;
+  const returningInRange = patientStats?.returningPatients ?? 0;
+  const patientsInRange = patientStats?.patientsInRange ?? (newInRange + returningInRange);
+  const patientMixSegments = [
+    { label: "New", count: newInRange, pct: pct(newInRange, patientsInRange), colorHex: "#0D9488" },
+    { label: "Returning", count: returningInRange, pct: pct(returningInRange, patientsInRange), colorHex: "#A78BFA" },
+  ];
+
+  // Samples — mutually exclusive pipeline stages, within the selected range
+  const awaitingCollection = sampleStats?.awaitingCollection ?? 0;
+  const samplesProcessing = sampleStats?.samplesProcessing ?? 0;
+  const samplesCompleted = sampleStats?.samplesCompleted ?? 0;
+  const samplesTotal = awaitingCollection + samplesProcessing + samplesCompleted;
+  const sampleSegments = [
+    { label: "Pending Collection", count: awaitingCollection, pct: pct(awaitingCollection, samplesTotal), colorHex: "#FBBF24" },
+    { label: "Processing", count: samplesProcessing, pct: pct(samplesProcessing, samplesTotal), colorHex: "#818CF8" },
+    { label: "Completed", count: samplesCompleted, pct: pct(samplesCompleted, samplesTotal), colorHex: "#22C55E" },
+  ];
+
+  // Report Status — Pending vs Ready, within the selected range
+  const reportsPending = reportStats?.reportsPending ?? 0;
+  const reportsReady = reportStats?.reportsReady ?? 0;
+  const reportsTotal = reportsPending + reportsReady;
+  const reportSegments = [
+    { label: "Pending", count: reportsPending, pct: pct(reportsPending, reportsTotal), colorHex: "#FBBF24" },
+    { label: "Ready", count: reportsReady, pct: pct(reportsReady, reportsTotal), colorHex: "#22C55E" },
   ];
 
   const topDoctors = rankings?.topDoctors ?? [];
@@ -710,12 +857,56 @@ export default function Statistics() {
           options={rangeOptions.slice(1)}
         />
         <HighlightCard
-          label="Today's Average Order Value"
-          value="₹0.00"
-          icon={LineChart}
+          label="Today's New Patients"
+          value={newPatientsLoading ? "…" : (newPatientsCount ?? 0).toLocaleString()}
+          icon={UserPlus}
           bg="bg-teal-50"
           color="text-teal-600"
           options={rangeOptions.slice(1)}
+          active={newPatientsRange}
+          onSelect={setNewPatientsRange}
+        />
+      </div>
+
+      {/* Row 2b — patients, samples, and report status, chart-style like the rest of the page */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <DonutCard
+          title="Patient Mix"
+          total={patientStatsLoading ? "…" : patientsInRange}
+          segments={patientMixSegments}
+          footerStat={{
+            label: "Total Patients",
+            value: patientStatsLoading ? "…" : patientStats?.totalPatients?.toLocaleString() ?? 0,
+          }}
+          range={patientRange}
+          onRangeChange={setPatientRange}
+          loading={patientStatsLoading}
+        />
+
+        <DonutCard
+          title="Samples"
+          total={sampleStatsLoading ? "…" : samplesTotal}
+          segments={sampleSegments}
+          footerStat={{
+            label: "Collected",
+            value: sampleStatsLoading ? "…" : sampleStats?.samplesCollected?.toLocaleString() ?? 0,
+          }}
+          range={sampleRange}
+          onRangeChange={setSampleRange}
+          loading={sampleStatsLoading}
+        />
+
+        <DonutCard
+          title="Report Status"
+          total={reportStatsLoading ? "…" : reportsTotal}
+          segments={reportSegments}
+          footerStat={{
+            label: "Generated (PDF)",
+            value: reportStatsLoading ? "…" : reportStats?.reportsGenerated?.toLocaleString() ?? 0,
+          }}
+          range={reportRange}
+          onRangeChange={setReportRange}
+          loading={reportStatsLoading}
         />
       </div>
 

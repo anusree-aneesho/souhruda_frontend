@@ -90,7 +90,7 @@ export async function deleteTechnicianApi(id) {
 
 // ── Patients ───────────────────────────────────────────────
 
-export async function getPatientsApi(query = "", page = 1) {       //<-paginate
+export async function getPatientsApi(query = "", page = 1) {
   const params = new URLSearchParams();
   if (query) params.append("q", query);
   params.append("page", page);
@@ -278,6 +278,7 @@ export async function resolveHomeCollectionOrderApi(hcCode) {
     method: "POST",
   });
 }
+
 // ── Lab Test ───────────────────────────────────────────────
 
 export function getLabTests(categoryId = null) {
@@ -468,6 +469,12 @@ export async function deleteOrderApi(orderId) {
   });
 }
 
+export async function markSampleCollectedApi(orderId) {
+  return request(`/orders/${orderId}/mark-sample-collected`, {
+    method: "PATCH",
+  });
+}
+
 // ── Order Reports ──────────────────────────────────────
 
 export async function getOrderReportUrlApi(orderId, letterhead = true) {
@@ -569,6 +576,7 @@ export async function deleteDoctorApi(id) {
 }
 
 // ── Reports ──────────────────────────────────────────────
+
 export async function getPatientsReportApi({ dateFrom, dateTo, q } = {}) {
   const params = new URLSearchParams();
   if (dateFrom) params.append("date_from", dateFrom);
@@ -615,12 +623,12 @@ export async function getYearlyReportApi(year) {
   return request(`/reports/yearly${qs ? `?${qs}` : ""}`);
 }
 
-
 export async function getTatReportApi({ dateFrom, dateTo }) {
   const params = new URLSearchParams();
   if (dateFrom) params.set("date_from", dateFrom);
   if (dateTo) params.set("date_to", dateTo);
   return request(`/reports/tat?${params.toString()}`);
+}
 
 export async function getHomeCollectionSummaryReportApi({ dateFrom, dateTo, q } = {}) {
   const params = new URLSearchParams();
@@ -653,7 +661,6 @@ export async function getHomeCollectionCancelledReportApi({ dateFrom, dateTo, q 
   if (q) params.append("q", q);
   const qs = params.toString();
   return request(`/reports/home-collection/cancelled${qs ? `?${qs}` : ""}`);
-
 }
 
 // ── Statistics ──────────────────────────────────────
@@ -701,11 +708,3 @@ export async function getRevenueOverTimeApi(range = "1 Year") {
     `/statistics/revenue-over-time?${params.toString()}`
   );
 }
-
-
-export async function markSampleCollectedApi(orderId) {
-  return request(`/orders/${orderId}/mark-sample-collected`, {
-    method: "PATCH",
-  });
-}
-

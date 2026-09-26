@@ -553,12 +553,13 @@ export async function deleteDoctorApi(id) {
   });
 }
 // ── Reports ──────────────────────────────────────────────
+
 export async function getPatientsReportApi({
   dateFrom,
   dateTo,
   q,
   page = 1,
-}) {
+} = {}) {
   const params = new URLSearchParams();
 
   if (dateFrom) {

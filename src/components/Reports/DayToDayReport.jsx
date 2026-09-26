@@ -47,13 +47,10 @@ export default function DayToDayReport({ onBack }) {
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard label="Patients" value={loading ? "—" : data?.summary?.patients ?? 0} icon={Users} color="teal" />
         <StatCard label="Orders" value={loading ? "—" : data?.summary?.orders ?? 0} icon={ClipboardList} color="blue" />
         <StatCard label="Tests" value={loading ? "—" : data?.summary?.tests ?? 0} icon={FlaskConical} color="purple" />
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <StatCard
           label="Home Collections"
           value={loading ? "—" : data?.summary?.home_collections ?? 0}

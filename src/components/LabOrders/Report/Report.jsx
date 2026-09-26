@@ -1,6 +1,8 @@
 // src/components/LabOrders/Report/Report.jsx
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
+import Toast from "../../common/Toast/Toast";
+import { useToast } from "../../common/Toast/useToast";
 import ReportHeader from "./ReportHeader";
 import FollowUpSuggestions from "./FollowUpSuggestions";
 import BillModal from "./BillModal";
@@ -11,7 +13,10 @@ import { getOrderReportUrlApi, getSettingsApi, getGstSettingsApi } from "../../.
 
 export default function Report() {
   const { orderId } = useParams();
-  const { state } = useLocation();
+  const location = useLocation();
+  const { state } = location;
+  const navigate = useNavigate();
+  const { toast, showToast, hideToast } = useToast();
   const [letterheadOn, setLetterheadOn] = useState(true);
   const [isBillOpen, setBillOpen] = useState(false);
   const [isWhatsAppOpen, setWhatsAppOpen] = useState(false);
@@ -57,6 +62,15 @@ export default function Report() {
   }
 
   const reportDate = formatReportDate(order?.orderedAt);
+
+  
+    useEffect(() => {
+      if (location.state?.justCompleted) {
+        const { orderId: completedId, patientName } = location.state.justCompleted;
+        showToast(`Order #${completedId} completed — report ready for ${patientName || "patient"}`);
+        navigate(location.pathname, { replace: true, state: { ...location.state, justCompleted: undefined } });
+      }
+    }, [location.state, location.pathname, navigate, showToast]);
 
   const results = state?.results || Object.fromEntries(tests.map((t) => [t.id, t.result || ""]));
 
@@ -541,6 +555,7 @@ export default function Report() {
       )}
 
       <iframe ref={iframeRef} title="report-print" style={{ display: "none" }} />
+            {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import LabOrdersHeader from "./LabOrdersHeader";
 import LabOrdersFilters from "./LabOrdersFilters";
 import LabOrdersTable from "./LabOrdersTable/LabOrdersTable";
 import LabOrderCard from "./LabOrdersTable/LabOrderCard";
+import SampleCollectionModal from "./SampleCollectionModal";
 import Toast from "../common/Toast/Toast";
 import { useToast } from "../common/Toast/useToast";
 import { getOrdersApi } from "../../api/api";
@@ -16,19 +17,27 @@ function capitalize(str) {
   return str ? str.charAt(0).toUpperCase() + str.slice(1) : str;
 }
 
+function statusLabel(status) {
+  if (status === "sample_collected") return "Sample Collected";
+  return capitalize(status);
+}
+
 function mapOrder(o) {
   return {
     orderId: o.order_no,
     patient: [o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" "),
     regNo: o.patient?.patient_number || "",
     tests: o.items_count ?? o.items?.length ?? 0,
-    status: capitalize(o.status),
+    testNames: (o.items || []).map((item) => item.lab_test?.name).filter(Boolean), // ADD
+    status: statusLabel(o.status),
     date: o.ordered_at
       ? new Date(o.ordered_at).toLocaleString("en-GB", {
           day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
         })
       : "",
     bill: Number(o.bill_total || 0).toFixed(2),
+    rawStatus: o.status,
+    items: o.items || [],
   };
 }
 
@@ -50,18 +59,30 @@ export default function LabOrders() {
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [modalOrder, setModalOrder] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // OrderDetail navigates here with { justDeleted: { orderId, patientName } }
   // right after a successful order deletion — same pattern as the justBooked
   // / justCreated toasts elsewhere. Refetch so the removed order actually
   // disappears from the list, and clear the state afterward.
-  useEffect(() => {
-    if (location.state?.justDeleted) {
-      const { orderId, patientName } = location.state.justDeleted;
-      showToast(`Order #${orderId} deleted for ${patientName || "patient"}`);
-      navigate(location.pathname, { replace: true, state: {} });
-    }
-  }, [location.state, location.pathname, navigate, showToast]);
+      useEffect(() => {
+        if (location.state?.justDeleted) {
+          const { orderId, patientName } = location.state.justDeleted;
+          showToast(`Order #${orderId} deleted for ${patientName || "patient"}`);
+          navigate(location.pathname, { replace: true, state: {} });
+          setRefreshKey((k) => k + 1); // ADD THIS
+        }
+      }, [location.state, location.pathname, navigate, showToast]);
+
+      useEffect(() => {
+        if (location.state?.justCreated) {
+          const { orderId, patientName } = location.state.justCreated;
+          showToast(`Order #${orderId} created for ${patientName || "patient"}`);
+          navigate(location.pathname, { replace: true, state: {} });
+          setRefreshKey((k) => k + 1); // ADD THIS
+        }
+      }, [location.state, location.pathname, navigate, showToast]);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,7 +113,7 @@ export default function LabOrders() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, isTodayFilter, search, page]);
+  }, [activeTab, isTodayFilter, search, page, refreshKey]);
 
   // Reset to page 1 whenever the filter or search changes.
   useEffect(() => {
@@ -122,6 +143,24 @@ export default function LabOrders() {
     }
   }
 
+  // Pending orders need a "sample collected" confirmation step before
+  // opening the order detail / results page. Anything past pending
+  // (sample_collected, completed) opens straight through, as before.
+  function handleOpenOrder(order) {
+    if (order.rawStatus === "pending") {
+      setModalOrder(order);
+    } else {
+      navigate(`/lab-orders/${order.orderId}`);
+    }
+  }
+
+    function handleSampleCollected(orderId, patientName) {
+      setModalOrder(null);
+      navigate(`/lab-orders/${orderId}`, {
+        state: { justCollected: { orderId, patientName } },
+      });
+    }
+
   const filteredOrders = useMemo(() => orders, [orders]);
 
   return (
@@ -145,11 +184,11 @@ export default function LabOrders() {
         ) : (
           <>
             <div className="hidden md:block">
-              <LabOrdersTable orders={filteredOrders} />
+              <LabOrdersTable orders={filteredOrders} onOpen={handleOpenOrder} />
             </div>
             <div className="md:hidden space-y-3">
               {filteredOrders.map((order) => (
-                <LabOrderCard key={order.orderId} {...order} />
+                <LabOrderCard key={order.orderId} {...order} onOpen={handleOpenOrder} />
               ))}
             </div>
 
@@ -185,6 +224,14 @@ export default function LabOrders() {
           </>
         )}
       </div>
+
+      {modalOrder && (
+        <SampleCollectionModal
+          order={modalOrder}
+          onClose={() => setModalOrder(null)}
+          onConfirmed={(orderId) => handleSampleCollected(orderId, modalOrder.patient)}
+        />
+      )}
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>

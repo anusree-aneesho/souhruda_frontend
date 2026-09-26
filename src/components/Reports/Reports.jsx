@@ -29,6 +29,9 @@ export default function Reports() {
           category={category}
           onSelect={(key) => navigate(`/reports/${category.key}/${key}`)}
         />
+        {category.quickView && (
+          <category.quickView onViewAll={() => navigate(`/reports/${category.key}/${category.items[0].key}`)} />
+        )}
       </div>
     );
   }

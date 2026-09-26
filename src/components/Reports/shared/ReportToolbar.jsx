@@ -10,6 +10,8 @@ export default function ReportToolbar({
   search,
   onSearchChange,
   searchPlaceholder = "Search...",
+  searchOptions, // optional: [{ value, label }] — when provided, renders a <select> instead of a text input
+  searchLabel = "Search",
   onExportCsv,
   onExportPdf,
 }) {
@@ -41,10 +43,29 @@ export default function ReportToolbar({
             </div>
           ))}
 
-          {onSearchChange && (
+          {onSearchChange && searchOptions && (
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1.5">
-                Search
+                {searchLabel}
+              </label>
+              <select
+                value={search}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className={`${inputClass} w-full sm:w-64`}
+              >
+                {searchOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {onSearchChange && !searchOptions && (
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                {searchLabel}
               </label>
               <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 w-full sm:w-64 focus-within:border-teal-500 focus-within:ring-1 focus-within:ring-teal-500">
                 <Search size={14} className="text-gray-400 shrink-0" />

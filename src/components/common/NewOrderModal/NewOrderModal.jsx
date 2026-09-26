@@ -22,6 +22,7 @@ import {
 } from "../../../api/api";
 import { getDoctorsApi } from "../../../api/api";
 import { computeOrderPricing } from "../../../utils/orderPricing";
+import { getPatientFollowUpRemindersApi } from "../../../api/api";
 
 
 function mapPatient(p) {
@@ -120,6 +121,9 @@ export default function NewOrderModal() {
 
   const [referredByTouched, setReferredByTouched] = useState(false);
 
+  const [patientReminders, setPatientReminders] = useState([]);
+  const [selectedReminderId, setSelectedReminderId] = useState(null);
+
   async function handleEditSelectedPatient() {
     if (!selectedPatient?.id) return;
     setIsLoadingPatientToEdit(true);
@@ -183,37 +187,66 @@ export default function NewOrderModal() {
   }, [isOpen, skipPatientStep, presetPatientRegNo]);
 
   useEffect(() => {
-  if (!isOpen) return;
-  let cancelled = false;
-  (async () => {
-    try {
-      const res = await getDoctorsApi();
-      if (!cancelled) setDoctors(res.data || []);
-    } catch (err) {
-      console.error("Failed to load doctors:", err.message);
-    }
-  })();
-  return () => {
-    cancelled = true;
-  };
-}, [isOpen]);
+    if (!isOpen) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await getDoctorsApi();
+        if (!cancelled) setDoctors(res.data || []);
+      } catch (err) {
+        console.error("Failed to load doctors:", err.message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
-useEffect(() => {
-  if (!isOpen) return;
-  let cancelled = false;
-  (async () => {
-    try {
-      const res = await getTestPackages();
-      // Only active packages are ever offered for selection / pricing.
-      if (!cancelled) setPackages((res.data || []).filter((p) => p.is_active));
-    } catch (err) {
-      console.error("Failed to load test packages:", err.message);
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await getTestPackages();
+        // Only active packages are ever offered for selection / pricing.
+        if (!cancelled) setPackages((res.data || []).filter((p) => p.is_active));
+      } catch (err) {
+        console.error("Failed to load test packages:", err.message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    const patientId = patientType === "new" ? createdPatient?.id : selectedPatient?.id;
+    if (!patientId) {
+      setPatientReminders([]);
+      setSelectedReminderId(null);
+      return;
     }
-  })();
-  return () => {
-    cancelled = true;
-  };
-}, [isOpen]);
+    let cancelled = false;
+    getPatientFollowUpRemindersApi(patientId)
+      .then((res) => {
+        if (cancelled) return;
+        setPatientReminders((res.data || []).filter((r) => ["pending", "overdue"].includes(r.status)));
+      })
+      .catch(() => {
+        if (!cancelled) setPatientReminders([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [patientType, selectedPatient?.id, createdPatient?.id]);
+
+  useEffect(() => {
+    if (!selectedReminderId) return;
+    const reminder = patientReminders.find((r) => r.id === selectedReminderId);
+    if (reminder && !selectedTests.some((t) => t.id === reminder.lab_test_id)) {
+      setSelectedReminderId(null);
+    }
+  }, [selectedTests, patientReminders, selectedReminderId]);
 
   const [address, setAddress] = useState("");
   const [pinnedLocation, setPinnedLocation] = useState(null);
@@ -248,6 +281,8 @@ useEffect(() => {
     setEditingPatient(null);
     setReferredBy("");
     setReferredByTouched(false);
+    setPatientReminders([]);
+    setSelectedReminderId(null);
     close();
   }
 
@@ -403,14 +438,15 @@ useEffect(() => {
         package_ids: appliedPackages.map((p) => p.id),
         referred_by: referredBy,
         payment_received: paymentDone,
+        follow_up_reminder_id: selectedReminderId || null,
       };
 
       const res = await createOrderApi(payload);
       const order = res.data;
 
       resetAndClose();
-      navigate(`/lab-orders/${order.order_no}`, {
-        state: { patient: currentPatient, tests: selectedTests, orderedAt: order.ordered_at, paymentDone, justCreated: true },
+      navigate('/lab-orders', {
+        state: { justCreated: { orderId: order.order_no, patientName: currentPatient?.first_name } },
       });
     } catch (err) {
       setSubmitError(err.message);
@@ -478,6 +514,40 @@ const isNextDisabled =
     <>
       <ModalShell title={stepTitles[step]} onClose={resetAndClose} maxWidth="max-w-xl">
         <StepProgressBar currentStep={step} totalSteps={totalSteps} />
+
+        {step === 2 && patientReminders.length > 0 && (
+          <div className="mx-6 mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <p className="text-xs font-medium text-amber-800 mb-2">
+              This patient has pending follow-up{patientReminders.length > 1 ? "s" : ""}:
+            </p>
+            <div className="space-y-1.5">
+              {patientReminders.map((r) => {
+                const testIncluded = selectedTests.some((t) => t.id === r.lab_test_id);
+                return (
+                  <label
+                    key={r.id}
+                    className={`flex items-center gap-2 text-sm cursor-pointer ${
+                      testIncluded ? "text-amber-900" : "text-amber-400 cursor-not-allowed"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="follow-up-reminder"
+                      disabled={!testIncluded}
+                      checked={selectedReminderId === r.id}
+                      onChange={() => setSelectedReminderId(r.id)}
+                    />
+                    {r.lab_test?.name} — due{" "}
+                    {new Date(r.due_date).toLocaleDateString("en-GB", {
+                      day: "2-digit", month: "short", year: "numeric",
+                    })}
+                    {!testIncluded && <span className="text-xs italic ml-1">(select this test to link)</span>}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {step === 1 && (
           <PatientStep

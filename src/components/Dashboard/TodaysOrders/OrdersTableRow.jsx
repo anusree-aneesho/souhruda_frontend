@@ -1,8 +1,7 @@
 // src/components/Dashboard/TodaysOrders/OrdersTableRow.jsx
-import { Link } from "react-router-dom";
 import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
 
-export default function OrdersTableRow({ order, patient, tests, status, time }) {
+export default function OrdersTableRow({ order, patient, tests, status, time, rawStatus, regNo, testNames, onOpen }) {
   return (
     <tr className="border-b border-gray-100 last:border-0">
       <td className="py-3 text-sm text-gray-500">{order}</td>
@@ -13,9 +12,12 @@ export default function OrdersTableRow({ order, patient, tests, status, time }) 
       </td>
       <td className="py-3 text-sm text-gray-500">{time}</td>
       <td className="py-3 text-right">
-        <Link to={`/lab-orders/${order}`} className="text-sm text-teal-600 font-medium hover:underline">
+        <button
+          onClick={() => onOpen({ order, patient, tests, status, time, rawStatus, regNo, testNames })}
+          className="text-sm text-teal-600 font-medium hover:underline"
+        >
           View →
-        </Link>
+        </button>
       </td>
     </tr>
   );

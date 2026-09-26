@@ -44,6 +44,13 @@ import DayToDayReport from "./DayToDayReport";
 import WeeklyReport from "./WeeklyReport";
 import MonthlyReport from "./MonthlyReport";
 import YearlyReport from "./YearlyReport";
+import TATReport from "./TATReport";
+import HomeCollectionSummaryReport from "./HomeCollectionSummaryReport";
+import TechnicianCollectionReport from "./TechnicianCollectionReport";
+import PendingCollectionsReport from "./PendingCollectionsReport";
+import CancelledCollectionsReport from "./CancelledCollectionsReport";
+import HomeCollectionQuickTable from "./HomeCollectionQuickTable";
+
 
 export const REPORT_CATEGORIES = [
   {
@@ -119,34 +126,37 @@ export const REPORT_CATEGORIES = [
     description: "Field pickups, technicians, and completion rates.",
     icon: MapPin,
     color: "bg-amber-50 text-amber-600",
+    // Shown under the report cards on the category's landing page, before a
+    // specific report is picked — see Reports.jsx.
+    quickView: HomeCollectionQuickTable,
     items: [
       {
         key: "hc-summary",
         title: "Collection Summary",
         description: "Requests, completions, and average distance.",
         icon: MapPin,
-        component: null,
+        component: HomeCollectionSummaryReport,
       },
       {
         key: "hc-technician",
         title: "Technician-wise Collection",
         description: "Jobs completed and on-time rate per technician.",
         icon: UserCheck2,
-        component: null,
+        component: TechnicianCollectionReport,
       },
       {
         key: "hc-pending",
         title: "Pending Collections",
         description: "Requests still unassigned or awaiting pickup.",
         icon: Hourglass,
-        component: null,
+        component: PendingCollectionsReport,
       },
       {
         key: "hc-cancelled",
         title: "Cancelled Collections",
         description: "Cancelled requests and the reasons behind them.",
         icon: XCircle,
-        component: null,
+        component: CancelledCollectionsReport,
       },
     ],
   },
@@ -248,7 +258,7 @@ export const REPORT_CATEGORIES = [
         title: "TAT Report",
         description: "Turnaround time from sample to report, by test.",
         icon: Timer,
-        component: null,
+        component: TATReport,
       },
     ],
   },

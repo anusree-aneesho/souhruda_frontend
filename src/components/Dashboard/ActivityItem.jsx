@@ -1,4 +1,5 @@
 // src/components/Dashboard/LatestActivities/ActivityItem.jsx
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Activity,
@@ -11,6 +12,8 @@ import {
   UserPlus,
 } from "lucide-react";
 import { useHomeCollectionModal } from "../../Context/HomeCollectionModalContext";
+import SampleCollectionModal from "../LabOrders/SampleCollectionModal";
+import { getOrderApi } from "../../api/api";
 
 function getIconMeta(text = "") {
   const t = text.toLowerCase();
@@ -39,18 +42,47 @@ function getIconMeta(text = "") {
 export default function ActivityItem({ date, text, type, targetId, isLatest, hideDate = false }) {
   const navigate = useNavigate();
   const { open } = useHomeCollectionModal();
+  const [modalOrder, setModalOrder] = useState(null);
+  const [checkingOrder, setCheckingOrder] = useState(false);
 
-  function handleClick() {
+  async function handleClick() {
     if (type === "order") {
-      navigate(`/lab-orders/${targetId}`);
+      setCheckingOrder(true);
+      try {
+        const res = await getOrderApi(targetId);
+        const o = res.data;
+
+        if (o.status === "pending") {
+          const patientName = [o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" ");
+          setModalOrder({
+            orderId: o.order_no,
+            patient: patientName,
+            regNo: o.patient?.patient_number || "",
+            tests: o.items?.length || 0,
+            testNames: (o.items || []).map((item) => item.lab_test?.name).filter(Boolean),
+          });
+        } else {
+          navigate(`/lab-orders/${targetId}`);
+        }
+      } catch (err) {
+        // If the status check fails for any reason, fall back to
+        // navigating straight through rather than blocking the click.
+        navigate(`/lab-orders/${targetId}`);
+      } finally {
+        setCheckingOrder(false);
+      }
     } else if (type === "homeCollection") {
       open(targetId);
     } else if (type === "patient") {
-      // No individual patient detail route exists yet (only /patients list page).
-      // Once a /patients/:id route is built, change this to:
-      //   navigate(`/patients/${targetId}`);
       navigate(`/patients`);
     }
+  }
+
+  function handleSampleCollected(orderId) {
+    setModalOrder(null);
+    navigate(`/lab-orders/${orderId}`, {
+      state: { justCollected: { orderId, patientName: modalOrder?.patient } },
+    });
   }
 
   const isClickable = type === "order" || type === "homeCollection" || type === "patient";
@@ -69,7 +101,8 @@ export default function ActivityItem({ date, text, type, targetId, isLatest, hid
         {isClickable ? (
           <button
             onClick={handleClick}
-            className="text-sm font-medium text-gray-900 hover:text-teal-600 text-left cursor-pointer"
+            disabled={checkingOrder}
+            className="text-sm font-medium text-gray-900 hover:text-teal-600 text-left cursor-pointer disabled:opacity-50"
           >
             {text}
           </button>
@@ -80,6 +113,14 @@ export default function ActivityItem({ date, text, type, targetId, isLatest, hid
 
       {!hideDate && (
         <span className="text-xs text-gray-400 shrink-0 pt-1.5">{date}</span>
+      )}
+
+      {modalOrder && (
+        <SampleCollectionModal
+          order={modalOrder}
+          onClose={() => setModalOrder(null)}
+          onConfirmed={handleSampleCollected}
+        />
       )}
     </div>
   );

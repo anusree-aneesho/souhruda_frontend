@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import FollowUpsHeader from "./FollowUpsHeader";
 import FollowUpsTable from "./FollowUpsTable/FollowUpsTable";
+import FollowUpDetailModal from "./modals/FollowUpDetailModal";
 import { getFollowUpRemindersApi } from "../../api/api";
 
 function capitalize(str) {
@@ -10,6 +11,7 @@ function capitalize(str) {
 
 function mapReminder(r) {
   return {
+    id: r.id,
     patient: [r.patient?.first_name, r.patient?.last_name].filter(Boolean).join(" "),
     test: r.lab_test?.name ?? "-",
     due: r.due_date
@@ -27,29 +29,22 @@ export default function FollowUps() {
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [viewingId, setViewingId] = useState(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  function fetchReminders() {
     setIsLoading(true);
-
     getFollowUpRemindersApi(page)
       .then((res) => {
-        if (!cancelled) {
-          setFollowUps((res.data || []).map(mapReminder));
-          setLastPage(res.last_page ?? 1);
-          setTotal(res.total ?? 0);
-        }
+        setFollowUps((res.data || []).map(mapReminder));
+        setLastPage(res.last_page ?? 1);
+        setTotal(res.total ?? 0);
       })
-      .catch(() => {
-        if (!cancelled) setFollowUps([]);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
+      .catch(() => setFollowUps([]))
+      .finally(() => setIsLoading(false));
+  }
 
-    return () => {
-      cancelled = true;
-    };
+  useEffect(() => {
+    fetchReminders();
   }, [page]);
 
   return (
@@ -60,7 +55,7 @@ export default function FollowUps() {
         <p className="text-sm text-gray-400 text-center py-6">Loading follow-ups...</p>
       ) : (
         <>
-          <FollowUpsTable followUps={followUps} />
+          <FollowUpsTable followUps={followUps} onView={setViewingId} />
 
           {followUps.length > 0 && lastPage > 1 && (
             <div className="flex items-center justify-between">
@@ -86,6 +81,17 @@ export default function FollowUps() {
             </div>
           )}
         </>
+      )}
+
+      {viewingId && (
+        <FollowUpDetailModal
+          id={viewingId}
+          onClose={() => setViewingId(null)}
+          onActionComplete={() => {
+            setViewingId(null);
+            fetchReminders();
+          }}
+        />
       )}
     </div>
   );

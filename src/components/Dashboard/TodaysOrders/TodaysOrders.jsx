@@ -1,19 +1,28 @@
 // src/components/Dashboard/TodaysOrders/TodaysOrders.jsx
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import OrdersTableRow from "./OrdersTableRow";
+import SampleCollectionModal from "../../LabOrders/SampleCollectionModal";
 import { getTodaysOrdersApi } from "../../../api/api";
 
 function capitalize(str) {
   return str ? str.charAt(0).toUpperCase() + str.slice(1) : str;
 }
 
+function statusLabel(status) {
+  if (status === "sample_collected") return "Sample Collected";
+  return capitalize(status);
+}
+
 function mapOrder(o) {
   return {
     order: o.order_no,
     patient: [o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" "),
+     regNo: o.patient?.patient_number || "",   // ADD THIS
     tests: o.items_count ?? o.items?.length ?? 0,
-    status: capitalize(o.status),
+    testNames: (o.items || []).map((item) => item.lab_test?.name).filter(Boolean),
+    status: statusLabel(o.status),
+    rawStatus: o.status,
     time: o.ordered_at
       ? new Date(o.ordered_at).toLocaleTimeString("en-US", {
           hour: "numeric", minute: "2-digit",
@@ -23,8 +32,10 @@ function mapOrder(o) {
 }
 
 export default function TodaysOrders() {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [modalOrder, setModalOrder] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,6 +55,21 @@ export default function TodaysOrders() {
       cancelled = true;
     };
   }, []);
+
+  function handleOpenOrder(order) {
+    if (order.rawStatus === "pending") {
+      setModalOrder(order);
+    } else {
+      navigate(`/lab-orders/${order.order}`);
+    }
+  }
+
+  function handleSampleCollected(orderId) {
+    setModalOrder(null);
+    navigate(`/lab-orders/${orderId}`, {
+      state: { justCollected: { orderId, patientName: modalOrder?.patient } },
+    });
+  }
 
   if (isLoading || orders.length === 0) {
     return null;
@@ -71,10 +97,24 @@ export default function TodaysOrders() {
         </thead>
         <tbody>
           {orders.map((o) => (
-            <OrdersTableRow key={o.order} {...o} />
+            <OrdersTableRow key={o.order} {...o} onOpen={handleOpenOrder} />
           ))}
         </tbody>
       </table>
+
+{modalOrder && (
+  <SampleCollectionModal
+    order={{
+      orderId: modalOrder.order,
+      patient: modalOrder.patient,
+      regNo: modalOrder.regNo,
+      tests: modalOrder.tests,
+      testNames: modalOrder.testNames,
+    }}
+    onClose={() => setModalOrder(null)}
+    onConfirmed={handleSampleCollected}
+  />
+)}
     </div>
   );
 }

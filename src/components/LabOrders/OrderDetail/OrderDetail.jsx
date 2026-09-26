@@ -39,9 +39,6 @@ function mapOrder(o) {
   rangeHigh: item.resolved_range_high != null ? Number(item.resolved_range_high) : null,
   price: Number(item.price_at_order),
   result: item.result_value ?? "",
-  // Which package (if any) this test was actually billed under — set
-  // server-side at order creation (OrderService::priceTests()), not
-  // re-detected here, so it always matches what the patient was charged.
   packageId: item.test_package_id ?? null,
   packageName: item.test_package?.name ?? null,
   packagePrice: item.test_package ? Number(item.test_package.price) : null,
@@ -50,11 +47,7 @@ function mapOrder(o) {
     orderedAt: o.ordered_at,
     paymentDone: Boolean(o.payment_received),
     referredBy: o.referred_by || "Self",
-    // Authoritative total the patient is actually billed, computed and
-    // stored server-side — never re-summed from individual test prices,
-    // so it stays correct when a package discount applied.
     billTotal: o.bill_total != null ? Number(o.bill_total) : null,
-    // Home visit fee for home-collection orders (0 otherwise) — billed on top of the tests.
     homeVisitFee: Number(o.home_visit_fee) || 0,
   };
 }
@@ -76,13 +69,19 @@ export default function OrderDetail() {
 
   const [confirmingComplete, setConfirmingComplete] = useState(false);
 
-  // NewOrderModal navigates here with { justCreated: true, patient } right
-  // after "Create Order" succeeds — same pattern as Home Collection's
-  // justBooked. Show the confirmation once, then clear the state so a
-  // later back-navigation or manual refresh doesn't re-fire it.
   useEffect(() => {
     if (location.state?.justCreated) {
       showToast(`Order #${orderId} created for ${location.state.patient?.name || "patient"}`);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, navigate, orderId, showToast]);
+
+  // ADDED — sample-collection confirmation toast, shown once after the
+  // Lab Orders list modal marks a pending order's sample as collected.
+  useEffect(() => {
+    if (location.state?.justCollected) {
+      const { patientName } = location.state.justCollected;
+      showToast(`Sample collected for ${patientName || "patient"}`);
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location.state, location.pathname, navigate, orderId, showToast]);
@@ -161,24 +160,28 @@ export default function OrderDetail() {
   }
 
   async function handleMarkCompleted() {
-  setSavingAction("complete");
-  setSaveError(null);
+    setSavingAction("complete");
+    setSaveError(null);
 
-  try {
-    const resultsPayload = Object.entries(results).map(([itemId, value]) => ({
-      order_item_id: Number(itemId),
-      result_value: value || null,
-    }));
+    try {
+      const resultsPayload = Object.entries(results).map(([itemId, value]) => ({
+        order_item_id: Number(itemId),
+        result_value: value || null,
+      }));
 
-    await completeOrderApi(orderId, resultsPayload);
-    navigate(`/lab-orders/${orderId}/report`, {
-      state: { patient, tests, orderedAt, results, paymentDone, referredBy: order?.referredBy || "Self", billTotal, homeVisitFee }
-    });
-  } catch (err) {
-    setSaveError(err.message);
-    setSavingAction(null);
+      await completeOrderApi(orderId, resultsPayload);
+      navigate(`/lab-orders/${orderId}/report`, {
+        state: {
+          patient, tests, orderedAt, results, paymentDone,
+          referredBy: order?.referredBy || "Self", billTotal, homeVisitFee,
+          justCompleted: { orderId, patientName: patient?.name }, // ADDED
+        }
+      });
+    } catch (err) {
+      setSaveError(err.message);
+      setSavingAction(null);
+    }
   }
-}
 
   if (isLoading) {
     return <p className="text-sm text-gray-400 text-center py-10">Loading order…</p>;

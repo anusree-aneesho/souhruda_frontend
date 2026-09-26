@@ -1,7 +1,7 @@
 // src/components/LabOrders/LabOrdersTable/LabOrdersTable.jsx
 import LabOrderRow from "./LabOrderRow";
 
-export default function LabOrdersTable({ orders }) {
+export default function LabOrdersTable({ orders, onOpen }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[720px]">
@@ -19,7 +19,7 @@ export default function LabOrdersTable({ orders }) {
         </thead>
         <tbody>
           {orders.map((order) => (
-            <LabOrderRow key={order.orderId} {...order} />
+            <LabOrderRow key={order.orderId} {...order} onOpen={onOpen} />
           ))}
         </tbody>
       </table>

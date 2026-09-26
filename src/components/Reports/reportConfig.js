@@ -37,6 +37,8 @@ import {
 } from "lucide-react";
 
 import PatientsReport from "./PatientsReport";
+import NewReturningPatientsReport from "./NewReturningPatientsReport";
+import PatientTestHistoryReport from "./PatientTestHistoryReport";
 import FinanceReport from "./FinanceReport";
 import DayToDayReport from "./DayToDayReport";
 import WeeklyReport from "./WeeklyReport";
@@ -63,14 +65,14 @@ export const REPORT_CATEGORIES = [
         title: "New & Returning Patients",
         description: "Split of first-time vs. repeat patients over time.",
         icon: UserPlus,
-        component: null,
+        component: NewReturningPatientsReport,
       },
       {
         key: "patient-test-history",
         title: "Patient Test History",
         description: "Every test a patient has taken, in one timeline.",
         icon: History,
-        component: null,
+        component: PatientTestHistoryReport,
       },
     ],
   },

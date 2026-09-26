@@ -553,14 +553,36 @@ export async function deleteDoctorApi(id) {
   });
 }
 // ── Reports ──────────────────────────────────────────────
-export async function getPatientsReportApi({ dateFrom, dateTo, q } = {}) {
+export async function getPatientsReportApi({
+  dateFrom,
+  dateTo,
+  q,
+  page = 1,
+}) {
   const params = new URLSearchParams();
-  if (dateFrom) params.append("date_from", dateFrom);
-  if (dateTo) params.append("date_to", dateTo);
-  if (q) params.append("q", q);
+
+  if (dateFrom) {
+    params.append("date_from", dateFrom);
+  }
+
+  if (dateTo) {
+    params.append("date_to", dateTo);
+  }
+
+  if (q) {
+    params.append("q", q);
+  }
+
+  params.append("page", page);
+
   const qs = params.toString();
-  return request(`/reports/patients${qs ? `?${qs}` : ""}`);
+
+  return request(
+    `/reports/patients${qs ? `?${qs}` : ""}`
+  );
 }
+
+
 
 export async function getFinanceReportApi({ dateFrom, dateTo } = {}) {
   const params = new URLSearchParams();

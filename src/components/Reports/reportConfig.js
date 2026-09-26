@@ -42,6 +42,7 @@ import DayToDayReport from "./DayToDayReport";
 import WeeklyReport from "./WeeklyReport";
 import MonthlyReport from "./MonthlyReport";
 import YearlyReport from "./YearlyReport";
+import TATReport from "./TATReport";
 
 export const REPORT_CATEGORIES = [
   {
@@ -246,7 +247,7 @@ export const REPORT_CATEGORIES = [
         title: "TAT Report",
         description: "Turnaround time from sample to report, by test.",
         icon: Timer,
-        component: null,
+        component: TATReport,
       },
     ],
   },

@@ -599,6 +599,13 @@ export async function getYearlyReportApi(year) {
   return request(`/reports/yearly${qs ? `?${qs}` : ""}`);
 }
 
+export async function getTatReportApi({ dateFrom, dateTo }) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.set("date_from", dateFrom);
+  if (dateTo) params.set("date_to", dateTo);
+  return request(`/reports/tat?${params.toString()}`);
+}
+
 // ── Statistics ──────────────────────────────────────
 
 export async function getStatisticsSummaryApi() {
@@ -646,3 +653,8 @@ export async function getRevenueOverTimeApi(range = "1 Year") {
   );
 }
 
+export async function markSampleCollectedApi(orderId) {
+  return request(`/orders/${orderId}/mark-sample-collected`, {
+    method: "PATCH",
+  });
+}

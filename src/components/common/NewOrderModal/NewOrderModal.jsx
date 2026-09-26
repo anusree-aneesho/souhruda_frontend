@@ -409,8 +409,8 @@ useEffect(() => {
       const order = res.data;
 
       resetAndClose();
-      navigate(`/lab-orders/${order.order_no}`, {
-        state: { patient: currentPatient, tests: selectedTests, orderedAt: order.ordered_at, paymentDone, justCreated: true },
+      navigate('/lab-orders', {
+        state: { justCreated: { orderId: order.order_no, patientName: currentPatient?.first_name } },
       });
     } catch (err) {
       setSubmitError(err.message);

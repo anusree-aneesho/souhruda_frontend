@@ -1,8 +1,7 @@
 // src/components/LabOrders/LabOrdersTable/LabOrderRow.jsx
-import { Link } from "react-router-dom";
 import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
 
-export default function LabOrderRow({ orderId, patient, regNo, tests, status, date, bill }) {
+export default function LabOrderRow({ orderId, patient, regNo, tests, status, date, bill, rawStatus, testNames, onOpen }) {
   return (
     <tr className="border-b border-gray-100 last:border-0">
       <td className="py-3 text-sm text-gray-500">{orderId}</td>
@@ -13,9 +12,12 @@ export default function LabOrderRow({ orderId, patient, regNo, tests, status, da
       <td className="py-3 text-sm text-gray-500">{date}</td>
       <td className="py-3 text-sm text-gray-900">₹{bill}</td>
       <td className="py-3 text-right">
-        <Link to={`/lab-orders/${orderId}`} className="text-sm text-teal-600 font-medium hover:underline">
+        <button
+          onClick={() => onOpen({ orderId, patient, regNo, tests, status, date, bill, rawStatus, testNames })}
+          className="text-sm text-teal-600 font-medium hover:underline"
+        >
           Open →
-        </Link>
+        </button>
       </td>
     </tr>
   );

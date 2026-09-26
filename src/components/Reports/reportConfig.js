@@ -51,6 +51,10 @@ import PendingCollectionsReport from "./PendingCollectionsReport";
 import CancelledCollectionsReport from "./CancelledCollectionsReport";
 import HomeCollectionQuickTable from "./HomeCollectionQuickTable";
 import BranchSummaryReport from "./BranchSummaryReport";
+import BranchPatientsReport from "./BranchPatientsReport";
+import BranchTestsReport from "./BranchTestsReport";
+import BranchRevenueReport from "./BranchRevenueReport";
+import BranchQuickTable from "./BranchQuickTable";
 
 export const REPORT_CATEGORIES = [
   {
@@ -268,6 +272,9 @@ export const REPORT_CATEGORIES = [
     description: "Compare performance across branches.",
     icon: Building2,
     color: "bg-rose-50 text-rose-600",
+    // Shown under the report cards on the category's landing page, before a
+    // specific report is picked — see Reports.jsx.
+    quickView: BranchQuickTable,
     items: [
       {
         key: "branch-summary",
@@ -281,21 +288,21 @@ export const REPORT_CATEGORIES = [
         title: "Branch-wise Patients",
         description: "Patient counts per branch over the period.",
         icon: Users,
-        component: null,
+        component: BranchPatientsReport,
       },
       {
         key: "branch-tests",
         title: "Branch-wise Tests",
         description: "Test volume per branch over the period.",
         icon: FlaskConical,
-        component: null,
+        component: BranchTestsReport,
       },
       {
         key: "branch-revenue",
         title: "Branch-wise Revenue",
         description: "Revenue per branch over the period.",
         icon: Building,
-        component: null,
+        component: BranchRevenueReport,
       },
     ],
   },

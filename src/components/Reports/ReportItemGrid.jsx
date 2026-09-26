@@ -1,17 +1,14 @@
 // src/components/Reports/ReportItemGrid.jsx
-export default function ReportItemGrid({ category, onSelect }) {
-  // 4+ cards (Home Collection, Finance, etc.) get a 4-wide row; smaller
-  // categories (e.g. the 3-card Patient Reports) stay at 3-wide so cards
-  // don't stretch awkwardly across the row.
-  const gridCols = category.items.length >= 4 ? "lg:grid-cols-4" : "lg:grid-cols-3";
+import { ArrowRight } from "lucide-react";
 
+export default function ReportItemGrid({ category, onSelect }) {
   return (
-    <div className={`grid grid-cols-1 sm:grid-cols-2 ${gridCols} gap-4`}>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {category.items.map(({ key, title, description, icon: Icon, component }) => (
         <button
           key={key}
           onClick={() => onSelect(key)}
-          className="text-left bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:shadow-md transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-teal-500"
+          className="group text-left bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] border border-transparent hover:border-teal-100 hover:shadow-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-teal-500"
         >
           <div className="flex items-start justify-between">
             <span className={`inline-flex h-10 w-10 rounded-lg items-center justify-center mb-3 ${category.color}`}>
@@ -23,7 +20,17 @@ export default function ReportItemGrid({ category, onSelect }) {
               </span>
             )}
           </div>
-          <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-gray-900 group-hover:text-teal-700 transition-colors">
+              {title}
+            </h3>
+            {component && (
+              <ArrowRight
+                size={14}
+                className="text-gray-300 group-hover:text-teal-600 group-hover:translate-x-0.5 transition-all shrink-0"
+              />
+            )}
+          </div>
           <p className="text-xs text-gray-500 mt-1">{description}</p>
         </button>
       ))}

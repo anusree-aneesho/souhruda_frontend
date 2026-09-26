@@ -1,5 +1,5 @@
 // src/components/Reports/Reports.jsx
-import { useParams, useNavigate, Navigate } from "react-router-dom";
+import { useParams, useNavigate, Navigate, Link } from "react-router-dom";
 import ReportItemGrid from "./ReportItemGrid";
 import ComingSoonReport from "./ComingSoonReport";
 import { REPORT_CATEGORIES } from "./reportConfig";
@@ -17,36 +17,14 @@ export default function Reports() {
 
   // Just a category was clicked in the sidebar — show its report cards as page content.
   if (!itemKey) {
-    // Branch Reports is special-cased: the logged-in user's own branch
-    // summary is shown inline at the top of the page (it's a live view, not
-    // a report you drill into), and the other report cards sit below it.
-    if (category.key === "branch") {
-      const summaryItem = category.items.find((i) => i.key === "branch-summary");
-      const cardItems = category.items.filter((i) => i.key !== "branch-summary");
-      const SummaryComponent = summaryItem?.component;
-
-      return (
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{category.title}</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Choose a report to see the numbers behind it.
-            </p>
-          </div>
-
-          <ReportItemGrid
-            category={{ ...category, items: cardItems }}
-            onSelect={(key) => navigate(`/reports/${category.key}/${key}`)}
-          />
-
-          {SummaryComponent && <SummaryComponent />}
-        </div>
-      );
-    }
-
     return (
       <div className="space-y-6">
         <div>
+          <p className="text-xs text-gray-400 mb-1">
+            <Link to="/reports" className="hover:text-gray-600">Reports</Link>
+            <span className="mx-1.5">/</span>
+            <span className="text-gray-600">{category.title}</span>
+          </p>
           <h1 className="text-2xl font-bold text-gray-900">{category.title}</h1>
           <p className="text-sm text-gray-500 mt-1">
             Choose a report to see the numbers behind it.
@@ -75,6 +53,13 @@ export default function Reports() {
 
   return (
     <div className="space-y-6">
+      <p className="text-xs text-gray-400">
+        <Link to="/reports" className="hover:text-gray-600">Reports</Link>
+        <span className="mx-1.5">/</span>
+        <Link to={`/reports/${category.key}`} className="hover:text-gray-600">{category.title}</Link>
+        <span className="mx-1.5">/</span>
+        <span className="text-gray-600">{item.title}</span>
+      </p>
       {ActiveComponent ? (
         <ActiveComponent onBack={goBack} />
       ) : (

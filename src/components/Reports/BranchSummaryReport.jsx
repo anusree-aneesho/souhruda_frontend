@@ -1,8 +1,4 @@
 // src/components/Reports/BranchSummaryReport.jsx
-//
-// Shows the logged-in user's own branch only — this is "how is my branch
-// doing", not a cross-branch comparison. The API is already scoped to the
-// user's branch_id, so `rows` will contain at most one entry.
 import { useState, useEffect, useCallback } from "react";
 import { Building2, Users, ClipboardList, IndianRupee } from "lucide-react";
 import StatCard from "../common/StatCard";
@@ -35,26 +31,30 @@ export default function BranchSummaryReport({ onBack }) {
     load();
   }, [load]);
 
-  const branch = data?.rows?.[0] || null;
-  const headers = ["Branch", "Code", "Orders", "Patients", "Home Collections", "Tests Revenue", "Home Visit Revenue", "Total Revenue"];
-  const csvRows = branch
-    ? [[
-        branch.branch_name,
-        branch.branch_code,
-        branch.orders,
-        branch.patients,
-        branch.home_collections,
-        branch.tests_revenue,
-        branch.home_visit_revenue,
-        branch.total_revenue,
-      ]]
-    : [];
+  const rows = data?.rows || [];
+  const headers = [
+    "Branch",
+    "Code",
+    "Orders",
+    "Patients",
+    "Home Collections",
+    "Tests Revenue",
+    "Home Visit Revenue",
+    "Total Revenue",
+  ];
+  const csvRows = rows.map((r) => [
+    r.branch_name,
+    r.branch_code,
+    r.orders,
+    r.patients,
+    r.home_collections,
+    r.tests_revenue,
+    r.home_visit_revenue,
+    r.total_revenue,
+  ]);
 
   return (
     <div className="space-y-6">
-      {!onBack && (
-        <h2 className="text-sm font-semibold text-gray-900">Your Branch Summary</h2>
-      )}
       <ReportToolbar
         onBack={onBack}
         fields={[
@@ -67,47 +67,68 @@ export default function BranchSummaryReport({ onBack }) {
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      {!loading && !error && !branch && (
+      {rows.length <= 1 && !loading && !error && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Your account isn't assigned to a branch, so this report has nothing to show.
+          Only one branch has data for this period. Orders, patients and home collection requests
+          made before branch tracking was added are all attributed to one branch and can't be
+          split retroactively — only new records are tracked per branch going forward.
         </div>
       )}
 
-      {branch && (
-        <>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Building2 className="h-4 w-4" />
-            <span className="font-medium text-gray-900">{branch.branch_name}</span>
-            <span className="text-gray-400">· {branch.branch_code}</span>
-          </div>
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <StatCard label="Branches" value={data?.summary?.branches ?? 0} icon={Building2} color="teal" />
+        <StatCard label="Total Orders" value={data?.summary?.total_orders ?? 0} icon={ClipboardList} color="blue" />
+        <StatCard label="Total Patients" value={data?.summary?.total_patients ?? 0} icon={Users} color="purple" />
+        <StatCard label="Total Revenue" value={formatCurrency(data?.summary?.total_revenue)} icon={IndianRupee} color="green" />
+      </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <StatCard label="Orders" value={branch.orders} icon={ClipboardList} color="blue" />
-            <StatCard label="Patients" value={branch.patients} icon={Users} color="purple" />
-            <StatCard label="Home Collections" value={branch.home_collections} icon={Building2} color="teal" />
-            <StatCard label="Total Revenue" value={formatCurrency(branch.total_revenue)} icon={IndianRupee} color="green" />
-          </div>
-
-          <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
-            <div className="divide-y divide-gray-50">
-              <div className="flex items-center justify-between px-4 py-3 text-sm">
-                <span className="text-gray-500">Tests Revenue</span>
-                <span className="font-medium text-gray-900">{formatCurrency(branch.tests_revenue)}</span>
-              </div>
-              <div className="flex items-center justify-between px-4 py-3 text-sm">
-                <span className="text-gray-500">Home Visit Revenue</span>
-                <span className="font-medium text-gray-900">{formatCurrency(branch.home_visit_revenue)}</span>
-              </div>
-              <div className="flex items-center justify-between px-4 py-3 text-sm bg-teal-50">
-                <span className="font-medium text-teal-700">Total Revenue</span>
-                <span className="font-bold text-teal-700">{formatCurrency(branch.total_revenue)}</span>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {loading && <p className="text-sm text-gray-400">Loading…</p>}
+      <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 text-left text-xs text-gray-500">
+                <th className="px-4 py-3 font-medium">Branch</th>
+                <th className="px-4 py-3 font-medium">Orders</th>
+                <th className="px-4 py-3 font-medium">Patients</th>
+                <th className="px-4 py-3 font-medium">Home Collections</th>
+                <th className="px-4 py-3 font-medium">Tests Revenue</th>
+                <th className="px-4 py-3 font-medium">Home Visit Revenue</th>
+                <th className="px-4 py-3 font-medium">Total Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                    Loading…
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                    No branches found.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((r) => (
+                  <tr key={r.branch_id} className="border-b border-gray-50 last:border-0">
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-gray-900">{r.branch_name}</div>
+                      <div className="text-xs text-gray-400">{r.branch_code}</div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">{r.orders}</td>
+                    <td className="px-4 py-3 text-gray-700">{r.patients}</td>
+                    <td className="px-4 py-3 text-gray-700">{r.home_collections}</td>
+                    <td className="px-4 py-3 text-gray-700">{formatCurrency(r.tests_revenue)}</td>
+                    <td className="px-4 py-3 text-gray-700">{formatCurrency(r.home_visit_revenue)}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900">{formatCurrency(r.total_revenue)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

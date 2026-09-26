@@ -630,6 +630,63 @@ export async function getBranchSummaryReportApi({ dateFrom, dateTo } = {}) {
   return request(`/reports/branch-summary${qs ? `?${qs}` : ""}`);
 }
 
+export async function getBranchPatientsReportApi({ dateFrom, dateTo } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  const qs = params.toString();
+  return request(`/reports/branch-patients${qs ? `?${qs}` : ""}`);
+}
+
+export async function getBranchTestsReportApi({ dateFrom, dateTo } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  const qs = params.toString();
+  return request(`/reports/branch-tests${qs ? `?${qs}` : ""}`);
+}
+
+export async function getBranchRevenueReportApi({ dateFrom, dateTo } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  const qs = params.toString();
+  return request(`/reports/branch-revenue${qs ? `?${qs}` : ""}`);
+}
+
+export async function getHomeCollectionSummaryReportApi({ dateFrom, dateTo, q } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  if (q) params.append("q", q);
+  const qs = params.toString();
+  return request(`/reports/home-collection/summary${qs ? `?${qs}` : ""}`);
+}
+
+export async function getHomeCollectionTechniciansReportApi({ dateFrom, dateTo } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  const qs = params.toString();
+  return request(`/reports/home-collection/technicians${qs ? `?${qs}` : ""}`);
+}
+
+export async function getHomeCollectionPendingReportApi({ q } = {}) {
+  const params = new URLSearchParams();
+  if (q) params.append("q", q);
+  const qs = params.toString();
+  return request(`/reports/home-collection/pending${qs ? `?${qs}` : ""}`);
+}
+
+export async function getHomeCollectionCancelledReportApi({ dateFrom, dateTo, q } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  if (q) params.append("q", q);
+  const qs = params.toString();
+  return request(`/reports/home-collection/cancelled${qs ? `?${qs}` : ""}`);
+}
+
 // ── Statistics ──────────────────────────────────────
 
 export async function getStatisticsSummaryApi() {

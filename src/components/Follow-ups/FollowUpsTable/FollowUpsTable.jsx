@@ -3,7 +3,7 @@ import FollowUpRow from "./FollowUpRow";
 import FollowUpCard from "./FollowUpCard";
 import EmptyState from "./EmptyState";
 
-export default function FollowUpsTable({ followUps }) {
+export default function FollowUpsTable({ followUps, onView }) {
   if (followUps.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
@@ -29,18 +29,19 @@ export default function FollowUpsTable({ followUps }) {
               <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">TEST</th>
               <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">DUE</th>
               <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">STATUS</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
-            {followUps.map((f, i) => (
-              <FollowUpRow key={i} {...f} />
+            {followUps.map((f) => (
+              <FollowUpRow key={f.id} {...f} onView={() => onView(f.id)} />
             ))}
           </tbody>
         </table>
       </div>
       <div className="md:hidden space-y-3">
-        {followUps.map((f, i) => (
-          <FollowUpCard key={i} {...f} />
+        {followUps.map((f) => (
+          <FollowUpCard key={f.id} {...f} onView={() => onView(f.id)} />
         ))}
       </div>
     </div>

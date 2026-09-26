@@ -18,6 +18,7 @@ const emptyForm = {
   criticalHigh: "",
   followupWeeks: "",
   criteria: "",
+  isActive: true,   
   demographicRanges: { ...emptyDemographicRanges },
 };
 
@@ -154,6 +155,7 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
         criticalHigh: editingTest.criticalHigh ?? "",
         followupWeeks: editingTest.followupWeeks ?? "",
         criteria: editingTest.criteria || "",
+        isActive: editingTest.isActive ?? true,
         demographicRanges: { ...emptyDemographicRanges, ...fixedRanges },
       });
       setCustomRows(extractCustomRows(ranges));
@@ -326,17 +328,31 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Follow-up (weeks)</label>
-            <input
-              type="number"
-              min="0"
-              value={form.followupWeeks}
-              onChange={(e) => handleChange("followupWeeks", e.target.value)}
-              placeholder="Optional"
-              className={inputClass(errors.followupWeeks)}
-            />
-            {errors.followupWeeks && <p className="text-xs text-red-500 mt-1">{errors.followupWeeks}</p>}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Follow-up (weeks)</label>
+              <input
+                type="number"
+                min="0"
+                value={form.followupWeeks}
+                onChange={(e) => handleChange("followupWeeks", e.target.value)}
+                placeholder="Optional"
+                className={inputClass(errors.followupWeeks)}
+              />
+              {errors.followupWeeks && <p className="text-xs text-red-500 mt-1">{errors.followupWeeks}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Status</label>
+              <select
+                value={form.isActive ? "active" : "inactive"}
+                onChange={(e) => handleChange("isActive", e.target.value === "active")}
+                className={inputClass(false)}
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
           </div>
 
           <div>

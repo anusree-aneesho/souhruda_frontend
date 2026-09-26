@@ -6,7 +6,15 @@ export default function TestRow({ test, onEdit, onRemove, onViewRange, canManage
 
   return (
     <tr className="border-b border-gray-100 last:border-0">
-      <td className="py-3 text-sm font-medium text-gray-900">{test.name}</td>
+      {/* <td className="py-3 text-sm font-medium text-gray-900">{test.name}</td> */}
+      <td className="py-3 text-sm font-medium text-gray-900 flex items-center gap-2">
+        {test.name}
+        {test.isActive === false && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">
+            Inactive
+          </span>
+        )}
+      </td>
       <td className="py-3 text-sm text-gray-500">{test.unit}</td>
       <td className="py-3 text-sm">
         <button

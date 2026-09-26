@@ -492,6 +492,21 @@ export async function markFollowUpReminderDoneApi(id) {
   });
 }
 
+export async function getFollowUpReminderApi(id) {
+  return request(`/follow-up-reminders/${id}`);
+}
+
+export async function rescheduleFollowUpReminderApi(id, dueDate) {
+  return request(`/follow-up-reminders/${id}/reschedule`, {
+    method: "PATCH",
+    body: JSON.stringify({ due_date: dueDate }),
+  });
+}
+
+export async function getPatientFollowUpRemindersApi(patientId) {
+  return request(`/follow-up-reminders?patient_id=${patientId}&per_page=50`);
+}
+
 // ── Staff Management ──────────────────────────────────────
 
 export async function addStaffApi(payload) {
@@ -552,6 +567,7 @@ export async function deleteDoctorApi(id) {
     method: "DELETE",
   });
 }
+
 // ── Reports ──────────────────────────────────────────────
 export async function getPatientsReportApi({ dateFrom, dateTo, q } = {}) {
   const params = new URLSearchParams();
@@ -652,7 +668,6 @@ export async function getStatisticsCollectionTypesApi() {
 
 export async function getStatisticsAttentionAlertsApi() {
   return request("/statistics/attention-alerts");
-
 }
 
 export async function getOrderStatusDistributionApi(range = "1 Year") {
@@ -678,3 +693,5 @@ export async function getRevenueOverTimeApi(range = "1 Year") {
     `/statistics/revenue-over-time?${params.toString()}`
   );
 }
+
+

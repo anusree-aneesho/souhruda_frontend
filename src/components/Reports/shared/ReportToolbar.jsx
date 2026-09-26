@@ -17,13 +17,15 @@ export default function ReportToolbar({
 }) {
   return (
     <div className="space-y-3">
-      <button
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 w-fit"
-      >
-        <ArrowLeft size={16} />
-        Back to Reports
-      </button>
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 w-fit"
+        >
+          <ArrowLeft size={16} />
+          Back to Reports
+        </button>
+      )}
 
       <div className="flex flex-col gap-4 rounded-xl border border-gray-100 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)] lg:flex-row lg:items-end lg:justify-between">
         <div className="flex flex-wrap items-end gap-4">

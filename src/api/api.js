@@ -622,6 +622,14 @@ export async function getYearlyReportApi(year) {
   return request(`/reports/yearly${qs ? `?${qs}` : ""}`);
 }
 
+export async function getBranchSummaryReportApi({ dateFrom, dateTo } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  const qs = params.toString();
+  return request(`/reports/branch-summary${qs ? `?${qs}` : ""}`);
+}
+
 // ── Statistics ──────────────────────────────────────
 
 export async function getStatisticsSummaryApi() {
@@ -684,4 +692,3 @@ export async function getRevenueOverTimeApi(range = "1 Year") {
     `/statistics/revenue-over-time?${params.toString()}`
   );
 }
-

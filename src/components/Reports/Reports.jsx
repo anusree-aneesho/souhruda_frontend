@@ -17,6 +17,33 @@ export default function Reports() {
 
   // Just a category was clicked in the sidebar — show its report cards as page content.
   if (!itemKey) {
+    // Branch Reports is special-cased: the logged-in user's own branch
+    // summary is shown inline at the top of the page (it's a live view, not
+    // a report you drill into), and the other report cards sit below it.
+    if (category.key === "branch") {
+      const summaryItem = category.items.find((i) => i.key === "branch-summary");
+      const cardItems = category.items.filter((i) => i.key !== "branch-summary");
+      const SummaryComponent = summaryItem?.component;
+
+      return (
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">{category.title}</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Choose a report to see the numbers behind it.
+            </p>
+          </div>
+
+          <ReportItemGrid
+            category={{ ...category, items: cardItems }}
+            onSelect={(key) => navigate(`/reports/${category.key}/${key}`)}
+          />
+
+          {SummaryComponent && <SummaryComponent />}
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-6">
         <div>

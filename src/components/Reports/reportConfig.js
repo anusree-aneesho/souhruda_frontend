@@ -50,7 +50,7 @@ import TechnicianCollectionReport from "./TechnicianCollectionReport";
 import PendingCollectionsReport from "./PendingCollectionsReport";
 import CancelledCollectionsReport from "./CancelledCollectionsReport";
 import HomeCollectionQuickTable from "./HomeCollectionQuickTable";
-
+import BranchSummaryReport from "./BranchSummaryReport";
 
 export const REPORT_CATEGORIES = [
   {
@@ -274,7 +274,7 @@ export const REPORT_CATEGORIES = [
         title: "Branch Summary",
         description: "Headline numbers for every branch, side by side.",
         icon: Building2,
-        component: null,
+        component: BranchSummaryReport,
       },
       {
         key: "branch-patients",

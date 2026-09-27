@@ -492,6 +492,22 @@ export async function markFollowUpReminderDoneApi(id) {
   });
 }
 
+export async function getFollowUpReminderApi(id) {
+  return request(`/follow-up-reminders/${id}`);
+}
+
+export async function rescheduleFollowUpReminderApi(id, dueDate) {
+  return request(`/follow-up-reminders/${id}/reschedule`, {
+    method: "PATCH",
+    body: JSON.stringify({ due_date: dueDate }),
+  });
+}
+
+export async function getPatientFollowUpRemindersApi(patientId) {
+  return request(`/follow-up-reminders?patient_id=${patientId}&per_page=50`);
+}
+
+
 // ── Staff Management ──────────────────────────────────────
 
 export async function addStaffApi(payload) {
@@ -622,6 +638,13 @@ export async function getYearlyReportApi(year) {
   return request(`/reports/yearly${qs ? `?${qs}` : ""}`);
 }
 
+export async function getTatReportApi({ dateFrom, dateTo } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.set("date_from", dateFrom);
+  if (dateTo) params.set("date_to", dateTo);
+  return request(`/reports/tat?${params.toString()}`);
+}
+
 export async function getBranchSummaryReportApi({ dateFrom, dateTo } = {}) {
   const params = new URLSearchParams();
   if (dateFrom) params.append("date_from", dateFrom);
@@ -749,3 +772,13 @@ export async function getRevenueOverTimeApi(range = "1 Year") {
     `/statistics/revenue-over-time?${params.toString()}`
   );
 }
+
+
+export async function markSampleCollectedApi(orderId) {
+  return request(`/orders/${orderId}/mark-sample-collected`, {
+    method: "PATCH",
+  });
+}
+
+
+

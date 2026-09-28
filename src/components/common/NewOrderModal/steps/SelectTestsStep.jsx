@@ -36,10 +36,6 @@ export default function SelectTestsStep({
   appliedPackageIds = [],
   onApplyPackageId,
   onRemovePackageIds,
-  doctors,
-  referredBy,
-  onReferredByChange,
-  referredByError,
 })
 {
   const [categories, setCategories] = useState([]);
@@ -192,29 +188,6 @@ export default function SelectTestsStep({
 
   return (
     <div className="px-6 py-5 space-y-4">
-      <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Referred By</label>
-              <select
-              value={referredBy}
-              onChange={(e) => onReferredByChange(e.target.value)}
-              className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
-                referredByError
-                  ? "border-red-400 focus:border-red-500 focus:ring-red-500"
-                  : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
-              }`}
-              >
-            <option value="" disabled>Select</option>
-            <option value="Self">Self</option>
-              {doctors.map((doc) => (
-            <option key={doc.id} value={`Dr. ${doc.name}`}>
-              Dr. {doc.name}
-            </option>
-          ))}
-          </select>
-          {referredByError && (
-            <p className="text-xs text-red-500 mt-1">This field is required.</p>
-          )}
-          </div>
       {(unappliedFullMatches.length > 0 || appliedFullMatches.length > 0 || partialMatches.length > 0) && (
         <div className="space-y-2">
           {appliedFullMatches.map((pkg) => (

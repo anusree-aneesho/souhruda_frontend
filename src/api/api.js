@@ -507,7 +507,6 @@ export async function getPatientFollowUpRemindersApi(patientId) {
   return request(`/follow-up-reminders?patient_id=${patientId}&per_page=50`);
 }
 
-
 // ── Staff Management ──────────────────────────────────────
 
 export async function addStaffApi(payload) {
@@ -620,8 +619,6 @@ export async function getNewReturningPatientsReportApi({
   );
 }
 
-
-
 export async function getFinanceReportApi({ dateFrom, dateTo } = {}) {
   const params = new URLSearchParams();
   if (dateFrom) params.append("date_from", dateFrom);
@@ -731,6 +728,13 @@ export async function getHomeCollectionCancelledReportApi({ dateFrom, dateTo, q 
   return request(`/reports/home-collection/cancelled${qs ? `?${qs}` : ""}`);
 }
 
+export async function getPendingTestsReportApi({ q } = {}) {
+  const params = new URLSearchParams();
+  if (q) params.append("q", q);
+  const qs = params.toString();
+  return request(`/reports/tests/pending${qs ? `?${qs}` : ""}`);
+}
+
 // ── Statistics ──────────────────────────────────────
 
 export async function getStatisticsSummaryApi() {
@@ -794,13 +798,26 @@ export async function getRevenueOverTimeApi(range = "1 Year") {
   );
 }
 
-
 export async function markSampleCollectedApi(orderId) {
   return request(`/orders/${orderId}/mark-sample-collected`, {
     method: "PATCH",
   });
 }
 
+export async function getTestPerformanceReportApi({ dateFrom, dateTo, q } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  if (q) params.append("q", q);
+  const qs = params.toString();
+  return request(`/reports/tests/performance${qs ? `?${qs}` : ""}`);
+}
 
-
-
+export async function getTestVolumeReportApi({ dateFrom, dateTo, q } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  if (q) params.append("q", q);
+  const qs = params.toString();
+  return request(`/reports/tests/volume${qs ? `?${qs}` : ""}`);
+}

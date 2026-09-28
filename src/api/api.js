@@ -598,6 +598,27 @@ export async function getPatientsReportApi({
   );
 }
 
+export async function getNewReturningPatientsReportApi({
+  dateFrom,
+  dateTo,
+} = {}) {
+  const params = new URLSearchParams();
+
+  if (dateFrom) {
+    params.append("date_from", dateFrom);
+  }
+
+  if (dateTo) {
+    params.append("date_to", dateTo);
+  }
+
+  const qs = params.toString();
+
+  return request(
+    `/reports/patients/new-returning${qs ? `?${qs}` : ""}`
+  );
+}
+
 export async function getFinanceReportApi({ dateFrom, dateTo } = {}) {
   const params = new URLSearchParams();
   if (dateFrom) params.append("date_from", dateFrom);

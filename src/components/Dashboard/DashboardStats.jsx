@@ -23,8 +23,8 @@ export default function DashboardStats() {
   const [todaysOrders, setTodaysOrders] = useState([]);
   const [pendingTotal, setPendingTotal] = useState(0);
   const [homeCollectionStat, setHomeCollectionStat] = useState({
-    value: "—",
-    sublabel: "loading…",
+    value: 0,
+    sublabel: "0 awaiting assignment",
   });
 
   useEffect(() => {

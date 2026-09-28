@@ -55,6 +55,7 @@ import BranchPatientsReport from "./BranchPatientsReport";
 import BranchTestsReport from "./BranchTestsReport";
 import BranchRevenueReport from "./BranchRevenueReport";
 import BranchQuickTable from "./BranchQuickTable";
+import OperationalQuickView from "./OperationalQuickView";
 
 export const REPORT_CATEGORIES = [
   {
@@ -228,6 +229,7 @@ export const REPORT_CATEGORIES = [
     description: "Day-to-day, weekly, monthly and yearly rollups.",
     icon: BarChart3,
     color: "bg-purple-50 text-purple-600",
+    quickView: OperationalQuickView, 
     items: [
       {
         key: "daily",
@@ -306,4 +308,5 @@ export const REPORT_CATEGORIES = [
       },
     ],
   },
+  
 ];

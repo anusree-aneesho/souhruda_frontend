@@ -32,7 +32,7 @@ export default function Pagination({ page, totalPages, onPageChange }) {
         className={btnBase}
         aria-label="Next page"
       >
-        <ChevronRight size={16} />
+       <ChevronRight size={16} />
       </button>
     </div>
   );

@@ -10,8 +10,11 @@ import {
 } from "lucide-react";
 import StatCard from "../common/StatCard";
 import { todayIso, daysAgoIso, formatCurrency } from "./shared/format";
+import Pagination from "./shared/Pagination";
 import { exportToCsv, exportToPdf } from "../../utils/reportExport";
 import { getNewReturningPatientsReportApi } from "../../api/api";
+
+const PAGE_SIZE = 5;
 
 const AVATAR_COLORS = [
   "bg-teal-50 text-teal-700",
@@ -23,20 +26,32 @@ const AVATAR_COLORS = [
 
 function getInitials(name) {
   if (!name) return "?";
+
   const parts = name.trim().split(/\s+/);
-  const initials = parts.length > 1 ? parts[0][0] + parts[1][0] : parts[0].slice(0, 2);
+
+  const initials =
+    parts.length > 1
+      ? parts[0][0] + parts[1][0]
+      : parts[0].slice(0, 2);
+
   return initials.toUpperCase();
 }
 
 function avatarColor(name) {
-  const code = (name || "").split("").reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+  const code = (name || "")
+    .split("")
+    .reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+
   return AVATAR_COLORS[code % AVATAR_COLORS.length];
 }
 
 function GroupedBarChart({ data }) {
   const maxValue = Math.max(
     1,
-    ...data.flatMap((item) => [item.newPatients, item.returningPatients])
+    ...data.flatMap((item) => [
+      item.newPatients,
+      item.returningPatients,
+    ])
   );
 
   return (
@@ -44,8 +59,15 @@ function GroupedBarChart({ data }) {
       <div className="min-w-[650px]">
         <div className="flex items-end gap-3 h-64 px-4 pt-6">
           {data.map((item, i) => {
-            const newHeight = Math.max(4, (item.newPatients / maxValue) * 180);
-            const returningHeight = Math.max(4, (item.returningPatients / maxValue) * 180);
+            const newHeight = Math.max(
+              4,
+              (item.newPatients / maxValue) * 180
+            );
+
+            const returningHeight = Math.max(
+              4,
+              (item.returningPatients / maxValue) * 180
+            );
 
             return (
               <div
@@ -54,7 +76,11 @@ function GroupedBarChart({ data }) {
               >
                 <div className="flex items-end justify-center gap-1 h-[200px]">
                   <div className="relative group">
-                    <div className="w-5 rounded-t-md bg-teal-500" style={{ height: `${newHeight}px` }} />
+                    <div
+                      className="w-5 rounded-t-md bg-teal-500"
+                      style={{ height: `${newHeight}px` }}
+                    />
+
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-10">
                       <div className="rounded-md bg-gray-900 px-2 py-1 text-[10px] text-white whitespace-nowrap">
                         New: {item.newPatients}
@@ -63,7 +89,11 @@ function GroupedBarChart({ data }) {
                   </div>
 
                   <div className="relative group">
-                    <div className="w-5 rounded-t-md bg-purple-500" style={{ height: `${returningHeight}px` }} />
+                    <div
+                      className="w-5 rounded-t-md bg-purple-500"
+                      style={{ height: `${returningHeight}px` }}
+                    />
+
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-10">
                       <div className="rounded-md bg-gray-900 px-2 py-1 text-[10px] text-white whitespace-nowrap">
                         Returning: {item.returningPatients}
@@ -72,7 +102,9 @@ function GroupedBarChart({ data }) {
                   </div>
                 </div>
 
-                <span className="mt-2 text-[11px] text-gray-400 whitespace-nowrap">{item.period}</span>
+                <span className="mt-2 text-[11px] text-gray-400 whitespace-nowrap">
+                  {item.period}
+                </span>
               </div>
             );
           })}
@@ -83,6 +115,7 @@ function GroupedBarChart({ data }) {
             <span className="h-3 w-3 rounded-sm bg-teal-500" />
             New Patients
           </div>
+
           <div className="flex items-center gap-2">
             <span className="h-3 w-3 rounded-sm bg-purple-500" />
             Returning Patients
@@ -104,12 +137,19 @@ export default function NewReturningPatientsReport({ onBack }) {
   // Which stat card is active — null means show the period trend table.
   const [selectedCard, setSelectedCard] = useState(null);
 
+  // Current page of the patient list (client-side pagination)
+  const [page, setPage] = useState(1);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
 
     try {
-      const res = await getNewReturningPatientsReportApi({ dateFrom, dateTo });
+      const res = await getNewReturningPatientsReportApi({
+        dateFrom,
+        dateTo,
+      });
+
       setData(res);
     } catch (err) {
       setError(err.message || "Failed to load report.");
@@ -124,6 +164,7 @@ export default function NewReturningPatientsReport({ onBack }) {
 
   useEffect(() => {
     setSelectedCard(null);
+    setPage(1);
   }, [dateFrom, dateTo]);
 
   const trendRows = data?.rows || [];
@@ -147,6 +188,13 @@ export default function NewReturningPatientsReport({ onBack }) {
       ? data?.returning_rows || []
       : [];
 
+  // Pagination — only the visible slice is rendered, exports use all rows
+  const totalPages = Math.max(1, Math.ceil(patientRows.length / PAGE_SIZE));
+  const pagedRows = patientRows.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE
+  );
+
   const summary = useMemo(() => {
     if (data?.summary) {
       return {
@@ -157,11 +205,19 @@ export default function NewReturningPatientsReport({ onBack }) {
       };
     }
 
-    return { newPatients: 0, returningPatients: 0, totalPatients: 0, retentionRate: 0 };
+    return {
+      newPatients: 0,
+      returningPatients: 0,
+      totalPatients: 0,
+      retentionRate: 0,
+    };
   }, [data]);
 
   const toggleCard = (card) => {
-    setSelectedCard((current) => (current === card ? null : card));
+    setPage(1);
+    setSelectedCard((current) =>
+      current === card ? null : card
+    );
   };
 
   const cardTitles = {
@@ -187,7 +243,12 @@ export default function NewReturningPatientsReport({ onBack }) {
         "Total Amount",
         ...(isRetention ? ["Status"] : []),
       ]
-    : ["Period", "New Patients", "Returning Patients", "Total Patients"];
+    : [
+        "Period",
+        "New Patients",
+        "Returning Patients",
+        "Total Patients",
+      ];
 
   const csvRows = selectedCard
     ? patientRows.map((r) => [
@@ -196,7 +257,9 @@ export default function NewReturningPatientsReport({ onBack }) {
         r.phone,
         r.tests,
         r.amount,
-        ...(isRetention ? [r.is_returning ? "Returned" : "First visit only"] : []),
+        ...(isRetention
+          ? [r.is_returning ? "Returned" : "First visit only"]
+          : []),
       ])
     : trendRows.map((item) => [
         item.period,
@@ -222,7 +285,10 @@ export default function NewReturningPatientsReport({ onBack }) {
 
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold text-gray-900">New & Returning Patients</h1>
+        <h1 className="text-xl font-bold text-gray-900">
+          New & Returning Patients
+        </h1>
+
         <p className="text-sm text-gray-500 mt-1">
           Track first-time and repeat patients over the selected period.
         </p>
@@ -232,7 +298,10 @@ export default function NewReturningPatientsReport({ onBack }) {
       <div className="flex flex-col gap-4 rounded-xl border border-gray-100 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)] lg:flex-row lg:items-end lg:justify-between">
         <div className="flex flex-wrap items-end gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Date From</label>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">
+              Date From
+            </label>
+
             <input
               type="date"
               value={dateFrom}
@@ -243,7 +312,10 @@ export default function NewReturningPatientsReport({ onBack }) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Date To</label>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">
+              Date To
+            </label>
+
             <input
               type="date"
               value={dateTo}
@@ -256,14 +328,22 @@ export default function NewReturningPatientsReport({ onBack }) {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => exportToPdf(exportTitle, headers, csvRows)}
+            onClick={() =>
+              exportToPdf(exportTitle, headers, csvRows)
+            }
             className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Export PDF
           </button>
 
           <button
-            onClick={() => exportToCsv("new-returning-patients", headers, csvRows)}
+            onClick={() =>
+              exportToCsv(
+                "new-returning-patients",
+                headers,
+                csvRows
+              )
+            }
             className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Export Excel
@@ -312,7 +392,11 @@ export default function NewReturningPatientsReport({ onBack }) {
 
         <StatCard
           label="Retention Rate"
-          value={loading ? "—" : `${summary.retentionRate}%`}
+          value={
+            loading
+              ? "—"
+              : `${summary.retentionRate}%`
+          }
           sublabel="Returning ÷ total patients"
           icon={TrendingUp}
           color="amber"
@@ -325,21 +409,32 @@ export default function NewReturningPatientsReport({ onBack }) {
       <div className="bg-white rounded-xl border border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-5">
         <div className="flex items-start justify-between mb-5">
           <div>
-            <h2 className="text-sm font-semibold text-gray-900">Patient Trend</h2>
-            <p className="text-xs text-gray-500 mt-1">New vs. returning patients over time</p>
+            <h2 className="text-sm font-semibold text-gray-900">
+              Patient Trend
+            </h2>
+
+            <p className="text-xs text-gray-500 mt-1">
+              New vs. returning patients over time
+            </p>
           </div>
+
           <TrendingUp size={18} className="text-gray-400" />
         </div>
 
         {loading ? (
           <div className="flex flex-col items-center justify-center gap-2 h-64 text-gray-400">
             <span className="h-6 w-6 rounded-full border-2 border-gray-200 border-t-teal-600 animate-spin" />
-            <span className="text-sm">Loading trend…</span>
+            <span className="text-sm">
+              Loading trend…
+            </span>
           </div>
         ) : trendRows.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 h-64 text-gray-400">
             <BarChart3 size={28} className="text-gray-300" />
-            <span className="text-sm font-medium text-gray-500">No data in this range</span>
+
+            <span className="text-sm font-medium text-gray-500">
+              No data in this range
+            </span>
           </div>
         ) : (
           <GroupedBarChart data={trendRows} />
@@ -351,8 +446,11 @@ export default function NewReturningPatientsReport({ onBack }) {
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <div>
             <h2 className="text-sm font-semibold text-gray-900">
-              {selectedCard ? cardTitles[selectedCard] : "Period Breakdown"}
+              {selectedCard
+                ? cardTitles[selectedCard]
+                : "Period Breakdown"}
             </h2>
+
             <p className="text-xs text-gray-500 mt-1">
               {isRetention
                 ? "All patients in range — those marked Returned make up the retention rate"
@@ -364,7 +462,10 @@ export default function NewReturningPatientsReport({ onBack }) {
 
           {selectedCard && (
             <button
-              onClick={() => setSelectedCard(null)}
+              onClick={() => {
+                setSelectedCard(null);
+                setPage(1);
+              }}
               className="text-xs font-medium text-teal-600 hover:text-teal-700"
             >
               Show period breakdown
@@ -377,30 +478,59 @@ export default function NewReturningPatientsReport({ onBack }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50/80 border-b border-gray-100 text-left text-xs font-semibold text-gray-500">
-                  <th className="px-4 py-3">Patient ID</th>
-                  <th className="px-4 py-3">Patient Name</th>
-                  <th className="px-4 py-3">Phone</th>
-                  <th className="px-4 py-3 text-center">Total Tests</th>
-                  <th className="px-4 py-3 text-right">Total Amount</th>
-                  {isRetention && <th className="px-4 py-3 text-center">Status</th>}
+                  <th className="px-4 py-3">
+                    Patient ID
+                  </th>
+
+                  <th className="px-4 py-3">
+                    Patient Name
+                  </th>
+
+                  <th className="px-4 py-3">
+                    Phone
+                  </th>
+
+                  <th className="px-4 py-3 text-center">
+                    Total Tests
+                  </th>
+
+                  <th className="px-4 py-3 text-right">
+                    Total Amount
+                  </th>
+
+                  {isRetention && (
+                    <th className="px-4 py-3 text-center">
+                      Status
+                    </th>
+                  )}
                 </tr>
               </thead>
 
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={isRetention ? 6 : 5} className="px-4 py-14 text-center text-gray-400">
+                    <td
+                      colSpan={isRetention ? 6 : 5}
+                      className="px-4 py-14 text-center text-gray-400"
+                    >
                       <div className="flex flex-col items-center gap-2">
                         <span className="h-6 w-6 rounded-full border-2 border-gray-200 border-t-teal-600 animate-spin" />
-                        <span className="text-sm">Loading patients…</span>
+
+                        <span className="text-sm">
+                          Loading patients…
+                        </span>
                       </div>
                     </td>
                   </tr>
                 ) : patientRows.length === 0 ? (
                   <tr>
-                    <td colSpan={isRetention ? 6 : 5} className="px-4 py-14 text-center text-gray-400">
+                    <td
+                      colSpan={isRetention ? 6 : 5}
+                      className="px-4 py-14 text-center text-gray-400"
+                    >
                       <div className="flex flex-col items-center gap-2">
                         <ClipboardList size={28} className="text-gray-300" />
+
                         <span className="text-sm font-medium text-gray-500">
                           No patients in this group
                         </span>
@@ -408,12 +538,14 @@ export default function NewReturningPatientsReport({ onBack }) {
                     </td>
                   </tr>
                 ) : (
-                  patientRows.map((r, i) => (
+                  pagedRows.map((r, i) => (
                     <tr
                       key={`${r.patient_id}-${i}`}
                       className="border-b border-gray-50 last:border-0 odd:bg-white even:bg-gray-50/40 hover:bg-teal-50/40 transition-colors"
                     >
-                      <td className="px-4 py-3 text-gray-500 font-mono text-xs">{r.patient_id ?? "—"}</td>
+                      <td className="px-4 py-3 text-gray-500 font-mono text-xs">
+                        {r.patient_id ?? "—"}
+                      </td>
 
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
@@ -424,11 +556,16 @@ export default function NewReturningPatientsReport({ onBack }) {
                           >
                             {getInitials(r.patient_name)}
                           </span>
-                          <span className="font-medium text-gray-900">{r.patient_name}</span>
+
+                          <span className="font-medium text-gray-900">
+                            {r.patient_name}
+                          </span>
                         </div>
                       </td>
 
-                      <td className="px-4 py-3 text-gray-500">{r.phone ?? "—"}</td>
+                      <td className="px-4 py-3 text-gray-500">
+                        {r.phone ?? "—"}
+                      </td>
 
                       <td className="px-4 py-3 text-center">
                         <span className="inline-flex min-w-[1.75rem] justify-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
@@ -462,27 +599,49 @@ export default function NewReturningPatientsReport({ onBack }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50/80 border-b border-gray-100 text-left text-xs font-semibold text-gray-500">
-                  <th className="px-4 py-3">Period</th>
-                  <th className="px-4 py-3 text-right">New Patients</th>
-                  <th className="px-4 py-3 text-right">Returning Patients</th>
-                  <th className="px-4 py-3 text-right">Total</th>
+                  <th className="px-4 py-3">
+                    Period
+                  </th>
+
+                  <th className="px-4 py-3 text-right">
+                    New Patients
+                  </th>
+
+                  <th className="px-4 py-3 text-right">
+                    Returning Patients
+                  </th>
+
+                  <th className="px-4 py-3 text-right">
+                    Total
+                  </th>
                 </tr>
               </thead>
 
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-14 text-center text-gray-400">
+                    <td
+                      colSpan={4}
+                      className="px-4 py-14 text-center text-gray-400"
+                    >
                       <div className="flex flex-col items-center gap-2">
                         <span className="h-6 w-6 rounded-full border-2 border-gray-200 border-t-teal-600 animate-spin" />
-                        <span className="text-sm">Loading…</span>
+
+                        <span className="text-sm">
+                          Loading…
+                        </span>
                       </div>
                     </td>
                   </tr>
                 ) : trendRows.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-14 text-center text-gray-400">
-                      <span className="text-sm font-medium text-gray-500">No data in this range</span>
+                    <td
+                      colSpan={4}
+                      className="px-4 py-14 text-center text-gray-400"
+                    >
+                      <span className="text-sm font-medium text-gray-500">
+                        No data in this range
+                      </span>
                     </td>
                   </tr>
                 ) : (
@@ -491,7 +650,9 @@ export default function NewReturningPatientsReport({ onBack }) {
                       key={`${item.period}-${i}`}
                       className="border-b border-gray-50 last:border-0 hover:bg-teal-50/40 transition-colors"
                     >
-                      <td className="px-4 py-3 font-medium text-gray-900">{item.period}</td>
+                      <td className="px-4 py-3 font-medium text-gray-900">
+                        {item.period}
+                      </td>
 
                       <td className="px-4 py-3 text-right">
                         <span className="inline-flex min-w-[2rem] justify-center rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700">
@@ -515,6 +676,16 @@ export default function NewReturningPatientsReport({ onBack }) {
             </table>
           )}
         </div>
+
+        {selectedCard && !loading && (
+          <div className="flex items-center justify-end px-5 py-3 border-t border-gray-100">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

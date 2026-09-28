@@ -619,6 +619,55 @@ export async function getNewReturningPatientsReportApi({
   );
 }
 
+export async function getPatientTestHistorySearchApi(q) {
+  const params = new URLSearchParams();
+
+  if (q) {
+    params.append("q", q);
+  }
+
+  return request(
+    `/reports/patients/test-history/search?${params.toString()}`
+  );
+}
+
+export async function getPatientTestHistoryApi({
+  patientNumber,
+  dateFrom,
+  dateTo,
+} = {}) {
+  const params = new URLSearchParams();
+
+  if (patientNumber) {
+    params.append("patient_number", patientNumber);
+  }
+
+  if (dateFrom) {
+    params.append("date_from", dateFrom);
+  }
+
+  if (dateTo) {
+    params.append("date_to", dateTo);
+  }
+
+  return request(
+    `/reports/patients/test-history?${params.toString()}`
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 export async function getFinanceReportApi({ dateFrom, dateTo } = {}) {
   const params = new URLSearchParams();
   if (dateFrom) params.append("date_from", dateFrom);

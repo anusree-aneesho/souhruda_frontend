@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 
 import PatientsReport from "./PatientsReport";
+import PatientQuickView from "./PatientQuickView";
 import NewReturningPatientsReport from "./NewReturningPatientsReport";
 import PatientTestHistoryReport from "./PatientTestHistoryReport";
 import FinanceReport from "./FinanceReport";
@@ -69,6 +70,7 @@ export const REPORT_CATEGORIES = [
     description: "Who you're seeing and how often they come back.",
     icon: Users,
     color: "bg-teal-50 text-teal-600",
+
     items: [
       {
         key: "patient-summary",
@@ -92,6 +94,8 @@ export const REPORT_CATEGORIES = [
         component: PatientTestHistoryReport,
       },
     ],
+
+    quickView: PatientQuickView,
   },
   {
     key: "tests",

@@ -6,9 +6,12 @@ import { useState, useEffect, useCallback } from "react";
 import { Users } from "lucide-react";
 import StatCard from "../common/StatCard";
 import ReportToolbar from "./shared/ReportToolbar";
+import ReportPeriod, { formatPeriod } from "./ReportPeriod";
+import DailyBreakdownTable, { formatRowDate } from "./DailyBreakdownTable";
 import { todayIso, daysAgoIso } from "./shared/format";
-import { exportToCsv, exportToPdf } from "../../utils/reportExport";
+import { exportSectionsToCsv, exportSectionsToPdf } from "../../utils/multiSectionExport";
 import { getBranchPatientsReportApi } from "../../api/api";
+import { BranchBarChart, DailyTrendChart } from "./shared/BranchCharts";
 
 export default function BranchPatientsReport({ onBack }) {
   const [dateFrom, setDateFrom] = useState(daysAgoIso(30));
@@ -38,6 +41,33 @@ export default function BranchPatientsReport({ onBack }) {
   const headers = ["Branch", "Code", "Patients", "Male", "Female"];
   const csvRows = rows.map((r) => [r.branch_name, r.branch_code, r.patients, r.male, r.female]);
 
+  // Same columns feed the on-screen day-wise table and the exports.
+  const dailyColumns = [
+    { key: "patients", label: "Patients" },
+    { key: "male", label: "Male" },
+    { key: "female", label: "Female" },
+  ];
+  const dailyRows = data?.daily || [];
+
+  const exportSections = () => [
+    { title: "Branch Comparison", headers, rows: csvRows },
+    {
+      title: "Day-wise Breakdown",
+      headers: ["Date", "Branch", ...dailyColumns.map((c) => c.label)],
+      rows: dailyRows.map((r) => [
+        formatRowDate(r.date),
+        r.branch_name,
+        ...dailyColumns.map((c) => r[c.key] ?? 0),
+      ]),
+    },
+  ];
+
+  const branchMetrics = [
+    { key: "patients", label: "Patients" },
+    { key: "male", label: "Male" },
+    { key: "female", label: "Female" },
+    ];
+
   return (
     <div className="space-y-6">
       <ReportToolbar
@@ -46,15 +76,21 @@ export default function BranchPatientsReport({ onBack }) {
           { label: "Date From", value: dateFrom, onChange: setDateFrom, max: dateTo },
           { label: "Date To", value: dateTo, onChange: setDateTo, min: dateFrom },
         ]}
-        onExportCsv={() => exportToCsv("branch-patients-report", headers, csvRows)}
-        onExportPdf={() => exportToPdf("Branch Patients Report", headers, csvRows)}
+        onExportCsv={() => exportSectionsToCsv(`branch-patients-report_${dateFrom}_to_${dateTo}`, exportSections())}
+        onExportPdf={() => exportSectionsToPdf(`Branch Patients Report (${formatPeriod(dateFrom, dateTo)})`, exportSections())}
       />
+
+      <ReportPeriod dateFrom={dateFrom} dateTo={dateTo} />
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard label="Total Patients" value={data?.summary?.total_patients ?? 0} icon={Users} color="purple" />
       </div>
+
+
+<BranchBarChart rows={rows} metrics={branchMetrics} loading={loading} />
+<DailyTrendChart rows={dailyRows} metrics={dailyColumns} loading={loading} formatLabel={formatRowDate} />
 
       <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
         <div className="overflow-x-auto">
@@ -93,6 +129,12 @@ export default function BranchPatientsReport({ onBack }) {
           </table>
         </div>
       </div>
+
+      <DailyBreakdownTable
+        rows={data?.daily || []}
+        loading={loading}
+        columns={dailyColumns}
+      />
     </div>
   );
 }

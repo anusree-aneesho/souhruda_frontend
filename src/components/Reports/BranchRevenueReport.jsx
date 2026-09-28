@@ -6,9 +6,12 @@ import { useState, useEffect, useCallback } from "react";
 import { IndianRupee, ClipboardList } from "lucide-react";
 import StatCard from "../common/StatCard";
 import ReportToolbar from "./shared/ReportToolbar";
+import ReportPeriod, { formatPeriod } from "./ReportPeriod";
+import DailyBreakdownTable, { formatRowDate } from "./DailyBreakdownTable";
 import { formatCurrency, todayIso, daysAgoIso } from "./shared/format";
-import { exportToCsv, exportToPdf } from "../../utils/reportExport";
+import { exportSectionsToCsv, exportSectionsToPdf } from "../../utils/multiSectionExport";
 import { getBranchRevenueReportApi } from "../../api/api";
+import { BranchBarChart, DailyTrendChart } from "./shared/BranchCharts";
 
 export default function BranchRevenueReport({ onBack }) {
   const [dateFrom, setDateFrom] = useState(daysAgoIso(30));
@@ -38,6 +41,35 @@ export default function BranchRevenueReport({ onBack }) {
   const headers = ["Branch", "Code", "Orders", "Tests Revenue", "Home Visit Revenue", "Total Revenue"];
   const csvRows = rows.map((r) => [r.branch_name, r.branch_code, r.orders, r.tests_revenue, r.home_visit_revenue, r.total_revenue]);
 
+  // Same columns feed the on-screen day-wise table and the exports.
+  const dailyColumns = [
+    { key: "orders", label: "Orders" },
+    { key: "tests_revenue", label: "Tests Revenue", currency: true },
+    { key: "home_visit_revenue", label: "Home Visit Revenue", currency: true },
+    { key: "total_revenue", label: "Total Revenue", currency: true },
+  ];
+  const dailyRows = data?.daily || [];
+
+  const exportSections = () => [
+    { title: "Branch Comparison", headers, rows: csvRows },
+    {
+      title: "Day-wise Breakdown",
+      headers: ["Date", "Branch", ...dailyColumns.map((c) => c.label)],
+      rows: dailyRows.map((r) => [
+        formatRowDate(r.date),
+        r.branch_name,
+        ...dailyColumns.map((c) => r[c.key] ?? 0),
+      ]),
+    },
+  ];
+
+  const branchMetrics = [
+    { key: "total_revenue", label: "Total Revenue", currency: true },
+    { key: "tests_revenue", label: "Tests Revenue", currency: true },
+    { key: "home_visit_revenue", label: "Home Visit Revenue", currency: true },
+    { key: "orders", label: "Orders" },
+    ];
+
   return (
     <div className="space-y-6">
       <ReportToolbar
@@ -46,9 +78,11 @@ export default function BranchRevenueReport({ onBack }) {
           { label: "Date From", value: dateFrom, onChange: setDateFrom, max: dateTo },
           { label: "Date To", value: dateTo, onChange: setDateTo, min: dateFrom },
         ]}
-        onExportCsv={() => exportToCsv("branch-revenue-report", headers, csvRows)}
-        onExportPdf={() => exportToPdf("Branch Revenue Report", headers, csvRows)}
+        onExportCsv={() => exportSectionsToCsv(`branch-revenue-report_${dateFrom}_to_${dateTo}`, exportSections())}
+        onExportPdf={() => exportSectionsToPdf(`Branch Revenue Report (${formatPeriod(dateFrom, dateTo)})`, exportSections())}
       />
+
+      <ReportPeriod dateFrom={dateFrom} dateTo={dateTo} />
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
@@ -56,6 +90,9 @@ export default function BranchRevenueReport({ onBack }) {
         <StatCard label="Total Revenue" value={formatCurrency(data?.summary?.total_revenue)} icon={IndianRupee} color="green" />
         <StatCard label="Total Orders" value={data?.summary?.total_orders ?? 0} icon={ClipboardList} color="blue" />
       </div>
+
+      <BranchBarChart rows={rows} metrics={branchMetrics} loading={loading} />
+      <DailyTrendChart rows={dailyRows} metrics={dailyColumns} loading={loading} formatLabel={formatRowDate} />
 
       <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
         <div className="overflow-x-auto">
@@ -96,6 +133,12 @@ export default function BranchRevenueReport({ onBack }) {
           </table>
         </div>
       </div>
+
+      <DailyBreakdownTable
+        rows={data?.daily || []}
+        loading={loading}
+        columns={dailyColumns}
+      />
     </div>
   );
 }

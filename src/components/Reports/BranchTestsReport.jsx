@@ -138,7 +138,7 @@ export default function BranchTestsReport({ onBack }) {
       />
       <DailyBarChart
         rows={dailyRows}
-        metrics={dailyColumns}
+        metrics={dailyColumns} dateFrom={dateFrom} dateTo={dateTo}
         loading={loading}
         formatLabel={formatRowDate}
       />

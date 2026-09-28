@@ -148,7 +148,7 @@ export default function BranchSummaryReport({ onBack }) {
 
 
 <BranchBarChart rows={rows} metrics={branchMetrics} loading={loading} />
-<DailyTrendChart rows={dailyRows} metrics={dailyColumns} loading={loading} formatLabel={formatRowDate} />
+<DailyTrendChart rows={dailyRows} metrics={dailyColumns} dateFrom={dateFrom} dateTo={dateTo} loading={loading} formatLabel={formatRowDate} />
 
       <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
         <div className="overflow-x-auto">

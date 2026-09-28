@@ -15,7 +15,9 @@ function statusLabel(s) {
   return (s || "").split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 }
 
-export default function OrdersOverTimeModal({ initialRange = "Today", onClose }) {
+const inr = (n) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+
+export default function RevenueOverTimeModal({ initialRange = "Today", onClose }) {
   const navigate = useNavigate();
   const [range, setRange] = useState(initialRange);
   const [allOrders, setAllOrders] = useState([]);
@@ -38,22 +40,26 @@ export default function OrdersOverTimeModal({ initialRange = "Today", onClose })
     return () => { cancelled = true; };
   }, []);
 
+  // Revenue excludes cancelled orders
   const orders = useMemo(() => {
     const [start, end] = getRangeBounds(range);
     return allOrders.filter((o) => {
       const d = new Date(o.ordered_at);
-      return d >= start && d < end;
+      return d >= start && d < end && o.status !== "cancelled";
     });
   }, [allOrders, range]);
 
-  const count = (status) => orders.filter((o) => o.status === status).length;
-  const totalBill = orders.reduce((sum, o) => sum + Number(o.bill_total || 0), 0);
+  const sum = (list) => list.reduce((t, o) => t + Number(o.bill_total || 0), 0);
+  const totalRevenue = sum(orders);
+  const completedRevenue = sum(orders.filter((o) => o.status === "completed"));
+  const pendingRevenue = totalRevenue - completedRevenue;
+  const avgOrder = orders.length ? totalRevenue / orders.length : 0;
 
   const tiles = [
-    { label: "Total Orders", value: orders.length, cls: "bg-gray-50 text-gray-900" },
-    { label: "Completed", value: count("completed"), cls: "bg-green-50 text-green-700" },
-    { label: "Pending", value: count("pending"), cls: "bg-amber-50 text-amber-700" },
-    { label: "Cancelled", value: count("cancelled"), cls: "bg-red-50 text-red-700" },
+    { label: "Total Revenue", value: inr(totalRevenue), cls: "bg-gray-50 text-gray-900" },
+    { label: "Completed", value: inr(completedRevenue), cls: "bg-green-50 text-green-700" },
+    { label: "Pending", value: inr(pendingRevenue), cls: "bg-amber-50 text-amber-700" },
+    { label: "Avg per Order", value: inr(avgOrder), cls: "bg-purple-50 text-purple-700" },
   ];
 
   return (
@@ -64,7 +70,7 @@ export default function OrdersOverTimeModal({ initialRange = "Today", onClose })
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="text-lg font-semibold text-gray-900">Orders Over Time</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Revenue Over Time (₹)</h2>
           <button onClick={onClose} className="rounded-full p-2 text-gray-500 hover:bg-gray-100">
             <X size={18} />
           </button>
@@ -102,16 +108,16 @@ export default function OrdersOverTimeModal({ initialRange = "Today", onClose })
           {loading ? (
             <p className="py-10 text-center text-xs text-gray-400">Loading…</p>
           ) : orders.length === 0 ? (
-            <p className="py-10 text-center text-xs text-gray-400">No orders in this range.</p>
+            <p className="py-10 text-center text-xs text-gray-400">No revenue in this range.</p>
           ) : (
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-left text-xs text-gray-500">
                 <tr>
-                  <th className="px-6 py-2 font-medium">Order</th>
+                  <th className="px-6 py-2 font-medium">Order #</th>
                   <th className="py-2 font-medium">Patient</th>
                   <th className="py-2 font-medium">Date</th>
                   <th className="py-2 font-medium">Status</th>
-                  <th className="px-6 py-2 text-right font-medium">Bill</th>
+                  <th className="px-6 py-2 text-right font-medium">Amount</th>
                 </tr>
               </thead>
               <tbody>
@@ -121,7 +127,7 @@ export default function OrdersOverTimeModal({ initialRange = "Today", onClose })
                     onClick={() => navigate(`/lab-orders/${o.order_no}`)}
                     className="cursor-pointer border-b border-gray-100 hover:bg-gray-50"
                   >
-                    <td className="px-6 py-3 text-gray-500">{o.order_no}</td>
+                    <td className="px-6 py-3 text-gray-500">#{o.order_no}</td>
                     <td className="py-3 font-medium text-gray-900">
                       {[o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" ")}
                       {o.patient?.patient_number && (
@@ -141,7 +147,7 @@ export default function OrdersOverTimeModal({ initialRange = "Today", onClose })
                       </span>
                     </td>
                     <td className="px-6 py-3 text-right font-medium text-gray-900">
-                      ₹{Number(o.bill_total || 0).toLocaleString("en-IN")}
+                      {inr(Number(o.bill_total || 0))}
                     </td>
                   </tr>
                 ))}
@@ -153,7 +159,7 @@ export default function OrdersOverTimeModal({ initialRange = "Today", onClose })
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-gray-100 bg-gray-50 px-6 py-4 rounded-b-2xl">
           <p className="text-sm text-gray-500">
-            Total bill: <span className="font-semibold text-gray-900">₹{totalBill.toLocaleString("en-IN")}</span>
+            {orders.length} orders · Total: <span className="font-semibold text-gray-900">{inr(totalRevenue)}</span>
           </p>
           <button onClick={onClose} className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
             Close

@@ -7,6 +7,8 @@ import {
 } from "../../api/api";
 import MiniBarChart from "../Reports/shared/MiniBarChart";
 import OrdersOverTimeModal from "./OrdersOverTimeModal";
+import RevenueOverTimeModal from "./RevenueOverTimeModal";
+import OrderStatusModal from "./OrderStatusModal";
 
 const ALL_RANGES = ["Today", "Yesterday", "1 Week", "1 Month", "1 Year"];
 
@@ -64,7 +66,7 @@ function TrendCard({ title, range, onRangeChange, chartData, loading, formatValu
   );
 }
 
-function DonutCard({ title, total, segments, range, onRangeChange, loading }) {
+function DonutCard({ title, total, segments, range, onRangeChange, loading, onViewReport }) {
   let cumulative = 0;
   const gradientParts = segments.map((s) => {
     const start = cumulative;
@@ -76,7 +78,11 @@ function DonutCard({ title, total, segments, range, onRangeChange, loading }) {
     <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
-        <a href="#" className="text-xs text-teal-600 font-medium hover:underline">View Report</a>
+        {onViewReport && (
+          <button onClick={onViewReport} className="text-xs text-teal-600 font-medium hover:underline cursor-pointer">
+            View Report
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -136,6 +142,8 @@ export default function OrdersTrendSection() {
   const [statusLoading, setStatusLoading] = useState(true);
   const [statusError, setStatusError] = useState(null);
   const [ordersReportOpen, setOrdersReportOpen] = useState(false);
+  const [revenueReportOpen, setRevenueReportOpen] = useState(false);
+  const [statusReportOpen, setStatusReportOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -219,6 +227,7 @@ export default function OrdersTrendSection() {
         chartData={revenueData}
         loading={revenueLoading}
         formatValue={(v) => `₹${v.toLocaleString("en-IN")}`}
+        onViewReport={() => setRevenueReportOpen(true)}
       />
       <DonutCard
         title="Order Status Distribution"
@@ -227,6 +236,7 @@ export default function OrdersTrendSection() {
         range={statusRange}
         onRangeChange={setStatusRange}
         loading={statusLoading}
+        onViewReport={() => setStatusReportOpen(true)}
       />
 
       {(ordersError || revenueError || statusError) && (
@@ -240,6 +250,18 @@ export default function OrdersTrendSection() {
         <OrdersOverTimeModal
           initialRange={ordersRange}
           onClose={() => setOrdersReportOpen(false)}
+        />
+      )}
+      {revenueReportOpen && (
+        <RevenueOverTimeModal
+          initialRange={revenueRange}
+          onClose={() => setRevenueReportOpen(false)}
+        />
+      )}
+      {statusReportOpen && (
+        <OrderStatusModal
+          initialRange={statusRange}
+          onClose={() => setStatusReportOpen(false)}
         />
       )}
     </div>

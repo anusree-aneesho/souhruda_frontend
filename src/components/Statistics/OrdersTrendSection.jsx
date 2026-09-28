@@ -6,8 +6,10 @@ import {
   getRevenueOverTimeApi,
 } from "../../api/api";
 import MiniBarChart from "../Reports/shared/MiniBarChart";
+import OrdersOverTimeModal from "./OrdersOverTimeModal";
 
 const ALL_RANGES = ["Today", "Yesterday", "1 Week", "1 Month", "1 Year"];
+
 
 function RangeFilter({ active, onChange }) {
   const options = active === "Today" ? ALL_RANGES.filter((r) => r !== "Today") : ALL_RANGES;
@@ -33,12 +35,16 @@ function RangeFilter({ active, onChange }) {
   );
 }
 
-function TrendCard({ title, range, onRangeChange, chartData, loading, formatValue }) {
+function TrendCard({ title, range, onRangeChange, chartData, loading, formatValue, onViewReport }) {
   return (
     <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
-        <a href="#" className="text-xs text-teal-600 font-medium hover:underline">View Report</a>
+        {onViewReport && (
+          <button onClick={onViewReport} className="text-xs text-teal-600 font-medium hover:underline cursor-pointer">
+            View Report
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -129,6 +135,7 @@ export default function OrdersTrendSection() {
   const [statusData, setStatusData] = useState({ total: 0, segments: [] });
   const [statusLoading, setStatusLoading] = useState(true);
   const [statusError, setStatusError] = useState(null);
+  const [ordersReportOpen, setOrdersReportOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -203,6 +210,7 @@ export default function OrdersTrendSection() {
         onRangeChange={setOrdersRange}
         chartData={ordersData}
         loading={ordersLoading}
+        onViewReport={() => setOrdersReportOpen(true)}
       />
       <TrendCard
         title="Revenue Over Time (₹)"
@@ -227,6 +235,12 @@ export default function OrdersTrendSection() {
           {revenueError && `Revenue: ${revenueError}. `}
           {statusError && `Status: ${statusError}.`}
         </p>
+      )}
+      {ordersReportOpen && (
+        <OrdersOverTimeModal
+          initialRange={ordersRange}
+          onClose={() => setOrdersReportOpen(false)}
+        />
       )}
     </div>
   );

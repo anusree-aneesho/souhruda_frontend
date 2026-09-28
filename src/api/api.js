@@ -732,13 +732,16 @@ export async function getStatisticsRankingsApi(limit = 5) {
   return request(`/statistics/rankings?limit=${limit}`);
 }
 
-export async function getStatisticsCollectionTypesApi() {
-  return request("/statistics/collection-types");
+export async function getStatisticsCollectionTypesApi(range = "1 Year") {
+  return request(`/statistics/collection-types?range=${encodeURIComponent(range)}`);
 }
 
 export async function getStatisticsAttentionAlertsApi() {
   return request("/statistics/attention-alerts");
+}
 
+export async function getStatisticsCollectionReportApi(range = "1 Year") {
+  return request(`/statistics/collection-report?range=${encodeURIComponent(range)}`);
 }
 
 export async function getStatisticsPatientsApi(range = "Today") {

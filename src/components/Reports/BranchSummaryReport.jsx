@@ -1,5 +1,6 @@
 // src/components/Reports/BranchSummaryReport.jsx
 import { useState, useEffect } from "react";
+import { ALL_BRANCHES, filterByBranch, useBranchOptions } from "./shared/branchFilter";
 import { Building2, Users, ClipboardList, IndianRupee } from "lucide-react";
 import StatCard from "../common/StatCard";
 import ReportToolbar from "./shared/ReportToolbar";
@@ -16,6 +17,7 @@ export default function BranchSummaryReport({ onBack }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [branchId, setBranchId] = useState(ALL_BRANCHES);
 
   useEffect(() => {
     // Don't query with an empty or inverted range (e.g. after clearing a date
@@ -45,7 +47,14 @@ export default function BranchSummaryReport({ onBack }) {
     };
   }, [dateFrom, dateTo]);
 
-  const rows = data?.rows || [];
+  const allRows = data?.rows || [];
+  const branchOptions = useBranchOptions(allRows);
+  const rows = filterByBranch(allRows, branchId);
+  const sumOf = (k) => rows.reduce((a, r) => a + (Number(r[k]) || 0), 0);
+  const summary =
+    branchId === ALL_BRANCHES
+      ? data?.summary || {}
+      : { branches: rows.length, total_orders: sumOf("orders"), total_patients: sumOf("patients"), total_revenue: sumOf("total_revenue") };
   const headers = [
     "Branch",
     "Code",
@@ -74,7 +83,9 @@ export default function BranchSummaryReport({ onBack }) {
     { key: "home_collections", label: "Home Collections" },
     { key: "total_revenue", label: "Total Revenue", currency: true },
   ];
-  const dailyRows = data?.daily || [];
+  const dailyRows = filterByBranch(data?.daily || [], branchId);
+  const selectedBranch = branchOptions.find((o) => o.value === branchId);
+  const branchSuffix = branchId !== ALL_BRANCHES && selectedBranch ? ` – ${selectedBranch.label}` : "";
 
   const exportSections = () => [
     { title: "Branch Summary", headers, rows: csvRows },
@@ -108,15 +119,19 @@ export default function BranchSummaryReport({ onBack }) {
           { label: "Date From", value: dateFrom, onChange: setDateFrom, max: dateTo },
           { label: "Date To", value: dateTo, onChange: setDateTo, min: dateFrom },
         ]}
+        search={branchId}
+        onSearchChange={setBranchId}
+        searchOptions={branchOptions}
+        searchLabel="Branch"
         onExportCsv={() => exportSectionsToCsv(`branch-summary-report_${dateFrom}_to_${dateTo}`, exportSections())}
-        onExportPdf={() => exportSectionsToPdf(`Branch Summary Report (${formatPeriod(dateFrom, dateTo)})`, exportSections())}
+        onExportPdf={() => exportSectionsToPdf(`Branch Summary Report (${formatPeriod(dateFrom, dateTo)})${branchSuffix}`, exportSections())}
       />
 
       <ReportPeriod dateFrom={dateFrom} dateTo={dateTo} />
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      {rows.length <= 1 && !loading && !error && (
+      {allRows.length <= 1 && !loading && !error && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           Only one branch has data for this period. Orders, patients and home collection requests
           made before branch tracking was added are all attributed to one branch and can't be
@@ -125,10 +140,10 @@ export default function BranchSummaryReport({ onBack }) {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <StatCard label="Branches" value={data?.summary?.branches ?? 0} icon={Building2} color="teal" />
-        <StatCard label="Total Orders" value={data?.summary?.total_orders ?? 0} icon={ClipboardList} color="blue" />
-        <StatCard label="Total Patients" value={data?.summary?.total_patients ?? 0} icon={Users} color="purple" />
-        <StatCard label="Total Revenue" value={formatCurrency(data?.summary?.total_revenue)} icon={IndianRupee} color="green" />
+        <StatCard label="Branches" value={summary.branches ?? 0} icon={Building2} color="teal" />
+        <StatCard label="Total Orders" value={summary.total_orders ?? 0} icon={ClipboardList} color="blue" />
+        <StatCard label="Total Patients" value={summary.total_patients ?? 0} icon={Users} color="purple" />
+        <StatCard label="Total Revenue" value={formatCurrency(summary.total_revenue)} icon={IndianRupee} color="green" />
       </div>
 
 
@@ -184,7 +199,7 @@ export default function BranchSummaryReport({ onBack }) {
       </div>
 
       <DailyBreakdownTable
-        rows={data?.daily || []}
+        rows={dailyRows}
         loading={loading}
         columns={dailyColumns}
       />

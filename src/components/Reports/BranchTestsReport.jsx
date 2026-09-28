@@ -2,6 +2,7 @@
 //
 // Test volume per branch, in range — compares branches side by side.
 import { useState, useEffect } from "react";
+import { ALL_BRANCHES, filterByBranch, useBranchOptions } from "./shared/branchFilter";
 import { FlaskConical, ListOrdered, IndianRupee, Calculator } from "lucide-react";
 import StatCard from "../common/StatCard";
 import ReportToolbar from "./shared/ReportToolbar";
@@ -18,6 +19,7 @@ export default function BranchTestsReport({ onBack }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [branchId, setBranchId] = useState(ALL_BRANCHES);
 
   useEffect(() => {
     // Don't query with an empty or inverted range (e.g. after clearing a date
@@ -47,8 +49,19 @@ export default function BranchTestsReport({ onBack }) {
     };
   }, [dateFrom, dateTo]);
 
-  const rows = data?.rows || [];
-  const summary = data?.summary || {};
+  const allRows = data?.rows || [];
+  const branchOptions = useBranchOptions(allRows);
+  const rows = filterByBranch(allRows, branchId);
+  const sumOf = (k) => rows.reduce((a, r) => a + (Number(r[k]) || 0), 0);
+  const summary =
+    branchId === ALL_BRANCHES
+      ? data?.summary || {}
+      : {
+          total_tests: sumOf("volume"),
+          unique_tests: sumOf("unique_tests"),
+          total_revenue: sumOf("revenue"),
+          avg_revenue_per_test: sumOf("volume") > 0 ? sumOf("revenue") / sumOf("volume") : 0,
+        };
 
   const headers = ["Branch", "Code", "Tests Ordered", "Unique Tests", "Revenue", "Revenue Share %"];
   const csvRows = rows.map((r) => [
@@ -72,7 +85,9 @@ export default function BranchTestsReport({ onBack }) {
     { key: "volume", label: "Tests Ordered" },
     { key: "revenue", label: "Revenue", currency: true },
   ];
-  const dailyRows = data?.daily || [];
+  const dailyRows = filterByBranch(data?.daily || [], branchId);
+  const selectedBranch = branchOptions.find((o) => o.value === branchId);
+  const branchSuffix = branchId !== ALL_BRANCHES && selectedBranch ? ` – ${selectedBranch.label}` : "";
 
   const exportSections = () => [
     { title: "Branch Comparison", headers, rows: csvRows },
@@ -95,8 +110,12 @@ export default function BranchTestsReport({ onBack }) {
           { label: "Date From", value: dateFrom, onChange: setDateFrom, max: dateTo },
           { label: "Date To", value: dateTo, onChange: setDateTo, min: dateFrom },
         ]}
+        search={branchId}
+        onSearchChange={setBranchId}
+        searchOptions={branchOptions}
+        searchLabel="Branch"
         onExportCsv={() => exportSectionsToCsv(`branch-tests-report_${dateFrom}_to_${dateTo}`, exportSections())}
-        onExportPdf={() => exportSectionsToPdf(`Branch Tests Report (${formatPeriod(dateFrom, dateTo)})`, exportSections())}
+        onExportPdf={() => exportSectionsToPdf(`Branch Tests Report (${formatPeriod(dateFrom, dateTo)})${branchSuffix}`, exportSections())}
       />
 
       <ReportPeriod dateFrom={dateFrom} dateTo={dateTo} />
@@ -168,7 +187,7 @@ export default function BranchTestsReport({ onBack }) {
                     <td className="px-4 py-3">{summary.total_tests ?? 0}</td>
                     <td className="px-4 py-3">{summary.unique_tests ?? 0}</td>
                     <td className="px-4 py-3">{formatCurrency(summary.total_revenue)}</td>
-                    <td className="px-4 py-3">{summary.total_revenue > 0 ? "100%" : "—"}</td>
+                    <td className="px-4 py-3">{branchId === ALL_BRANCHES ? (summary.total_revenue > 0 ? "100%" : "—") : `${Number(sumOf("revenue_share").toFixed(2))}%`}</td>
                   </tr>
                 </>
               )}

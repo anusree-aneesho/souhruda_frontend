@@ -3,6 +3,7 @@
 // Revenue per branch, in range — one row per branch, so branches can be
 // compared side by side.
 import { useState, useEffect } from "react";
+import { ALL_BRANCHES, filterByBranch, useBranchOptions } from "./shared/branchFilter";
 import { IndianRupee, ClipboardList } from "lucide-react";
 import StatCard from "../common/StatCard";
 import ReportToolbar from "./shared/ReportToolbar";
@@ -19,6 +20,7 @@ export default function BranchRevenueReport({ onBack }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [branchId, setBranchId] = useState(ALL_BRANCHES);
 
   useEffect(() => {
     // Don't query with an empty or inverted range (e.g. after clearing a date
@@ -48,7 +50,14 @@ export default function BranchRevenueReport({ onBack }) {
     };
   }, [dateFrom, dateTo]);
 
-  const rows = data?.rows || [];
+  const allRows = data?.rows || [];
+  const branchOptions = useBranchOptions(allRows);
+  const rows = filterByBranch(allRows, branchId);
+  const sumOf = (k) => rows.reduce((a, r) => a + (Number(r[k]) || 0), 0);
+  const summary =
+    branchId === ALL_BRANCHES
+      ? data?.summary || {}
+      : { total_orders: sumOf("orders"), total_revenue: sumOf("total_revenue") };
   const headers = ["Branch", "Code", "Orders", "Tests Revenue", "Home Visit Revenue", "Total Revenue"];
   const csvRows = rows.map((r) => [r.branch_name, r.branch_code, r.orders, r.tests_revenue, r.home_visit_revenue, r.total_revenue]);
 
@@ -59,7 +68,9 @@ export default function BranchRevenueReport({ onBack }) {
     { key: "home_visit_revenue", label: "Home Visit Revenue", currency: true },
     { key: "total_revenue", label: "Total Revenue", currency: true },
   ];
-  const dailyRows = data?.daily || [];
+  const dailyRows = filterByBranch(data?.daily || [], branchId);
+  const selectedBranch = branchOptions.find((o) => o.value === branchId);
+  const branchSuffix = branchId !== ALL_BRANCHES && selectedBranch ? ` – ${selectedBranch.label}` : "";
 
   const exportSections = () => [
     { title: "Branch Comparison", headers, rows: csvRows },
@@ -89,8 +100,12 @@ export default function BranchRevenueReport({ onBack }) {
           { label: "Date From", value: dateFrom, onChange: setDateFrom, max: dateTo },
           { label: "Date To", value: dateTo, onChange: setDateTo, min: dateFrom },
         ]}
+        search={branchId}
+        onSearchChange={setBranchId}
+        searchOptions={branchOptions}
+        searchLabel="Branch"
         onExportCsv={() => exportSectionsToCsv(`branch-revenue-report_${dateFrom}_to_${dateTo}`, exportSections())}
-        onExportPdf={() => exportSectionsToPdf(`Branch Revenue Report (${formatPeriod(dateFrom, dateTo)})`, exportSections())}
+        onExportPdf={() => exportSectionsToPdf(`Branch Revenue Report (${formatPeriod(dateFrom, dateTo)})${branchSuffix}`, exportSections())}
       />
 
       <ReportPeriod dateFrom={dateFrom} dateTo={dateTo} />
@@ -98,8 +113,8 @@ export default function BranchRevenueReport({ onBack }) {
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <StatCard label="Total Revenue" value={formatCurrency(data?.summary?.total_revenue)} icon={IndianRupee} color="green" />
-        <StatCard label="Total Orders" value={data?.summary?.total_orders ?? 0} icon={ClipboardList} color="blue" />
+        <StatCard label="Total Revenue" value={formatCurrency(summary.total_revenue)} icon={IndianRupee} color="green" />
+        <StatCard label="Total Orders" value={summary.total_orders ?? 0} icon={ClipboardList} color="blue" />
       </div>
 
       <BranchBarChart rows={rows} metrics={branchMetrics} loading={loading} />
@@ -146,7 +161,7 @@ export default function BranchRevenueReport({ onBack }) {
       </div>
 
       <DailyBreakdownTable
-        rows={data?.daily || []}
+        rows={dailyRows}
         loading={loading}
         columns={dailyColumns}
       />

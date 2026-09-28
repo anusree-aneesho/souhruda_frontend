@@ -3,6 +3,7 @@
 // Patients registered per branch, in range — one row per branch, so
 // branches can be compared side by side.
 import { useState, useEffect } from "react";
+import { ALL_BRANCHES, filterByBranch, useBranchOptions } from "./shared/branchFilter";
 import { Users } from "lucide-react";
 import StatCard from "../common/StatCard";
 import ReportToolbar from "./shared/ReportToolbar";
@@ -19,6 +20,7 @@ export default function BranchPatientsReport({ onBack }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [branchId, setBranchId] = useState(ALL_BRANCHES);
 
   useEffect(() => {
     // Don't query with an empty or inverted range (e.g. after clearing a date
@@ -48,7 +50,13 @@ export default function BranchPatientsReport({ onBack }) {
     };
   }, [dateFrom, dateTo]);
 
-  const rows = data?.rows || [];
+  const allRows = data?.rows || [];
+  const branchOptions = useBranchOptions(allRows);
+  const rows = filterByBranch(allRows, branchId);
+  const summary =
+    branchId === ALL_BRANCHES
+      ? data?.summary || {}
+      : { total_patients: rows.reduce((a, r) => a + (Number(r.patients) || 0), 0) };
   const headers = ["Branch", "Code", "Patients", "Male", "Female"];
   const csvRows = rows.map((r) => [r.branch_name, r.branch_code, r.patients, r.male, r.female]);
 
@@ -58,7 +66,9 @@ export default function BranchPatientsReport({ onBack }) {
     { key: "male", label: "Male" },
     { key: "female", label: "Female" },
   ];
-  const dailyRows = data?.daily || [];
+  const dailyRows = filterByBranch(data?.daily || [], branchId);
+  const selectedBranch = branchOptions.find((o) => o.value === branchId);
+  const branchSuffix = branchId !== ALL_BRANCHES && selectedBranch ? ` – ${selectedBranch.label}` : "";
 
   const exportSections = () => [
     { title: "Branch Comparison", headers, rows: csvRows },
@@ -87,8 +97,12 @@ export default function BranchPatientsReport({ onBack }) {
           { label: "Date From", value: dateFrom, onChange: setDateFrom, max: dateTo },
           { label: "Date To", value: dateTo, onChange: setDateTo, min: dateFrom },
         ]}
+        search={branchId}
+        onSearchChange={setBranchId}
+        searchOptions={branchOptions}
+        searchLabel="Branch"
         onExportCsv={() => exportSectionsToCsv(`branch-patients-report_${dateFrom}_to_${dateTo}`, exportSections())}
-        onExportPdf={() => exportSectionsToPdf(`Branch Patients Report (${formatPeriod(dateFrom, dateTo)})`, exportSections())}
+        onExportPdf={() => exportSectionsToPdf(`Branch Patients Report (${formatPeriod(dateFrom, dateTo)})${branchSuffix}`, exportSections())}
       />
 
       <ReportPeriod dateFrom={dateFrom} dateTo={dateTo} />
@@ -96,7 +110,7 @@ export default function BranchPatientsReport({ onBack }) {
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label="Total Patients" value={data?.summary?.total_patients ?? 0} icon={Users} color="purple" />
+        <StatCard label="Total Patients" value={summary.total_patients ?? 0} icon={Users} color="purple" />
       </div>
 
 
@@ -142,7 +156,7 @@ export default function BranchPatientsReport({ onBack }) {
       </div>
 
       <DailyBreakdownTable
-        rows={data?.daily || []}
+        rows={dailyRows}
         loading={loading}
         columns={dailyColumns}
       />

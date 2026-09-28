@@ -1,9 +1,23 @@
 // src/components/Reports/ReportItemGrid.jsx
 import { ArrowRight } from "lucide-react";
 
+// Tailwind needs static, literal class names to keep them in the build, so
+// this maps item counts to a whole class string rather than interpolating
+// `lg:grid-cols-${n}`. Counts above 6 fall back to a 6-wide grid and wrap.
+const LG_COLS_BY_COUNT = {
+  1: "lg:grid-cols-1",
+  2: "lg:grid-cols-2",
+  3: "lg:grid-cols-3",
+  4: "lg:grid-cols-4",
+  5: "lg:grid-cols-5",
+  6: "lg:grid-cols-6",
+};
+
 export default function ReportItemGrid({ category, onSelect }) {
+  const lgCols = LG_COLS_BY_COUNT[category.items.length] || "lg:grid-cols-6";
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className={`grid grid-cols-1 sm:grid-cols-2 ${lgCols} gap-4`}>
       {category.items.map(({ key, title, description, icon: Icon, component }) => (
         <button
           key={key}

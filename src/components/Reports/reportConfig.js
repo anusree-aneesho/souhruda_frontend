@@ -56,6 +56,11 @@ import BranchTestsReport from "./BranchTestsReport";
 import BranchRevenueReport from "./BranchRevenueReport";
 import BranchQuickTable from "./BranchQuickTable";
 import OperationalQuickView from "./OperationalQuickView";
+import PendingTestsReport from "./PendingTestsReport";
+import TestPerformanceReport from "./TestPerformanceReport";
+import TestVolumeReport from "./TestVolumeReport";
+import TestsQuickTable from "./TestsQuickTable";
+
 
 export const REPORT_CATEGORIES = [
   {
@@ -94,13 +99,14 @@ export const REPORT_CATEGORIES = [
     description: "How individual tests are performing.",
     icon: FlaskConical,
     color: "bg-cyan-50 text-cyan-600",
+    quickView: TestsQuickTable, 
     items: [
       {
         key: "test-performance",
         title: "Test Performance",
         description: "Volume and turnaround by test over the period.",
         icon: TrendingUp,
-        component: null,
+        component: TestPerformanceReport,
       },
       {
         key: "test-revenue",
@@ -114,14 +120,14 @@ export const REPORT_CATEGORIES = [
         title: "Test Volume",
         description: "Order counts per test, ranked high to low.",
         icon: ListOrdered,
-        component: null,
+        component: TestVolumeReport,
       },
       {
         key: "pending-tests",
         title: "Pending Tests",
         description: "Tests ordered but not yet completed or reported.",
         icon: Hourglass,
-        component: null,
+        component: PendingTestsReport,
       },
     ],
   },

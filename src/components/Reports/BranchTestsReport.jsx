@@ -1,7 +1,7 @@
 // src/components/Reports/BranchTestsReport.jsx
 //
 // Test volume per branch, in range — compares branches side by side.
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { FlaskConical, ListOrdered, IndianRupee, Calculator } from "lucide-react";
 import StatCard from "../common/StatCard";
 import ReportToolbar from "./shared/ReportToolbar";
@@ -19,22 +19,33 @@ export default function BranchTestsReport({ onBack }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await getBranchTestsReportApi({ dateFrom, dateTo });
-      setData(res);
-    } catch (err) {
-      setError(err.message || "Failed to load report.");
-    } finally {
-      setLoading(false);
-    }
-  }, [dateFrom, dateTo]);
-
   useEffect(() => {
+    // Don't query with an empty or inverted range (e.g. after clearing a date
+    // field) — the API would fall back to its default range and the numbers
+    // would no longer match the selected period.
+    if (!dateFrom || !dateTo || dateFrom > dateTo) return undefined;
+
+    let cancelled = false; // ignore responses from older, superseded requests
+
+    async function load() {
+      setLoading(true);
+      setError("");
+      setData(null); // never show the previous period's numbers under the new dates
+      try {
+        const res = await getBranchTestsReportApi({ dateFrom, dateTo });
+        if (!cancelled) setData(res);
+      } catch (err) {
+        if (!cancelled) setError(err.message || "Failed to load report.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
     load();
-  }, [load]);
+    return () => {
+      cancelled = true;
+    };
+  }, [dateFrom, dateTo]);
 
   const rows = data?.rows || [];
   const summary = data?.summary || {};

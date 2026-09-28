@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ModalShell from "../../common/Modal/ModalShell";
 import StepProgressBar from "./StepProgressBar";
-import PatientStep from "./steps/PatientStep";
+import PatientStep, { ReferredByField } from "./steps/PatientStep";
 import SelectTestsStep from "./steps/SelectTestsStep";
 import ConfirmStep from "./steps/ConfirmStep";
 import AddressSlotStep from "./steps/AddressSlotStep";
@@ -383,9 +383,9 @@ export default function NewOrderModal() {
         };
 
   async function handleNext() {
-    if (step === 2 && !referredBy) {
-    setReferredByTouched(true);
-    return;
+    if ((step === 1 || (step === 2 && skipPatientStep)) && !referredBy) {
+      setReferredByTouched(true);
+      return;
     }
     if (step === 1 && patientType === "new" && !createdPatient) {
       if (!newPatientData.name.trim()) {
@@ -504,8 +504,10 @@ export default function NewOrderModal() {
 const isNextDisabled =
   (step === 1 && patientType === "existing" && !selectedPatient) ||
   (step === 1 && patientType === "new" && (!newPatientData.name.trim() || !newPatientData.dateOfBirth)) ||
+  (step === 1 && !referredBy) ||
   (step === 1 && isCreatingPatient) ||
-  (step === 2 && (selectedTests.length === 0 || !currentPatient || !referredBy)) ||
+  (step === 2 && skipPatientStep && !referredBy) ||
+  (step === 2 && (selectedTests.length === 0 || !currentPatient)) ||
   (isHomeCollection && step === 3 && (!address.trim() || !preferredDate || !pinnedLocation || !pinnedLocation.withinRadius));
 
   if (!isOpen) return null;
@@ -559,7 +561,28 @@ const isNextDisabled =
             onNewPatientChange={(field, value) => setNewPatientData((prev) => ({ ...prev, [field]: value }))}
             onEditSelectedPatient={handleEditSelectedPatient}
             isLoadingPatientToEdit={isLoadingPatientToEdit}
+            doctors={doctors}
+            referredBy={referredBy}
+            onReferredByChange={(val) => {
+              setReferredBy(val);
+              if (val) setReferredByTouched(false);
+            }}
+            referredByError={referredByTouched && !referredBy}
           />
+        )}
+
+        {step === 2 && skipPatientStep && (
+          <div className="px-6 pt-5">
+            <ReferredByField
+              doctors={doctors}
+              referredBy={referredBy}
+              onReferredByChange={(val) => {
+                setReferredBy(val);
+                if (val) setReferredByTouched(false);
+              }}
+              referredByError={referredByTouched && !referredBy}
+            />
+          </div>
         )}
 
         {step === 2 && (
@@ -572,13 +595,6 @@ const isNextDisabled =
             appliedPackageIds={appliedPackageIds}
             onApplyPackageId={applyPackageId}
             onRemovePackageIds={removePackageIds}
-            doctors={doctors}
-            referredBy={referredBy}
-            onReferredByChange={(val) => {
-              setReferredBy(val);
-              if (val) setReferredByTouched(false);
-            }}
-            referredByError={referredByTouched && !referredBy}
           />
         )}
 

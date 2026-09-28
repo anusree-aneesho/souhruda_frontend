@@ -8,6 +8,7 @@ import CommandPalette from "../components/common/CommandPalette/CommandPalette";
 import NewOrderModal from "../components/common/NewOrderModal/NewOrderModal";
 import HomeCollectionDetailModal from "../components/HomeCollection/DetailModal/HomeCollectionDetailModal";
 import LabAssistant from "../components/common/LabAssistant/LabAssistant";
+import Footer from "../components/common/Footer/Footer";
 
 export default function MainLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -42,8 +43,11 @@ export default function MainLayout() {
           </button>
         </div>
         <Topbar />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          <Outlet />
+        <main className="flex flex-1 flex-col overflow-y-auto">
+          <div className="flex-1 p-4 md:p-6">
+            <Outlet />
+          </div>
+          <Footer />
         </main>
       </div>
 

@@ -1,11 +1,15 @@
 // src/components/Reports/BranchSummaryReport.jsx
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { ALL_BRANCHES, filterByBranch, useBranchOptions } from "./shared/branchFilter";
 import { Building2, Users, ClipboardList, IndianRupee } from "lucide-react";
 import StatCard from "../common/StatCard";
 import ReportToolbar from "./shared/ReportToolbar";
+import ReportPeriod, { formatPeriod } from "./ReportPeriod";
+import DailyBreakdownTable, { formatRowDate } from "./DailyBreakdownTable";
 import { formatCurrency, todayIso, daysAgoIso } from "./shared/format";
-import { exportToCsv, exportToPdf } from "../../utils/reportExport";
+import { exportSectionsToCsv, exportSectionsToPdf } from "../../utils/multiSectionExport";
 import { getBranchSummaryReportApi } from "../../api/api";
+import { BranchBarChart, DailyTrendChart } from "./shared/BranchCharts";
 
 export default function BranchSummaryReport({ onBack }) {
   const [dateFrom, setDateFrom] = useState(daysAgoIso(30));
@@ -13,25 +17,44 @@ export default function BranchSummaryReport({ onBack }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await getBranchSummaryReportApi({ dateFrom, dateTo });
-      setData(res);
-    } catch (err) {
-      setError(err.message || "Failed to load report.");
-    } finally {
-      setLoading(false);
-    }
-  }, [dateFrom, dateTo]);
+  const [branchId, setBranchId] = useState(ALL_BRANCHES);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    // Don't query with an empty or inverted range (e.g. after clearing a date
+    // field) — the API would fall back to its default range and the numbers
+    // would no longer match the selected period.
+    if (!dateFrom || !dateTo || dateFrom > dateTo) return undefined;
 
-  const rows = data?.rows || [];
+    let cancelled = false; // ignore responses from older, superseded requests
+
+    async function load() {
+      setLoading(true);
+      setError("");
+      setData(null); // never show the previous period's numbers under the new dates
+      try {
+        const res = await getBranchSummaryReportApi({ dateFrom, dateTo });
+        if (!cancelled) setData(res);
+      } catch (err) {
+        if (!cancelled) setError(err.message || "Failed to load report.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [dateFrom, dateTo]);
+
+  const allRows = data?.rows || [];
+  const branchOptions = useBranchOptions(allRows);
+  const rows = filterByBranch(allRows, branchId);
+  const sumOf = (k) => rows.reduce((a, r) => a + (Number(r[k]) || 0), 0);
+  const summary =
+    branchId === ALL_BRANCHES
+      ? data?.summary || {}
+      : { branches: rows.length, total_orders: sumOf("orders"), total_patients: sumOf("patients"), total_revenue: sumOf("total_revenue") };
   const headers = [
     "Branch",
     "Code",
@@ -53,6 +76,41 @@ export default function BranchSummaryReport({ onBack }) {
     r.total_revenue,
   ]);
 
+  // Same columns feed the on-screen day-wise table and the exports.
+  const dailyColumns = [
+    { key: "orders", label: "Orders" },
+    { key: "patients", label: "Patients" },
+    { key: "home_collections", label: "Home Collections" },
+    { key: "total_revenue", label: "Total Revenue", currency: true },
+  ];
+  const dailyRows = filterByBranch(data?.daily || [], branchId);
+  const selectedBranch = branchOptions.find((o) => o.value === branchId);
+  const branchSuffix = branchId !== ALL_BRANCHES && selectedBranch ? ` – ${selectedBranch.label}` : "";
+
+  const exportSections = () => [
+    { title: "Branch Summary", headers, rows: csvRows },
+    {
+      title: "Day-wise Breakdown",
+      headers: ["Date", "Branch", ...dailyColumns.map((c) => c.label)],
+      rows: dailyRows.map((r) => [
+        formatRowDate(r.date),
+        r.branch_name,
+        ...dailyColumns.map((c) => r[c.key] ?? 0),
+      ]),
+    },
+  ];
+
+  const branchMetrics = [
+    { key: "total_revenue", label: "Total Revenue", currency: true },
+    { key: "orders", label: "Orders" },
+    { key: "patients", label: "Patients" },
+    { key: "home_collections", label: "Home Collections" },
+    { key: "tests_revenue", label: "Tests Revenue", currency: true },
+    { key: "home_visit_revenue", label: "Home Visit Revenue", currency: true },
+  ];
+
+  
+
   return (
     <div className="space-y-6">
       <ReportToolbar
@@ -61,13 +119,19 @@ export default function BranchSummaryReport({ onBack }) {
           { label: "Date From", value: dateFrom, onChange: setDateFrom, max: dateTo },
           { label: "Date To", value: dateTo, onChange: setDateTo, min: dateFrom },
         ]}
-        onExportCsv={() => exportToCsv("branch-summary-report", headers, csvRows)}
-        onExportPdf={() => exportToPdf("Branch Summary Report", headers, csvRows)}
+        search={branchId}
+        onSearchChange={setBranchId}
+        searchOptions={branchOptions}
+        searchLabel="Branch"
+        onExportCsv={() => exportSectionsToCsv(`branch-summary-report_${dateFrom}_to_${dateTo}`, exportSections())}
+        onExportPdf={() => exportSectionsToPdf(`Branch Summary Report (${formatPeriod(dateFrom, dateTo)})${branchSuffix}`, exportSections())}
       />
+
+      <ReportPeriod dateFrom={dateFrom} dateTo={dateTo} />
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      {rows.length <= 1 && !loading && !error && (
+      {allRows.length <= 1 && !loading && !error && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           Only one branch has data for this period. Orders, patients and home collection requests
           made before branch tracking was added are all attributed to one branch and can't be
@@ -76,11 +140,15 @@ export default function BranchSummaryReport({ onBack }) {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <StatCard label="Branches" value={data?.summary?.branches ?? 0} icon={Building2} color="teal" />
-        <StatCard label="Total Orders" value={data?.summary?.total_orders ?? 0} icon={ClipboardList} color="blue" />
-        <StatCard label="Total Patients" value={data?.summary?.total_patients ?? 0} icon={Users} color="purple" />
-        <StatCard label="Total Revenue" value={formatCurrency(data?.summary?.total_revenue)} icon={IndianRupee} color="green" />
+        <StatCard label="Branches" value={summary.branches ?? 0} icon={Building2} color="teal" />
+        <StatCard label="Total Orders" value={summary.total_orders ?? 0} icon={ClipboardList} color="blue" />
+        <StatCard label="Total Patients" value={summary.total_patients ?? 0} icon={Users} color="purple" />
+        <StatCard label="Total Revenue" value={formatCurrency(summary.total_revenue)} icon={IndianRupee} color="green" />
       </div>
+
+
+<BranchBarChart rows={rows} metrics={branchMetrics} loading={loading} />
+<DailyTrendChart rows={dailyRows} metrics={dailyColumns} dateFrom={dateFrom} dateTo={dateTo} loading={loading} formatLabel={formatRowDate} />
 
       <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
         <div className="overflow-x-auto">
@@ -129,6 +197,12 @@ export default function BranchSummaryReport({ onBack }) {
           </table>
         </div>
       </div>
+
+      <DailyBreakdownTable
+        rows={dailyRows}
+        loading={loading}
+        columns={dailyColumns}
+      />
     </div>
   );
 }

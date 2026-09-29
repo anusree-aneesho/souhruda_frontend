@@ -8,7 +8,6 @@ import {
   getStatisticsPatientsApi,
   getStatisticsSampleProcessingApi,
   getStatisticsReportStatusApi,
-  getStatisticsCollectionReportApi, 
 } from "../../api/api";
 import {
   Briefcase,
@@ -125,16 +124,16 @@ function DonutCard({ title, total, segments, footerStat, range, onRangeChange, l
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
         {onViewReport ? (
-  <button
-    type="button"
-    onClick={onViewReport}
-    className="text-xs text-teal-600 font-medium hover:underline cursor-pointer"
-  >
-    View Report
-  </button>
-) : (
-  <a href="#" className="text-xs text-teal-600 font-medium hover:underline">View Report</a>
-)}
+          <button
+            type="button"
+            onClick={onViewReport}
+            className="text-xs text-teal-600 font-medium hover:underline cursor-pointer"
+          >
+            View Report
+          </button>
+        ) : (
+          <a href="#" className="text-xs text-teal-600 font-medium hover:underline">View Report</a>
+        )}
       </div>
       {footerStat && (
         <div className="flex items-center justify-between -mt-2 pb-1 border-b border-gray-50">
@@ -171,6 +170,100 @@ function DonutCard({ title, total, segments, footerStat, range, onRangeChange, l
       {onRangeChange && (
         <RangeFilter options={rangeOptions} active={range} onSelect={onRangeChange} />
       )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// DonutDetailModal — "View Report" popup for Patient Mix / Samples / Report
+// Status. Shows the full segment breakdown with counts and percentages.
+// ─────────────────────────────────────────────────────────────
+
+function DonutDetailModal({ title, total, segments, footerStat, range, onRangeChange, loading, onClose }) {
+  if (!title) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Full breakdown{range ? ` — ${range}` : ""}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="px-6 py-4 space-y-5">
+          {onRangeChange && (
+            <RangeFilter options={rangeOptions} active={range} onSelect={onRangeChange} />
+          )}
+
+          {loading ? (
+            <div className="py-10 text-center">
+              <div className="inline-block w-5 h-5 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-gray-400 mt-3">Loading…</p>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3">
+                <span className="text-sm text-gray-500">Total</span>
+                <span className="text-xl font-bold text-gray-900">{total}</span>
+              </div>
+
+              {footerStat && (
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-sm text-gray-500">{footerStat.label}</span>
+                  <span className="text-sm font-semibold text-gray-900">{footerStat.value}</span>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                {segments.map((s) => (
+                  <div key={s.label}>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="flex items-center gap-2 text-gray-700">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.colorHex }} />
+                        {s.label}
+                      </span>
+                      <span className="text-gray-900 font-medium">{s.count} ({s.pct}%)</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${s.pct}%`, backgroundColor: s.colorHex }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end px-6 py-4 border-t border-gray-100 bg-gray-50">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition"
+          >
+            Close
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -335,7 +428,6 @@ function AttentionModal({ open, alerts, loading, onClose }) {
 
   const criticalResults = alerts?.criticalResults ?? [];
   const followUps = alerts?.followUps ?? [];
-  const samplesDelayedList = alerts?.samplesDelayedList ?? [];
 
   const formatDate = (value) => {
     if (!value) return "-";
@@ -351,109 +443,9 @@ function AttentionModal({ open, alerts, loading, onClose }) {
     }
   };
 
-  const tabs = [
-    { key: "critical", label: "Critical Results", count: criticalResults.length, active: "text-red-600 border-red-500" },
-    { key: "followups", label: "Follow-ups Due", count: followUps.length, active: "text-amber-600 border-amber-500" },
-    { key: "delayed", label: "Samples Delayed", count: samplesDelayedList.length, active: "text-orange-600 border-orange-500" },
-  ];
-
-  const OrderRow = ({ row, dateValue, icon: Icon, bg, color }) => (
-    <div className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition">
-      <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center shrink-0`}>
-        <Icon size={15} className={color} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-800 truncate">
-          {row.patient_name}
-          {row.patient_number && (
-            <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
-          )}
-        </p>
-        <p className="text-xs text-gray-400 truncate">Order #{row.order_id}</p>
-      </div>
-      <span className="text-xs text-gray-500 shrink-0">{formatDate(dateValue)}</span>
-    </div>
-  );
-
-  const renderContent = () => {
-    if (tab === "critical") {
-      return criticalResults.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-10">No critical results flagged today.</p>
-      ) : (
-        <div className="space-y-1">
-          {criticalResults.map((row, index) => (
-            <div
-              key={`${row.order_id}-${row.test_name}-${index}`}
-              className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition"
-            >
-              <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
-                <AlertTriangle size={15} className="text-red-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-800 truncate">
-                  {row.patient_name}
-                  {row.patient_number && (
-                    <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
-                  )}
-                </p>
-                <p className="text-xs text-gray-400 truncate">
-                  {row.test_name} · Order #{row.order_id}
-                </p>
-              </div>
-              <div className="text-right shrink-0">
-                <p className={`text-sm font-semibold ${row.flag === "high" ? "text-red-600" : "text-blue-600"}`}>
-                  {row.result} {row.result_unit || ""}
-                </p>
-                <p className="text-[11px] text-gray-400 uppercase">{row.flag}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-
-
-    if (tab === "followups") {
-      return followUps.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-10">No follow-ups due this week.</p>
-      ) : (
-        <div className="space-y-1">
-          {followUps.map((row) => (
-            <div key={row.id} className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition">
-              <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
-                <Clock size={15} className="text-amber-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-800 truncate">
-                  {row.patient_name}
-                  {row.patient_number && (
-                    <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
-                  )}
-                </p>
-                <p className="text-xs text-gray-400 truncate">{row.test_name || "Follow-up"}</p>
-              </div>
-              <span className="text-xs text-gray-500 shrink-0">{formatDate(row.due_at)}</span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    return samplesDelayedList.length === 0 ? (
-      <p className="text-sm text-gray-400 text-center py-10">No delayed samples.</p>
-    ) : (
-      <div className="space-y-1">
-        {samplesDelayedList.map((row) => (
-          <OrderRow key={row.order_id} row={row} dateValue={row.sample_collected_at} icon={Clock} bg="bg-orange-50" color="text-orange-500" />
-        ))}
-      </div>
-    );
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl overflow-hidden">
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
 
         {/* Header */}
         <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100">
@@ -470,21 +462,29 @@ function AttentionModal({ open, alerts, loading, onClose }) {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 px-4 pt-3 overflow-x-auto">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key)}
-              className={`px-3 py-2 text-sm font-medium rounded-t-lg transition whitespace-nowrap ${
-                tab === t.key
-                  ? `${t.active} border-b-2`
-                  : "text-gray-400 hover:text-gray-600"
-              }`}
-            >
-              {t.label} ({t.count})
-            </button>
-          ))}
+        <div className="flex gap-1 px-4 pt-3">
+          <button
+            type="button"
+            onClick={() => setTab("critical")}
+            className={`px-3 py-2 text-sm font-medium rounded-t-lg transition ${
+              tab === "critical"
+                ? "text-red-600 border-b-2 border-red-500"
+                : "text-gray-400 hover:text-gray-600"
+            }`}
+          >
+            Critical Results ({criticalResults.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("followups")}
+            className={`px-3 py-2 text-sm font-medium rounded-t-lg transition ${
+              tab === "followups"
+                ? "text-amber-600 border-b-2 border-amber-500"
+                : "text-gray-400 hover:text-gray-600"
+            }`}
+          >
+            Follow-ups Due ({followUps.length})
+          </button>
         </div>
 
         {/* Content */}
@@ -494,251 +494,76 @@ function AttentionModal({ open, alerts, loading, onClose }) {
               <div className="inline-block w-5 h-5 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
               <p className="text-sm text-gray-400 mt-3">Loading…</p>
             </div>
+          ) : tab === "critical" ? (
+            criticalResults.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-10">No critical results flagged today.</p>
+            ) : (
+              <div className="space-y-1">
+                {criticalResults.map((row, index) => (
+                  <div
+                    key={`${row.order_id}-${row.test_name}-${index}`}
+                    className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+                      <AlertTriangle size={15} className="text-red-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-800 truncate">
+                        {row.patient_name}
+                        {row.patient_number && (
+                          <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-400 truncate">
+                        {row.test_name} · Order #{row.order_id}
+                      </p>
+                    </div>  
+                    <div className="text-right shrink-0">
+                      <p
+                        className={`text-sm font-semibold ${
+                          row.flag === "high" ? "text-red-600" : "text-blue-600"
+                        }`}
+                      >
+                        {row.result} {row.result_unit || ""}
+                      </p>
+                      <p className="text-[11px] text-gray-400 uppercase">{row.flag}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : followUps.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-10">No follow-ups due this week.</p>
           ) : (
-            renderContent()
+            <div className="space-y-1">
+              {followUps.map((row) => (
+                <div
+                  key={row.id}
+                  className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+                    <Clock size={15} className="text-amber-500" />
+                  </div>
+                 <div className="flex-1 min-w-0">
+  <p className="text-sm text-gray-800 truncate">
+    {row.patient_name}
+    {row.patient_number && (
+      <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
+    )}
+  </p>
+  <p className="text-xs text-gray-400 truncate">
+    {row.test_name} · Order #{row.order_id}
+  </p>
+</div>
+                  <span className="text-xs text-gray-500 shrink-0">{formatDate(row.due_at)}</span>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-end px-6 py-4 border-t border-gray-100 bg-gray-50">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition"
-          >
-            Close
-        </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CollectionReportModal({ open, range: initialRange, onClose }) {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState("all");
-  const [range, setRange] = useState(initialRange);
-  const PAGE_SIZE = 20;
-  const [page, setPage] = useState(1);
-
-  useEffect(() => {
-  setPage(1);
-}, [range, filter, open]);
-
-  // Each time the popup opens, start from the range the card is showing
-  useEffect(() => {
-    if (open) setRange(initialRange);
-  }, [open, initialRange]);
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    setLoading(true);
-    setFilter("all");
-    (async () => {
-      try {
-        const res = await getStatisticsCollectionReportApi(range);
-        if (!cancelled) setData(res);
-      } catch (err) {
-        console.error("Failed to load collection report:", err.message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [open, range]);
-
-  if (!open) return null;
-
-const allRows = data?.rows ?? [];
-const rows = filter === "all" ? allRows : allRows.filter((r) => r.type === filter);
-const totalBill = rows.reduce((sum, r) => sum + Number(r.bill_total || 0), 0);
-
-const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-const currentPage = Math.min(page, totalPages);
-const pagedRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
-  const formatDate = (value) =>
-    value
-      ? new Date(value).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
-      : "-";
-
-  const statusStyle = (s) =>
-    s === "completed"
-      ? "bg-green-50 text-green-700"
-      : s === "sample_collected"
-      ? "bg-indigo-50 text-indigo-700"
-      : "bg-amber-50 text-amber-700";
-
-  const tabs = [
-    { key: "all", label: "All", count: data?.total ?? 0 },
-    { key: "lab", label: "Lab Orders", count: data?.lab ?? 0 },
-    { key: "home", label: "Home Collection", count: data?.home ?? 0 },
-  ];
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl overflow-hidden">
-        {/* Header */}
-        <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">Lab Orders vs Home Collection</h2>
-            
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        {/* Range buttons */}
-<div className="flex gap-2 flex-wrap px-6 pt-4">
-  {rangeOptions.map((r) => (
-    <button
-      key={r}
-      type="button"
-      onClick={() => setRange(r)}
-      className={`px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer ${
-        r === range
-          ? "bg-teal-600 text-white"
-          : "border border-gray-200 text-gray-600 hover:bg-gray-50"
-      }`}
-    >
-      {r}
-    </button>
-  ))}
-</div>
-
-        {/* Summary boxes */}
-        <div className="grid grid-cols-3 gap-3 px-6 pt-4">
-          <div className="rounded-lg bg-gray-50 p-3">
-            <p className="text-xs text-gray-500">Total Orders</p>
-            <p className="text-lg font-bold text-gray-900">{data?.total ?? 0}</p>
-          </div>
-          <div className="rounded-lg bg-teal-50 p-3">
-            <p className="text-xs text-teal-700">Lab Orders</p>
-            <p className="text-lg font-bold text-gray-900">
-              {data?.lab ?? 0} <span className="text-xs font-normal text-gray-500">({data?.labPercentage ?? 0}%)</span>
-            </p>
-          </div>
-          <div className="rounded-lg bg-purple-50 p-3">
-            <p className="text-xs text-purple-700">Home Collection</p>
-            <p className="text-lg font-bold text-gray-900">
-              {data?.home ?? 0} <span className="text-xs font-normal text-gray-500">({data?.homePercentage ?? 0}%)</span>
-            </p>
-          </div>
-        </div>
-
-        {/* Filter tabs */}
-        <div className="flex gap-1 px-4 pt-3">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setFilter(t.key)}
-              className={`px-3 py-2 text-sm font-medium rounded-t-lg transition ${
-                filter === t.key ? "text-teal-600 border-b-2 border-teal-500" : "text-gray-400 hover:text-gray-600"
-              }`}
-            >
-              {t.label} ({t.count})
-            </button>
-          ))}
-        </div>
-
-        {/* Table */}
-        <div className="max-h-[380px] overflow-auto border-t border-gray-100">
-          {loading ? (
-            <div className="py-10 text-center">
-              <div className="inline-block w-5 h-5 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-gray-400 mt-3">Loading…</p>
-            </div>
-          ) : rows.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-10">No orders in this range.</p>
-          ) : (
-            <table className="w-full text-xs">
-              <thead className="bg-gray-50 text-gray-500 sticky top-0">
-                <tr>
-                  <th className="text-left font-medium px-4 py-2">Order #</th>
-                  <th className="text-left font-medium px-2 py-2">Patient</th>
-                  <th className="text-left font-medium px-2 py-2">Type</th>
-                  <th className="text-left font-medium px-2 py-2">Date</th>
-                  <th className="text-left font-medium px-2 py-2">Status</th>
-                  <th className="text-right font-medium px-4 py-2">Bill</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pagedRows.map((r) => (
-  <tr key={r.order_id} className="border-t border-gray-50 hover:bg-gray-50">
-                    <td className="px-4 py-2.5 text-gray-800">#{r.order_id}</td>
-                    <td className="px-2 py-2.5 text-gray-800">
-                      {r.patient_name}
-                      {r.patient_number && <span className="text-gray-400"> · PID {r.patient_number}</span>}
-                    </td>
-                    <td className="px-2 py-2.5">
-                      <span
-                        className={`px-2 py-0.5 rounded-full ${
-                          r.type === "home" ? "bg-purple-50 text-purple-700" : "bg-teal-50 text-teal-700"
-                        }`}
-                      >
-                        {r.type === "home" ? "Home Collection" : "Lab Order"}
-                      </span>
-                    </td>
-                    <td className="px-2 py-2.5 text-gray-500">{formatDate(r.ordered_at)}</td>
-                    <td className="px-2 py-2.5">
-                      <span className={`px-2 py-0.5 rounded-full capitalize ${statusStyle(r.status)}`}>
-                        {String(r.status).replace("_", " ")}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5 text-right text-gray-900 font-medium">
-                      ₹{Number(r.bill_total || 0).toLocaleString("en-IN")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-
-{/* Pagination */}
-{!loading && rows.length > PAGE_SIZE && (
-  <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100">
-    <span className="text-xs text-gray-500">
-      Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, rows.length)} of {rows.length}
-    </span>
-    <div className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={() => setPage((p) => Math.max(1, p - 1))}
-        disabled={currentPage === 1}
-        className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-      >
-        Previous
-      </button>
-      <span className="text-xs text-gray-600">
-        Page {currentPage} of {totalPages}
-      </span>
-      <button
-        type="button"
-        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-        disabled={currentPage === totalPages}
-        className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-      >
-        Next
-      </button>
-    </div>
-  </div>
-)}
-        {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50">
-          <span className="text-sm text-gray-600">
-            Total bill: <span className="font-semibold text-gray-900">₹{totalBill.toLocaleString("en-IN")}</span>
-          </span>
           <button
             type="button"
             onClick={onClose}
@@ -763,8 +588,6 @@ export default function Statistics() {
 
   const [collectionTypes, setCollectionTypes] = useState(null);
   const [collectionTypesLoading, setCollectionTypesLoading] = useState(true);
-  const [collectionRange, setCollectionRange] = useState("Today");
-  const [collectionReportOpen, setCollectionReportOpen] = useState(false); 
 
   const [alerts, setAlerts] = useState(null);
   const [alertsLoading, setAlertsLoading] = useState(true);
@@ -785,6 +608,8 @@ export default function Statistics() {
   const [reportStats, setReportStats] = useState(null);
   const [reportStatsLoading, setReportStatsLoading] = useState(true);
   const [reportRange, setReportRange] = useState("Today");
+
+  const [reportModal, setReportModal] = useState(null); // "patient" | "samples" | "reports" | null
 
   useEffect(() => {
     let cancelled = false;
@@ -892,10 +717,9 @@ useEffect(() => {
 
   useEffect(() => {
     let cancelled = false;
-    setCollectionTypesLoading(true);
     (async () => {
       try {
-        const res = await getStatisticsCollectionTypesApi(collectionRange);
+        const res = await getStatisticsCollectionTypesApi();
         if (!cancelled) setCollectionTypes(res);
       } catch (err) {
         console.error("Failed to load collection types:", err.message);
@@ -906,8 +730,7 @@ useEffect(() => {
     return () => {
       cancelled = true;
     };
-  }, [collectionRange]);
-
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -1164,6 +987,7 @@ useEffect(() => {
           range={patientRange}
           onRangeChange={setPatientRange}
           loading={patientStatsLoading}
+          onViewReport={() => setReportModal("patient")}
         />
 
         <DonutCard
@@ -1177,6 +1001,7 @@ useEffect(() => {
           range={sampleRange}
           onRangeChange={setSampleRange}
           loading={sampleStatsLoading}
+          onViewReport={() => setReportModal("samples")}
         />
 
         <DonutCard
@@ -1190,6 +1015,7 @@ useEffect(() => {
           range={reportRange}
           onRangeChange={setReportRange}
           loading={reportStatsLoading}
+          onViewReport={() => setReportModal("reports")}
         />
       </div>
 
@@ -1217,16 +1043,12 @@ useEffect(() => {
         />
       </div>
 
-            {/* Row 5 — collection type donut + attention-needed alerts */}
+      {/* Row 5 — collection type donut + attention-needed alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <DonutCard
           title="Lab Orders vs Home Collection"
           total={collectionTypesLoading ? "…" : (collectionTypes?.total ?? 0)}
           segments={collectionSegments}
-          range={collectionRange}
-          onRangeChange={setCollectionRange}
-          loading={collectionTypesLoading}
-           onViewReport={() => setCollectionReportOpen(true)}
         />
 
         <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-4">
@@ -1241,21 +1063,24 @@ useEffect(() => {
             </button>
           </div>
           <div className="space-y-3">
-            {[
-              { label: "Critical results flagged today", value: alerts?.criticalResultsToday, icon: AlertTriangle, bg: "bg-red-50", color: "text-red-500" },
-              { label: "Follow-ups due this week", value: alerts?.followUpsDueThisWeek, icon: Clock, bg: "bg-amber-50", color: "text-amber-500" },
-              { label: "Samples delayed", value: alerts?.samplesDelayed, icon: Clock, bg: "bg-orange-50", color: "text-orange-500" },
-            ].map(({ label, value, icon: Icon, bg, color }) => (
-              <div key={label} className="flex items-center gap-3 text-sm">
-                <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center shrink-0`}>
-                  <Icon size={16} className={color} />
-                </div>
-                <span className="text-gray-600 flex-1">{label}</span>
-                <span className="font-semibold text-gray-900">
-                  {alertsLoading ? "…" : (value ?? 0)}
-                </span>
+            <div className="flex items-center gap-3 text-sm">
+              <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+                <AlertTriangle size={16} className="text-red-500" />
               </div>
-            ))}
+              <span className="text-gray-600 flex-1">Critical results flagged today</span>
+              <span className="font-semibold text-gray-900">
+                {alertsLoading ? "…" : (alerts?.criticalResultsToday ?? 0)}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 text-sm">
+              <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+                <Clock size={16} className="text-amber-500" />
+              </div>
+              <span className="text-gray-600 flex-1">Follow-ups due this week</span>
+              <span className="font-semibold text-gray-900">
+                {alertsLoading ? "…" : (alerts?.followUpsDueThisWeek ?? 0)}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -1274,11 +1099,54 @@ useEffect(() => {
         onClose={() => setAttentionModalOpen(false)}
       />
 
-          <CollectionReportModal
-      open={collectionReportOpen}
-      range={collectionRange}
-      onClose={() => setCollectionReportOpen(false)}
-    />
+      <DonutDetailModal
+        title={
+          reportModal === "patient" ? "Patient Mix" :
+          reportModal === "samples" ? "Samples" :
+          reportModal === "reports" ? "Report Status" :
+          null
+        }
+        total={
+          reportModal === "patient" ? (patientStatsLoading ? "…" : patientsInRange) :
+          reportModal === "samples" ? (sampleStatsLoading ? "…" : samplesTotal) :
+          reportModal === "reports" ? (reportStatsLoading ? "…" : reportsTotal) :
+          null
+        }
+        segments={
+          reportModal === "patient" ? patientMixSegments :
+          reportModal === "samples" ? sampleSegments :
+          reportModal === "reports" ? reportSegments :
+          []
+        }
+        footerStat={
+          reportModal === "patient"
+            ? { label: "Total Patients", value: patientStatsLoading ? "…" : patientStats?.totalPatients?.toLocaleString() ?? 0 }
+            : reportModal === "samples"
+            ? { label: "Collected", value: sampleStatsLoading ? "…" : sampleStats?.samplesCollected?.toLocaleString() ?? 0 }
+            : reportModal === "reports"
+            ? { label: "Generated (PDF)", value: reportStatsLoading ? "…" : reportStats?.reportsGenerated?.toLocaleString() ?? 0 }
+            : null
+        }
+        range={
+          reportModal === "patient" ? patientRange :
+          reportModal === "samples" ? sampleRange :
+          reportModal === "reports" ? reportRange :
+          null
+        }
+        onRangeChange={
+          reportModal === "patient" ? setPatientRange :
+          reportModal === "samples" ? setSampleRange :
+          reportModal === "reports" ? setReportRange :
+          null
+        }
+        loading={
+          reportModal === "patient" ? patientStatsLoading :
+          reportModal === "samples" ? sampleStatsLoading :
+          reportModal === "reports" ? reportStatsLoading :
+          false
+        }
+        onClose={() => setReportModal(null)}
+      />
     </div>
   );
 }

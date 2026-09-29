@@ -30,6 +30,25 @@ import OrdersTrendSection from "./OrdersTrendSection";
 
 const rangeOptions = ["Today", "Yesterday", "1 Week", "1 Month", "1 Year"];
 
+// Turns a selected range + a noun into a card label, e.g. "Yesterday's Orders",
+// "This Week's Orders". Falls back to "Today's X" when nothing is selected yet.
+function rangeLabel(range, noun) {
+  switch (range) {
+    case "Yesterday":
+      return `Yesterday's ${noun}`;
+    case "1 Week":
+      return `This Week's ${noun}`;
+    case "1 Month":
+      return `This Month's ${noun}`;
+    case "1 Year":
+      return `This Year's ${noun}`;
+    case "Today":
+    default:
+      return `Today's ${noun}`;
+  }
+}
+
+
 function StatCard({ label, value, icon: Icon, bg, color }) {
   return (
     <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
@@ -995,7 +1014,7 @@ useEffect(() => {
       {/* Row 2 — highlight cards with their own range filters */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <HighlightCard
-                  label="Today's Orders"
+                  label={rangeLabel(ordersRange, "Orders")}
                   value={ordersRangeLoading ? "…" : (ordersRangeCount ?? 0).toLocaleString()}
                   icon={Calendar}
                   bg="bg-blue-50"
@@ -1018,7 +1037,7 @@ useEffect(() => {
         />
       
         <HighlightCard
-          label="Today's New Patients"
+          label={rangeLabel(newPatientsRange, "New Patients")}
           value={newPatientsLoading ? "…" : (newPatientsCount ?? 0).toLocaleString()}
           icon={UserPlus}
           bg="bg-teal-50"

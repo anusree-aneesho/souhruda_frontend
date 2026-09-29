@@ -105,14 +105,6 @@ export default function CancelledCollectionsReport({ onBack }) {
         <p className="rounded-lg bg-red-50 border border-red-100 px-3 py-2 text-sm text-red-600">{error}</p>
       )}
 
-      {data && data.reason_tracked === false && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Cancellation reasons aren't captured when a request is cancelled yet, so that column isn't shown here.
-          Every request below can only be cancelled while it's still unassigned — once a technician is
-          assigned, cancellation is no longer possible.
-        </div>
-      )}
-
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <StatCard
           label="Cancelled Requests"

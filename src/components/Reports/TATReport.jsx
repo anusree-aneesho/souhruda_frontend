@@ -6,6 +6,7 @@ import ReportToolbar from "./shared/ReportToolbar";
 import { todayIso, daysAgoIso } from "./shared/format";
 import { exportToCsv, exportToPdf } from "../../utils/reportExport";
 import { getTatReportApi } from "../../api/api";
+import Pagination from "./shared/Pagination";
 
 function formatHours(h) {
   if (h === null || h === undefined) return "-";
@@ -22,6 +23,8 @@ export default function TATReport({ onBack }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -40,7 +43,14 @@ export default function TATReport({ onBack }) {
     load();
   }, [load]);
 
+  useEffect(() => {
+  setPage(1);
+  }, [dateFrom, dateTo]);
+
   const rows = data?.by_test || [];
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const headers = ["Test", "Samples", "Avg TAT (hrs)", "Min TAT (hrs)", "Max TAT (hrs)"];
   const csvRows = rows.map((r) => [
     r.test_name, r.sample_count, r.avg_tat_hours, r.min_tat_hours, r.max_tat_hours,
@@ -100,7 +110,7 @@ export default function TATReport({ onBack }) {
                   </td>
                 </tr>
               ) : (
-                rows.map((r, i) => (
+                pagedRows.map((r, i) => (
                   <tr key={i} className="border-b border-gray-50 last:border-0">
                     <td className="px-4 py-3 text-gray-900 font-medium">{r.test_name}</td>
                     <td className="px-4 py-3 text-gray-500">{r.sample_count}</td>
@@ -113,6 +123,14 @@ export default function TATReport({ onBack }) {
             </tbody>
           </table>
         </div>
+        {!loading && rows.length > PAGE_SIZE && (
+          <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
+            <span className="text-xs text-gray-500">
+              Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, rows.length)} of {rows.length}
+            </span>
+            <Pagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
+          </div>
+        )}
       </div>
     </div>
   );

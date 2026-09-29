@@ -47,6 +47,25 @@ export default function Report() {
   const patient = order?.patient || { name: "Aaa ff", age: "11", gender: "Male", regNo: "200128355" };
   const tests = order?.tests || [];
 
+  const DISPLAY_TZ = "Asia/Kolkata";
+
+  function toDate(raw) {
+    if (!raw) return null;
+    const hasZone = /(Z|[+-]\d{2}:?\d{2})$/i.test(raw);
+    const d = new Date(hasZone ? raw : raw.replace(" ", "T") + "Z");
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  function formatDateTime(value) {
+    const d = value instanceof Date ? value : toDate(value);
+    if (!d) return "";
+    return d.toLocaleString("en-IN", {
+      timeZone: DISPLAY_TZ,
+      day: "2-digit", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    });
+  }
+
   function formatReportDate(raw) {
     if (!raw) return "16 Sep 2026";
     if (raw.includes(" at ")) return raw.split(" at ")[0];
@@ -61,7 +80,7 @@ export default function Report() {
     });
   }
 
-  const reportDate = formatReportDate(order?.orderedAt);
+  const reportDate = formatDateTime(order?.orderedAt) || "—";
 
   
     useEffect(() => {
@@ -299,7 +318,7 @@ export default function Report() {
     ${labInfo.footer_note ? `<div class="disclaimer-strip">${labInfo.footer_note}</div>` : `<div class="disclaimer-strip">Reports are not valid for medico-legal purposes.</div>`}
 
     <div class="footer-meta">
-        <span>Generated on: ${new Date().toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+        <span>Generated on: ${formatDateTime(new Date())}</span>
         <span>Page 1 of 1</span>
     </div>
 
@@ -511,16 +530,7 @@ export default function Report() {
 
         {/* ── Footer meta + band ─────────────────────────────────── */}
         <div className="flex justify-between text-[8.5px] text-gray-400 border-t border-gray-200 px-6 py-1 mt-auto">
-          <span>
-            Generated on:{" "}
-            {new Date().toLocaleString("en-IN", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </span>
+          <span>Generated on: {formatDateTime(new Date())}</span>
           <span>Page 1 of 1</span>
         </div>
 

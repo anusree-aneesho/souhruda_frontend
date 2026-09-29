@@ -978,7 +978,7 @@ useEffect(() => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reportRange]);
 
   const handleViewAll = async (type) => {
     setViewAllType(type);

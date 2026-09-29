@@ -803,14 +803,17 @@ export default function Statistics() {
       cancelled = true;
     };
   }, []);
-  const newPatientsRangeKeyMap = {
+  // NEW
+const newPatientsRangeKeyMap = {
+  Today: "today",
   Yesterday: "yesterday",
   "1 Week": "week",
   "1 Month": "month",
   "1 Year": "year",
 };
 
-const [newPatientsRange, setNewPatientsRange] = useState("Yesterday");
+const [newPatientsRange, setNewPatientsRange] = useState(null);
+const [hasSwitchedNewPatientsRange, setHasSwitchedNewPatientsRange] = useState(false);
 const [newPatientsCount, setNewPatientsCount] = useState(null);
 const [newPatientsLoading, setNewPatientsLoading] = useState(true);
 
@@ -819,7 +822,9 @@ useEffect(() => {
   setNewPatientsLoading(true);
   (async () => {
     try {
-      const res = await getNewPatientsForRangeApi(newPatientsRangeKeyMap[newPatientsRange]);
+      const res = await getNewPatientsForRangeApi(
+        newPatientsRangeKeyMap[newPatientsRange] ?? "today"
+      );
       if (!cancelled) setNewPatientsCount(res.count);
     } catch (err) {
       console.error("Failed to load new patients for range:", err.message);
@@ -831,6 +836,7 @@ useEffect(() => {
     cancelled = true;
   };
 }, [newPatientsRange]);
+
   const rangeKeyMap = {
     Today: "today",
     Yesterday: "yesterday",
@@ -1139,15 +1145,20 @@ useEffect(() => {
           color="text-green-600"
           options={rangeOptions.slice(1)}
         />
+      
         <HighlightCard
           label="Today's New Patients"
           value={newPatientsLoading ? "…" : (newPatientsCount ?? 0).toLocaleString()}
           icon={UserPlus}
           bg="bg-teal-50"
           color="text-teal-600"
-          options={rangeOptions.slice(1)}
+          options={rangeOptions}
           active={newPatientsRange}
-          onSelect={setNewPatientsRange}
+          onSelect={(r) => {
+            setNewPatientsRange(r);
+            setHasSwitchedNewPatientsRange(true);
+          }}
+          showToday={hasSwitchedNewPatientsRange}
         />
       </div>
 

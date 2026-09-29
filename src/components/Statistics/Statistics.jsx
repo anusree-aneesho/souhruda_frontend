@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getOrdersForRangeApi, getNewPatientsForRangeApi } from "../../api/api";
+import CollectionReportModal from "./CollectionReportModal";
 import {
   getStatisticsSummaryApi,
   getStatisticsRankingsApi,
@@ -21,6 +22,8 @@ import {
   AlertTriangle,
   Users,
   UserPlus,
+    FlaskConical,
+
 } from "lucide-react";
 
 import OrdersTrendSection from "./OrdersTrendSection";
@@ -418,9 +421,8 @@ function RankingsModal({ type, data, loading, onClose }) {
 // AttentionModal — "View All" popup for Attention Needed
 // Two tabs: Critical Results, Follow-ups Due
 // ─────────────────────────────────────────────────────────────
-
-function AttentionModal({ open, alerts, loading, onClose }) {
-  const [tab, setTab] = useState("critical");
+function AttentionModal({ open, alerts, loading, initialTab = "critical", onClose }) {
+  const [tab, setTab] = useState(initialTab);
 
   if (!open) {
     return null;
@@ -428,6 +430,7 @@ function AttentionModal({ open, alerts, loading, onClose }) {
 
   const criticalResults = alerts?.criticalResults ?? [];
   const followUps = alerts?.followUps ?? [];
+  const samplesDelayedList = alerts?.samplesDelayedList ?? [];
 
   const formatDate = (value) => {
     if (!value) return "-";
@@ -443,10 +446,115 @@ function AttentionModal({ open, alerts, loading, onClose }) {
     }
   };
 
+  const tabs = [
+    { key: "critical", label: "Critical Results", count: criticalResults.length, active: "text-red-600 border-red-500" },
+    { key: "followups", label: "Follow-ups Due", count: followUps.length, active: "text-amber-600 border-amber-500" },
+    { key: "samples", label: "Samples Delayed", count: samplesDelayedList.length, active: "text-orange-600 border-orange-500" },
+  ];
+
+  const Empty = ({ text }) => <p className="text-sm text-gray-400 text-center py-10">{text}</p>;
+
+  const renderContent = () => {
+    if (tab === "critical") {
+      return criticalResults.length === 0 ? (
+        <Empty text="No critical results flagged today." />
+      ) : (
+        <div className="space-y-1">
+          {criticalResults.map((row, index) => (
+            <div
+              key={`${row.order_id}-${row.test_name}-${index}`}
+              className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition"
+            >
+              <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+                <AlertTriangle size={15} className="text-red-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-800 truncate">
+                  {row.patient_name}
+                  {row.patient_number && (
+                    <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
+                  )}
+                </p>
+                <p className="text-xs text-gray-400 truncate">
+                  {row.test_name} · Order #{row.order_id}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className={`text-sm font-semibold ${row.flag === "high" ? "text-red-600" : "text-blue-600"}`}>
+                  {row.result} {row.result_unit || ""}
+                </p>
+                <p className="text-[11px] text-gray-400 uppercase">{row.flag}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (tab === "followups") {
+      return followUps.length === 0 ? (
+        <Empty text="No follow-ups due this week." />
+      ) : (
+        <div className="space-y-1">
+          {followUps.map((row) => (
+            <div
+              key={row.id}
+              className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition"
+            >
+              <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+                <Clock size={15} className="text-amber-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-800 truncate">
+                  {row.patient_name}
+                  {row.patient_number && (
+                    <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
+                  )}
+                </p>
+                <p className="text-xs text-gray-400 truncate">{row.test_name ?? "Follow-up"}</p>
+              </div>
+              <span className="text-xs text-gray-500 shrink-0">{formatDate(row.due_at)}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // samples delayed
+    return samplesDelayedList.length === 0 ? (
+      <Empty text="No delayed samples." />
+    ) : (
+      <div className="space-y-1">
+        {samplesDelayedList.map((row) => (
+          <div
+            key={row.order_id}
+            className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition"
+          >
+            <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
+              <Clock size={15} className="text-orange-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-gray-800 truncate">
+                {row.patient_name}
+                {row.patient_number && (
+                  <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
+                )}
+              </p>
+              <p className="text-xs text-gray-400 truncate">Order #{row.order_id}</p>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-xs text-gray-500">{formatDate(row.sample_collected_at)}</p>
+              <p className="text-[11px] text-gray-400">Collected</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
-
         {/* Header */}
         <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100">
           <h2 className="text-lg font-bold text-gray-900">Attention Needed</h2>
@@ -462,29 +570,19 @@ function AttentionModal({ open, alerts, loading, onClose }) {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 px-4 pt-3">
-          <button
-            type="button"
-            onClick={() => setTab("critical")}
-            className={`px-3 py-2 text-sm font-medium rounded-t-lg transition ${
-              tab === "critical"
-                ? "text-red-600 border-b-2 border-red-500"
-                : "text-gray-400 hover:text-gray-600"
-            }`}
-          >
-            Critical Results ({criticalResults.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("followups")}
-            className={`px-3 py-2 text-sm font-medium rounded-t-lg transition ${
-              tab === "followups"
-                ? "text-amber-600 border-b-2 border-amber-500"
-                : "text-gray-400 hover:text-gray-600"
-            }`}
-          >
-            Follow-ups Due ({followUps.length})
-          </button>
+        <div className="flex gap-1 px-4 pt-3 overflow-x-auto">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              className={`px-3 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition ${
+                tab === t.key ? t.active : "text-gray-400 border-transparent hover:text-gray-600"
+              }`}
+            >
+              {t.label} ({t.count})
+            </button>
+          ))}
         </div>
 
         {/* Content */}
@@ -494,71 +592,8 @@ function AttentionModal({ open, alerts, loading, onClose }) {
               <div className="inline-block w-5 h-5 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
               <p className="text-sm text-gray-400 mt-3">Loading…</p>
             </div>
-          ) : tab === "critical" ? (
-            criticalResults.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-10">No critical results flagged today.</p>
-            ) : (
-              <div className="space-y-1">
-                {criticalResults.map((row, index) => (
-                  <div
-                    key={`${row.order_id}-${row.test_name}-${index}`}
-                    className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
-                      <AlertTriangle size={15} className="text-red-500" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-800 truncate">
-                        {row.patient_name}
-                        {row.patient_number && (
-                          <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
-                        )}
-                      </p>
-                      <p className="text-xs text-gray-400 truncate">
-                        {row.test_name} · Order #{row.order_id}
-                      </p>
-                    </div>  
-                    <div className="text-right shrink-0">
-                      <p
-                        className={`text-sm font-semibold ${
-                          row.flag === "high" ? "text-red-600" : "text-blue-600"
-                        }`}
-                      >
-                        {row.result} {row.result_unit || ""}
-                      </p>
-                      <p className="text-[11px] text-gray-400 uppercase">{row.flag}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )
-          ) : followUps.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-10">No follow-ups due this week.</p>
           ) : (
-            <div className="space-y-1">
-              {followUps.map((row) => (
-                <div
-                  key={row.id}
-                  className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
-                    <Clock size={15} className="text-amber-500" />
-                  </div>
-                 <div className="flex-1 min-w-0">
-  <p className="text-sm text-gray-800 truncate">
-    {row.patient_name}
-    {row.patient_number && (
-      <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
-    )}
-  </p>
-  <p className="text-xs text-gray-400 truncate">
-    {row.test_name} · Order #{row.order_id}
-  </p>
-</div>
-                  <span className="text-xs text-gray-500 shrink-0">{formatDate(row.due_at)}</span>
-                </div>
-              ))}
-            </div>
+            renderContent()
           )}
         </div>
 
@@ -576,7 +611,6 @@ function AttentionModal({ open, alerts, loading, onClose }) {
     </div>
   );
 }
-
 export default function Statistics() {
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
@@ -592,6 +626,7 @@ export default function Statistics() {
   const [alerts, setAlerts] = useState(null);
   const [alertsLoading, setAlertsLoading] = useState(true);
   const [attentionModalOpen, setAttentionModalOpen] = useState(false);
+  const [attentionTab, setAttentionTab] = useState("critical"); 
 
   const [viewAllType, setViewAllType] = useState(null);
   const [allRankings, setAllRankings] = useState(null);
@@ -611,6 +646,10 @@ export default function Statistics() {
 
   const [reportModal, setReportModal] = useState(null); // "patient" | "samples" | "reports" | null
 
+  const [collectionRange, setCollectionRange] = useState("Today");
+  const [hasSwitchedCollectionRange, setHasSwitchedCollectionRange] = useState(false);
+  const [collectionReportOpen, setCollectionReportOpen] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -621,7 +660,7 @@ export default function Statistics() {
         if (!cancelled) setSummaryError(err.message || "Couldn't load order statistics.");
         console.error("Failed to load statistics summary:", err.message);
       } finally {
-        if (!cancelled) setSummaryLoading(false);
+        setSummaryLoading(false);
       }
     })();
     return () => {
@@ -723,9 +762,10 @@ useEffect(() => {
 
   useEffect(() => {
     let cancelled = false;
+    setCollectionTypesLoading(true);
     (async () => {
       try {
-        const res = await getStatisticsCollectionTypesApi();
+        const res = await getStatisticsCollectionTypesApi(collectionRange);
         if (!cancelled) setCollectionTypes(res);
       } catch (err) {
         console.error("Failed to load collection types:", err.message);
@@ -736,7 +776,7 @@ useEffect(() => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [collectionRange]);
 
   useEffect(() => {
     let cancelled = false;
@@ -833,7 +873,7 @@ useEffect(() => {
       bg: "bg-blue-50",
       color: "text-blue-600",
     },
-    { label: "Total Revenue", value: "₹15,12,295.93", icon: IndianRupee, bg: "bg-green-50", color: "text-green-600" },
+    { label: "Total Revenue", value: "₹15,12", icon: IndianRupee, bg: "bg-green-50", color: "text-green-600" },
     {
       label: "Total Patients",
       value: patientStatsLoading ? "…" : (patientStats?.totalPatients ?? 0).toLocaleString(),
@@ -855,6 +895,14 @@ useEffect(() => {
       bg: "bg-amber-50",
       color: "text-amber-600",
     },
+
+    {
+  label: "Sample Collected",
+  value: summaryLoading ? "…" : (summary?.sampleCollectedOrders ?? 0).toLocaleString(),
+  icon: FlaskConical,
+  bg: "bg-indigo-50",
+  color: "text-indigo-600",
+},
     {
       label: "Cancelled Orders",
       value: summaryLoading ? "…" : (summary?.cancelledOrders ?? 0).toLocaleString(),
@@ -908,7 +956,7 @@ useEffect(() => {
   // Walk-in vs Home Collection — sourced from /statistics/collection-types
   const collectionSegments = [
     {
-      label: "Lab Oders",
+      label: "Lab Orders",
       count: collectionTypes?.walkIn ?? 0,
       pct: collectionTypes?.walkInPercentage ?? 0,
       colorHex: "#0D9488",
@@ -938,7 +986,7 @@ useEffect(() => {
       )}
 
       {/* Row 1 — top-level totals */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         {statCards.map((c) => (
           <StatCard key={c.label} {...c} />
         ))}
@@ -1056,11 +1104,18 @@ useEffect(() => {
 
       {/* Row 5 — collection type donut + attention-needed alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <DonutCard
-          title="Lab Orders vs Home Collection"
-          total={collectionTypesLoading ? "…" : (collectionTypes?.total ?? 0)}
-          segments={collectionSegments}
-        />
+<DonutCard
+  title="Lab Orders vs Home Collection"
+  total={collectionTypesLoading ? "…" : (collectionTypes?.total ?? 0)}
+  segments={collectionSegments}
+  range={collectionRange}
+  onRangeChange={(r) => {
+    setCollectionRange(r);
+    setHasSwitchedCollectionRange(true);
+  }}
+  loading={collectionTypesLoading}
+  onViewReport={() => setCollectionReportOpen(true)}
+/>
 
         <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-4">
           <div className="flex items-center justify-between">
@@ -1073,26 +1128,23 @@ useEffect(() => {
               View All
             </button>
           </div>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 text-sm">
-              <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
-                <AlertTriangle size={16} className="text-red-500" />
-              </div>
-              <span className="text-gray-600 flex-1">Critical results flagged today</span>
-              <span className="font-semibold text-gray-900">
-                {alertsLoading ? "…" : (alerts?.criticalResultsToday ?? 0)}
-              </span>
-            </div>
-            <div className="flex items-center gap-3 text-sm">
-              <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
-                <Clock size={16} className="text-amber-500" />
-              </div>
-              <span className="text-gray-600 flex-1">Follow-ups due this week</span>
-              <span className="font-semibold text-gray-900">
-                {alertsLoading ? "…" : (alerts?.followUpsDueThisWeek ?? 0)}
-              </span>
-            </div>
-          </div>
+<div className="space-y-3">
+  {[
+    { label: "Critical results flagged today", value: alerts?.criticalResultsToday, icon: AlertTriangle, bg: "bg-red-50", color: "text-red-500" },
+    { label: "Follow-ups due this week", value: alerts?.followUpsDueThisWeek, icon: Clock, bg: "bg-amber-50", color: "text-amber-500" },
+    { label: "Samples delayed", value: alerts?.samplesDelayed, icon: Clock, bg: "bg-orange-50", color: "text-orange-500" },
+  ].map(({ label, value, icon: Icon, bg, color }) => (
+    <div key={label} className="flex items-center gap-3 text-sm">
+      <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center shrink-0`}>
+        <Icon size={16} className={color} />
+      </div>
+      <span className="text-gray-600 flex-1">{label}</span>
+      <span className="font-semibold text-gray-900">
+        {alertsLoading ? "…" : (value ?? 0)}
+      </span>
+    </div>
+  ))}
+</div>
         </div>
       </div>
 
@@ -1157,6 +1209,15 @@ useEffect(() => {
           false
         }
         onClose={() => setReportModal(null)}
+      />
+      <CollectionReportModal
+        open={collectionReportOpen}
+        range={collectionRange}
+        onRangeChange={(r) => {
+          setCollectionRange(r);
+          setHasSwitchedCollectionRange(true);
+        }}
+        onClose={() => setCollectionReportOpen(false)}
       />
     </div>
   );

@@ -49,10 +49,13 @@ export default function Report() {
 
   const DISPLAY_TZ = "Asia/Kolkata";
 
+  // Accepts "2026-09-16T10:30:00Z", "2026-09-16 10:30:00Z", "2026-09-16 10:30:00"
+  // (assumed UTC, matching the API), or any value the Date constructor already understands.
   function toDate(raw) {
     if (!raw) return null;
-    const hasZone = /(Z|[+-]\d{2}:?\d{2})$/i.test(raw);
-    const d = new Date(hasZone ? raw : raw.replace(" ", "T") + "Z");
+    const normalized = String(raw).replace(" ", "T");
+    const hasZone = /(Z|[+-]\d{2}:?\d{2})$/i.test(normalized);
+    const d = new Date(hasZone ? normalized : normalized + "Z");
     return Number.isNaN(d.getTime()) ? null : d;
   }
 
@@ -66,21 +69,13 @@ export default function Report() {
     });
   }
 
-  function formatReportDate(raw) {
-    if (!raw) return "16 Sep 2026";
-    if (raw.includes(" at ")) return raw.split(" at ")[0];
-    const parsed = new Date(raw);
-    if (Number.isNaN(parsed.getTime())) return raw;
-    return parsed.toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
+  // The API/mock data has been seen using both camelCase and snake_case for
+  // these timestamps, so accept either rather than silently showing "—".
+  const rawOrderedAt = order?.orderedAt ?? order?.ordered_at;
+  const rawCompletedAt = order?.completedAt ?? order?.completed_at;
 
-  const reportDate = formatDateTime(order?.orderedAt) || "—";
+  const registered = formatDateTime(rawOrderedAt) || "—";
+  const reportDate = formatDateTime(rawCompletedAt) || "—";
 
   
     useEffect(() => {
@@ -306,7 +301,7 @@ export default function Report() {
         <div class="col right-col">
             <div><strong>Order No:</strong> ${orderId}</div>
             <div><strong>Ref. By:</strong> ${order?.referredBy || "Self"}</div>
-            <div>Registered: ${reportDate}</div>
+            <div>Registered: ${registered}</div>
             <div>Reported: ${reportDate}</div>
         </div>
     </div>
@@ -452,7 +447,7 @@ export default function Report() {
           <div className="flex-1 text-right text-[10px] text-gray-600 leading-snug">
             <p><strong className="text-gray-900 font-semibold">Order No:</strong> {orderId}</p>
             <p><strong className="text-gray-900 font-semibold">Ref. By:</strong> {order?.referredBy || "Self"}</p>
-            <p>Registered: {reportDate}</p>
+            <p>Registered: {registered}</p>
             <p>Reported: {reportDate}</p>
           </div>
         </div>

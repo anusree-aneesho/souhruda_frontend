@@ -45,6 +45,9 @@ function mapOrder(o) {
 };
     }),
     orderedAt: o.ordered_at,
+    // The PDF/Blade report already falls back to orderedAt when there's no
+    // completion time yet, so the in-app report does the same here.
+    completedAt: o.completed_at || o.ordered_at,
     paymentDone: Boolean(o.payment_received),
     referredBy: o.referred_by || "Self",
     billTotal: o.bill_total != null ? Number(o.bill_total) : null,
@@ -103,6 +106,7 @@ export default function OrderDetail() {
               patient: mapped.patient,
               tests: mapped.tests,
               orderedAt: mapped.orderedAt,
+              completedAt: mapped.completedAt,
               results: Object.fromEntries(mapped.tests.map((t) => [t.id, t.result || ""])),
               paymentDone: mapped.paymentDone,
               referredBy: mapped.referredBy,
@@ -169,10 +173,16 @@ export default function OrderDetail() {
         result_value: value || null,
       }));
 
-      await completeOrderApi(orderId, resultsPayload);
+      const res = await completeOrderApi(orderId, resultsPayload);
+      // Prefer the server's own completion timestamp when the response includes
+      // one; otherwise "now" is correct since the order was just marked complete.
+      const justCompletedAt = res?.data?.completed_at || new Date().toISOString();
+
       navigate(`/lab-orders/${orderId}/report`, {
         state: {
-          patient, tests, orderedAt, results, paymentDone,
+          patient, tests, orderedAt,
+          completedAt: justCompletedAt,
+          results, paymentDone,
           referredBy: order?.referredBy || "Self", billTotal, homeVisitFee,
           justCompleted: { orderId, patientName: patient?.name }, // ADDED
         }

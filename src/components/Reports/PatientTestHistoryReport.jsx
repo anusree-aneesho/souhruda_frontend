@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  ArrowLeft,
   Search,
   History,
   FlaskConical,
@@ -8,6 +7,7 @@ import {
   Receipt,
   UserSearch,
 } from "lucide-react";
+import ReportToolbar from "./shared/ReportToolbar";
 import { todayIso, daysAgoIso } from "./shared/format";
 import { exportToCsv, exportToPdf } from "../../utils/reportExport";
 import {
@@ -200,16 +200,24 @@ export default function PatientTestHistoryReport({ onBack }) {
     ? `Patient Test History — ${patient.name} (${patient.id})`
     : "Patient Test History";
 
+  // Export buttons stay clickable at all times (ReportToolbar has no disabled
+  // state for them) — these guards just no-op until a patient with rows is loaded.
+  const canExport = Boolean(patient) && csvRows.length > 0;
+
   return (
     <div className="space-y-6">
-      {/* Back */}
-      <button
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 w-fit"
-      >
-        <ArrowLeft size={16} />
-        Back to Reports
-      </button>
+      <ReportToolbar
+        onBack={onBack}
+        fields={[
+          { label: "Date From", value: dateFrom, max: dateTo, onChange: setDateFrom },
+          { label: "Date To", value: dateTo, min: dateFrom, onChange: setDateTo },
+        ]}
+        onExportPdf={() => canExport && exportToPdf(exportTitle, headers, csvRows)}
+        onExportCsv={() =>
+          canExport &&
+          exportToCsv(`patient-test-history-${patient?.id ?? "report"}`, headers, csvRows)
+        }
+      />
 
       {/* Header */}
       <div>
@@ -222,114 +230,58 @@ export default function PatientTestHistoryReport({ onBack }) {
         </p>
       </div>
 
-      {/* Search + date filters */}
+      {/* Patient search */}
       <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">
-              Search Patient
-            </label>
+        <label className="block text-xs font-medium text-gray-500 mb-1.5">
+          Search Patient
+        </label>
 
-            <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 focus-within:border-teal-500 focus-within:ring-1 focus-within:ring-teal-500">
-              <Search size={15} className="text-gray-400 shrink-0" />
+        <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 focus-within:border-teal-500 focus-within:ring-1 focus-within:ring-teal-500 sm:max-w-md">
+          <Search size={15} className="text-gray-400 shrink-0" />
 
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by patient name, ID or phone..."
-                className="flex-1 text-sm outline-none min-w-0"
-              />
-            </div>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by patient name, ID or phone..."
+            className="flex-1 text-sm outline-none min-w-0"
+          />
+        </div>
 
-            {search.trim() && (
-              <div className="mt-2 rounded-lg border border-gray-100 bg-white shadow-md overflow-hidden">
-                {searching && results.length === 0 ? (
-                  <div className="px-3 py-3 text-sm text-gray-400">
-                    Searching…
-                  </div>
-                ) : results.length === 0 ? (
-                  <div className="px-3 py-3 text-sm text-gray-400">
-                    No patients found.
-                  </div>
-                ) : (
-                  results.map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => selectPatient(p)}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-gray-50"
-                    >
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-50 text-teal-700 text-xs font-semibold">
-                        {getInitials(p.name)}
-                      </span>
-
-                      <span>
-                        <span className="block text-sm font-medium text-gray-900">
-                          {p.name}
-                        </span>
-
-                        <span className="block text-xs text-gray-400">
-                          {p.id} · {p.phone ?? "—"}
-                        </span>
-                      </span>
-                    </button>
-                  ))
-                )}
+        {search.trim() && (
+          <div className="mt-2 rounded-lg border border-gray-100 bg-white shadow-md overflow-hidden sm:max-w-md">
+            {searching && results.length === 0 ? (
+              <div className="px-3 py-3 text-sm text-gray-400">
+                Searching…
               </div>
+            ) : results.length === 0 ? (
+              <div className="px-3 py-3 text-sm text-gray-400">
+                No patients found.
+              </div>
+            ) : (
+              results.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => selectPatient(p)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-gray-50 cursor-pointer"
+                >
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-50 text-teal-700 text-xs font-semibold">
+                    {getInitials(p.name)}
+                  </span>
+
+                  <span>
+                    <span className="block text-sm font-medium text-gray-900">
+                      {p.name}
+                    </span>
+
+                    <span className="block text-xs text-gray-400">
+                      {p.id} · {p.phone ?? "—"}
+                    </span>
+                  </span>
+                </button>
+              ))
             )}
           </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">
-              Date From
-            </label>
-
-            <input
-              type="date"
-              value={dateFrom}
-              max={dateTo}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">
-              Date To
-            </label>
-
-            <input
-              type="date"
-              value={dateTo}
-              min={dateFrom}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => exportToPdf(exportTitle, headers, csvRows)}
-              disabled={!patient || csvRows.length === 0}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Export PDF
-            </button>
-
-            <button
-              onClick={() =>
-                exportToCsv(
-                  `patient-test-history-${patient?.id ?? "report"}`,
-                  headers,
-                  csvRows
-                )
-              }
-              disabled={!patient || csvRows.length === 0}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Export Excel
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Error */}

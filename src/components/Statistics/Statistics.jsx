@@ -892,7 +892,7 @@ useEffect(() => {
       bg: "bg-blue-50",
       color: "text-blue-600",
     },
-    { label: "Total Revenue", value: "₹15,12", icon: IndianRupee, bg: "bg-green-50", color: "text-green-600" },
+    { label: "Total Revenue", value: "₹150000", icon: IndianRupee, bg: "bg-green-50", color: "text-green-600" },
     {
       label: "Total Patients",
       value: patientStatsLoading ? "…" : (patientStats?.totalPatients ?? 0).toLocaleString(),

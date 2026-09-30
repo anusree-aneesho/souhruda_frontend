@@ -55,7 +55,7 @@ export default function TestsQuickTable({ onViewAll }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50/80 border-b border-gray-100 text-left text-xs font-semibold text-gray-500">
-              <th className="px-4 py-3 w-12">#</th>
+              <th className="px-4 py-3 w-12">No.</th>
               <th className="px-4 py-3">Test</th>
               <th className="px-4 py-3">Category</th>
               <th className="px-4 py-3 text-right">Volume</th>

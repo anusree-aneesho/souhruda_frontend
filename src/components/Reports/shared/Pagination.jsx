@@ -9,8 +9,7 @@ export default function Pagination({ page, totalPages, onPageChange }) {
   if (totalPages <= 1) return null;
 
   const btnBase =
-    "h-7 w-7 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent";
-
+  "h-7 w-7 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent";
   return (
     <div className="flex items-center gap-2 mr-14 sm:mr-16">
       <button

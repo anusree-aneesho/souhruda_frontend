@@ -299,7 +299,7 @@ export default function StaffManagement() {
       {confirmingRemove && (
         <ConfirmModal
           title="Remove Staff"
-          message={`Remove ${confirmingRemove.name}? This can't be undone.`}
+          message={`Are you sure you want to remove ${confirmingRemove.name} (${confirmingRemove.role})?`}
           confirmLabel="Remove"
           cancelLabel="Keep Staff"
           danger

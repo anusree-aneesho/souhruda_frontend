@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 export default function OrderDetailHeader({ patientName, orderId, regNo, age, gender, orderedAt, onDelete }) {
   return (
     <div>
-      <Link to="/lab-orders" className="text-sm text-teal-600 font-medium hover:underline">
+      <Link to="/lab-orders" className="text-sm text-teal-600 font-medium hover:underline cursor-pointer">
         ← Back to orders
       </Link>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-2">

@@ -57,7 +57,7 @@ export default function BranchQuickTable({ onViewAll }) {
         </div>
         <button
           onClick={onViewAll}
-          className="flex items-center gap-1 text-sm text-teal-600 hover:text-teal-700 font-medium"
+          className="flex items-center gap-1 text-sm text-teal-600 hover:text-teal-700 font-medium cursor-pointer"
         >
           View Full Report
           <ArrowRight size={14} />

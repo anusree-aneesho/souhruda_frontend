@@ -3,6 +3,7 @@ import { getDoctorsApi, deleteDoctorApi } from "../../../api/api";
 import AddDoctorModal from "./modals/AddDoctorModal";
 import Toast from "../../common/Toast/Toast";
 import { useToast } from "../../common/Toast/useToast";
+import ConfirmModal from "../../Patients/modals/ConfirmModal";
 import {
   Search,
   Plus,
@@ -24,6 +25,7 @@ export default function Doctors() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingDoctor, setEditingDoctor] = useState(null);
+  const [confirmingRemove, setConfirmingRemove] = useState(null); 
 
   const fetchDoctors = async (pageNum = 1) => {
     setLoading(true);
@@ -38,11 +40,16 @@ export default function Doctors() {
     fetchDoctors(1);
   }, []);
 
-  const handleDelete = async (id) => {
-    if (!confirm("Remove this doctor?")) return;
+  const handleDelete = (id) => {
     const target = doctors.find((d) => d.id === id);
+    setConfirmingRemove(target);
+  };
+
+  const confirmRemove = async () => {
+    const target = confirmingRemove;
+    setConfirmingRemove(null);
     try {
-      await deleteDoctorApi(id);
+      await deleteDoctorApi(target.id);
       showToast(`Doctor ${target?.name || ""} was removed.`, "success");
       fetchDoctors(page);
     } catch (err) {
@@ -225,6 +232,18 @@ export default function Doctors() {
           </div>
         )}
       </div>
+
+      {confirmingRemove && (
+      <ConfirmModal
+        title="Remove Doctor"
+        message={`Are you sure you want to remove Dr. ${confirmingRemove.name}?`}
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        danger
+        onConfirm={confirmRemove}
+        onClose={() => setConfirmingRemove(null)}
+      />
+    )}
 
       {(showAddModal || editingDoctor) && (
         <AddDoctorModal

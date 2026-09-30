@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../Context/AuthContext";
 import { Bell, LogOut, KeyRound } from "lucide-react";
 import { requestProfilePasswordResetApi } from "../../../api/api";
+import ConfirmModal from "../../Patients/modals/ConfirmModal";
 
 function useLiveClock() {
   const [now, setNow] = useState(new Date());
@@ -29,6 +30,7 @@ export default function TopbarActions() {
   const menuRef = useRef(null);
   const [sendingReset, setSendingReset] = useState(false);
   const [resetMessage, setResetMessage] = useState("");
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -101,7 +103,10 @@ export default function TopbarActions() {
             )}
 
             <button
-              onClick={handleLogout}
+              onClick={() => {
+                setMenuOpen(false);
+                setConfirmingLogout(true);
+              }}
               className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
             >
               <LogOut size={15} />
@@ -110,6 +115,21 @@ export default function TopbarActions() {
           </div>
         )}
       </div>
+
+      {confirmingLogout && (
+        <ConfirmModal
+          title="Log Out"
+          message="Are you sure you want to log out?"
+          confirmLabel="Log Out"
+          cancelLabel="Cancel"
+          danger
+          onConfirm={() => {
+            setConfirmingLogout(false);
+            handleLogout();
+          }}
+          onClose={() => setConfirmingLogout(false)}
+        />
+      )}
     </div>
   );
 }

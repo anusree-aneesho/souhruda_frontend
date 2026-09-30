@@ -14,7 +14,7 @@ export default function LabOrderRow({ orderId, patient, regNo, tests, status, da
       <td className="py-3 text-right">
         <button
           onClick={() => onOpen({ orderId, patient, regNo, tests, status, date, bill, rawStatus, testNames })}
-          className="text-sm text-teal-600 font-medium hover:underline"
+          className="text-sm text-teal-600 font-medium hover:underline cursor-pointer"
         >
           Open →
         </button>

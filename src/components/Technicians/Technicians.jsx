@@ -5,6 +5,7 @@ import TechniciansSearch from "./TechniciansSearch";
 import TechniciansTable from "./TechniciansTable/TechniciansTable";
 import TechnicianCard from "./TechniciansTable/TechnicianCard";
 import CreateTechnicianModal from "./modals/CreateTechnicianModal";
+import ConfirmModal from "../Patients/modals/ConfirmModal";
 import Toast from "../common/Toast/Toast";
 import { useToast } from "../common/Toast/useToast";
 import { useAuth } from "../../Context/AuthContext";
@@ -53,6 +54,8 @@ export default function Technicians() {
   const [search, setSearch] = useState("");
   const [modalState, setModalState] = useState(null); // null | { editingTechnician: null | technician }
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [removingTechnician, setRemovingTechnician] = useState(null); // technician pending removal, or null
+  const [removeError, setRemoveError] = useState(null);
   const { toast, showToast, hideToast } = useToast();
 
   const loadTechnicians = useCallback(() => {
@@ -116,17 +119,24 @@ export default function Technicians() {
     setShowCreateModal(false);
   }
 
-  async function handleRemoveTechnician(tech) {
+  function handleRemoveTechnician(tech) {
     if (!canManage) return; // safety net in case the button is ever rendered
+    setRemoveError(null);
+    setRemovingTechnician(tech);
+  }
 
-    if (!window.confirm(`Remove "${tech.name}"? This can't be undone.`)) return;
+  async function confirmRemoveTechnician() {
+    const tech = removingTechnician;
+    if (!tech) return;
 
     try {
       await deleteTechnicianApi(tech.id);
       setTechnicians((prev) => prev.filter((t) => t.id !== tech.id));
+      setRemovingTechnician(null);
+      showToast(`${tech.name} removed`);
     } catch (err) {
       console.error("Failed to remove technician", err);
-      alert(err.message || "Something went wrong removing the technician.");
+      setRemoveError(err.message || "Something went wrong removing the technician.");
     }
   }
 
@@ -184,6 +194,23 @@ export default function Technicians() {
         <CreateTechnicianModal
           onClose={() => setShowCreateModal(false)}
           onSave={handleSaveTechnician}
+        />
+      )}
+
+      {canManage && removingTechnician && (
+        <ConfirmModal
+          title="Remove Technician"
+          message={`Remove "${removingTechnician.name}"? This can't be undone.${
+            removeError ? `\n\n${removeError}` : ""
+          }`}
+          confirmLabel="Remove Technician"
+          cancelLabel="Cancel"
+          danger
+          onConfirm={confirmRemoveTechnician}
+          onClose={() => {
+            setRemovingTechnician(null);
+            setRemoveError(null);
+          }}
         />
       )}
 

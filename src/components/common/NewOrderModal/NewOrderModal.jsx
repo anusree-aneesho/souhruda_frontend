@@ -649,7 +649,7 @@ const isNextDisabled =
             <button
               onClick={resetAndClose}
               disabled={isSubmitting}
-              className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>
@@ -657,7 +657,7 @@ const isNextDisabled =
             <button
               onClick={() => setStep((s) => s - 1)}
               disabled={isSubmitting}
-              className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
             >
               ← Back
             </button>
@@ -667,7 +667,7 @@ const isNextDisabled =
             <button
               onClick={handleNext}
               disabled={isNextDisabled || isSubmitting || isCreatingPatient}
-              className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40 cursor-pointer"
             >
             {isCreatingPatient ? "Saving patient…" : nextButtonLabels[step]}
             </button>
@@ -675,7 +675,7 @@ const isNextDisabled =
             <button
               onClick={isHomeCollection ? handleConfirmBooking : handleCreateOrder}
               disabled={isSubmitting}
-              className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40"
+              className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40 cursor-pointer"
             >
               {isSubmitting ? "Creating…" : isHomeCollection ? "Confirm Booking" : "Create Order"}
             </button>

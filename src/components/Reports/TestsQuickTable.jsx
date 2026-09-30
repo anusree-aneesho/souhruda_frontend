@@ -43,7 +43,7 @@ export default function TestsQuickTable({ onViewAll }) {
         </div>
         <button
           onClick={onViewAll}
-          className="flex items-center gap-1 text-xs font-medium text-teal-700 hover:text-teal-800 transition-colors"
+          className="flex items-center gap-1 text-xs font-medium text-teal-700 hover:text-teal-800 transition-colors cursor-pointer"
         >
           View full report <ArrowRight size={14} />
         </button>

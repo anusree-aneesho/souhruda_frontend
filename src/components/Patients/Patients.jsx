@@ -253,7 +253,7 @@ export default function Patients() {
       {deletingPatient && (
         <ConfirmModal
           title="Remove Patient"
-          message={`Are you sure you want to remove ${deletingPatient.name}? This action cannot be undone.`}
+          message={`Are you sure you want to remove the patient ${deletingPatient.name}?`}
           confirmLabel="Remove"
           danger
           onConfirm={confirmDelete}

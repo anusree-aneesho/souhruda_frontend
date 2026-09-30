@@ -36,7 +36,7 @@ function MetricTabs({ metrics, value, onChange }) {
           key={m.key}
           type="button"
           onClick={() => onChange(m.key)}
-          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
             value === m.key ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
           }`}
         >
@@ -174,7 +174,7 @@ function GranularityToggle({ value, onChange }) {
           key={g.key}
           type="button"
           onClick={() => onChange(g.key)}
-          className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+          className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
             value === g.key ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
           }`}
         >

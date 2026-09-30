@@ -142,7 +142,7 @@ export default function OrderStatusModal({ initialRange = "Today", onClose }) {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-left text-xs text-gray-500">
                 <tr>
-                  <th className="px-6 py-2 font-medium">Order #</th>
+                  <th className="px-6 py-2 font-medium">Order</th>
                   <th className="py-2 font-medium">Patient</th>
                   <th className="py-2 font-medium">Date</th>
                   <th className="py-2 font-medium">Status</th>
@@ -156,7 +156,7 @@ export default function OrderStatusModal({ initialRange = "Today", onClose }) {
                     onClick={() => navigate(`/lab-orders/${o.order_no}`)}
                     className="cursor-pointer border-b border-gray-100 hover:bg-gray-50"
                   >
-                    <td className="px-6 py-3 text-gray-500">#{o.order_no}</td>
+                    <td className="px-6 py-3 text-gray-500">{o.order_no}</td>
                     <td className="py-3 font-medium text-gray-900">
                       {[o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" ")}
                       {o.patient?.patient_number && (

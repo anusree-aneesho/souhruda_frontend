@@ -157,7 +157,7 @@ export default function CollectionReportModal({ open, range, onRangeChange, onCl
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-gray-50 text-xs text-gray-500">
                 <tr>
-                  <th className="text-left font-medium px-6 py-2.5">Order #</th>
+                  <th className="text-left font-medium px-6 py-2.5">Order</th>
                   <th className="text-left font-medium px-2 py-2.5">Patient</th>
                   <th className="text-left font-medium px-2 py-2.5">Type</th>
                   <th className="text-left font-medium px-2 py-2.5">Date</th>
@@ -168,7 +168,7 @@ export default function CollectionReportModal({ open, range, onRangeChange, onCl
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.order_id} className="border-t border-gray-50 hover:bg-gray-50">
-                    <td className="px-6 py-3 text-gray-700">#{r.order_id}</td>
+                    <td className="px-6 py-3 text-gray-700">{r.order_id}</td>
                     <td className="px-2 py-3 text-gray-800">
                       {r.patient_name}
                       {r.patient_number && (

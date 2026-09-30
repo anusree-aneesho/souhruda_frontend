@@ -99,7 +99,7 @@ export default function TestVolumeReport({ onBack }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50/80 border-b border-gray-100 text-left text-xs font-semibold text-gray-500">
-                <th className="px-4 py-3 w-12">#</th>
+                <th className="px-4 py-3 w-12">No.</th>
                 <th className="px-4 py-3">Test</th>
                 <th className="px-4 py-3">Category</th>
                 <th className="px-4 py-3 text-right">Volume</th>
@@ -137,9 +137,9 @@ export default function TestVolumeReport({ onBack }) {
                       <td className="px-4 py-3 text-gray-400 tabular-nums">{rank}</td>
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-900 mb-1">{r.test_name}</div>
-                        <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden max-w-[160px]">
+                        <div className="h-1 rounded-full bg-gray-100 overflow-hidden max-w-[200px]">
                           <div
-                            className="h-full rounded-full bg-teal-500"
+                            className="h-full rounded-full bg-teal-400/80"
                             style={{ width: `${barWidth}%` }}
                           />
                         </div>

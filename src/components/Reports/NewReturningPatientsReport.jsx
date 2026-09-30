@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import {
-  ArrowLeft,
   Users,
   UserPlus,
   UserCheck,
@@ -9,6 +8,7 @@ import {
   ClipboardList,
 } from "lucide-react";
 import StatCard from "../common/StatCard";
+import ReportToolbar from "./shared/ReportToolbar";
 import { todayIso, daysAgoIso, formatCurrency } from "./shared/format";
 import Pagination from "./shared/Pagination";
 import { exportToCsv, exportToPdf } from "../../utils/reportExport";
@@ -274,14 +274,15 @@ export default function NewReturningPatientsReport({ onBack }) {
 
   return (
     <div className="space-y-6">
-      {/* Back */}
-      <button
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 w-fit"
-      >
-        <ArrowLeft size={16} />
-        Back to Reports
-      </button>
+      <ReportToolbar
+        onBack={onBack}
+        fields={[
+          { label: "Date From", value: dateFrom, max: dateTo, onChange: setDateFrom },
+          { label: "Date To", value: dateTo, min: dateFrom, onChange: setDateTo },
+        ]}
+        onExportPdf={() => exportToPdf(exportTitle, headers, csvRows)}
+        onExportCsv={() => exportToCsv("new-returning-patients", headers, csvRows)}
+      />
 
       {/* Header */}
       <div>
@@ -292,63 +293,6 @@ export default function NewReturningPatientsReport({ onBack }) {
         <p className="text-sm text-gray-500 mt-1">
           Track first-time and repeat patients over the selected period.
         </p>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col gap-4 rounded-xl border border-gray-100 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)] lg:flex-row lg:items-end lg:justify-between">
-        <div className="flex flex-wrap items-end gap-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">
-              Date From
-            </label>
-
-            <input
-              type="date"
-              value={dateFrom}
-              max={dateTo}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">
-              Date To
-            </label>
-
-            <input
-              type="date"
-              value={dateTo}
-              min={dateFrom}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() =>
-              exportToPdf(exportTitle, headers, csvRows)
-            }
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Export PDF
-          </button>
-
-          <button
-            onClick={() =>
-              exportToCsv(
-                "new-returning-patients",
-                headers,
-                csvRows
-              )
-            }
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Export Excel
-          </button>
-        </div>
       </div>
 
       {/* Error */}

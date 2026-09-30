@@ -74,13 +74,13 @@ export default function OrderStatusModal({ initialRange = "Today", onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-xl"
+        className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-xl cursor-pointer"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <h2 className="text-lg font-semibold text-gray-900">Order Status Distribution</h2>
-          <button onClick={onClose} className="rounded-full p-2 text-gray-500 hover:bg-gray-100">
+          <button onClick={onClose} className="rounded-full p-2 text-gray-500 hover:bg-gray-100 cursor-pointer">
             <X size={18} />
           </button>
         </div>
@@ -91,7 +91,7 @@ export default function OrderStatusModal({ initialRange = "Today", onClose }) {
             <button
               key={r}
               onClick={() => setRange(r)}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium ${
+              className={`rounded-md px-3 py-1.5 text-xs font-medium cursor-pointer ${
                 r === range
                   ? "bg-teal-600 text-white"
                   : "border border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -190,7 +190,7 @@ export default function OrderStatusModal({ initialRange = "Today", onClose }) {
           <p className="text-sm text-gray-500">
             Total bill: <span className="font-semibold text-gray-900">{inr(totalBill)}</span>
           </p>
-          <button onClick={onClose} className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          <button onClick={onClose} className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
             Close
           </button>
         </div>

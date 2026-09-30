@@ -22,13 +22,21 @@ function statusLabel(status) {
   return capitalize(status);
 }
 
+// Converts a filter-tab label into the raw status value the backend expects.
+// "All" / "Pending" / "Completed" already match; only "Sample Collected"
+// needs converting, since the DB stores it as "sample_collected".
+function tabToStatus(tab) {
+  if (tab === "Sample Collected") return "sample_collected";
+  return tab;
+}
+
 function mapOrder(o) {
   return {
     orderId: o.order_no,
     patient: [o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" "),
     regNo: o.patient?.patient_number || "",
     tests: o.items_count ?? o.items?.length ?? 0,
-    testNames: (o.items || []).map((item) => item.lab_test?.name).filter(Boolean), // ADD
+    testNames: (o.items || []).map((item) => item.lab_test?.name).filter(Boolean),
     status: statusLabel(o.status),
     date: o.ordered_at
       ? new Date(o.ordered_at).toLocaleString("en-GB", {
@@ -66,23 +74,23 @@ export default function LabOrders() {
   // right after a successful order deletion — same pattern as the justBooked
   // / justCreated toasts elsewhere. Refetch so the removed order actually
   // disappears from the list, and clear the state afterward.
-      useEffect(() => {
-        if (location.state?.justDeleted) {
-          const { orderId, patientName } = location.state.justDeleted;
-          showToast(`Order #${orderId} deleted for ${patientName || "patient"}`);
-          navigate(location.pathname, { replace: true, state: {} });
-          setRefreshKey((k) => k + 1); // ADD THIS
-        }
-      }, [location.state, location.pathname, navigate, showToast]);
+  useEffect(() => {
+    if (location.state?.justDeleted) {
+      const { orderId, patientName } = location.state.justDeleted;
+      showToast(`Order #${orderId} deleted for ${patientName || "patient"}`);
+      navigate(location.pathname, { replace: true, state: {} });
+      setRefreshKey((k) => k + 1);
+    }
+  }, [location.state, location.pathname, navigate, showToast]);
 
-      useEffect(() => {
-        if (location.state?.justCreated) {
-          const { orderId, patientName } = location.state.justCreated;
-          showToast(`Order #${orderId} created for ${patientName || "patient"}`);
-          navigate(location.pathname, { replace: true, state: {} });
-          setRefreshKey((k) => k + 1); // ADD THIS
-        }
-      }, [location.state, location.pathname, navigate, showToast]);
+  useEffect(() => {
+    if (location.state?.justCreated) {
+      const { orderId, patientName } = location.state.justCreated;
+      showToast(`Order #${orderId} created for ${patientName || "patient"}`);
+      navigate(location.pathname, { replace: true, state: {} });
+      setRefreshKey((k) => k + 1);
+    }
+  }, [location.state, location.pathname, navigate, showToast]);
 
   useEffect(() => {
     let cancelled = false;
@@ -91,7 +99,7 @@ export default function LabOrders() {
 
     getOrdersApi({
       today: isTodayFilter ? 1 : undefined,
-      status: activeTab,
+      status: tabToStatus(activeTab),
       q: search,
       page,
       per_page: PER_PAGE,
@@ -154,12 +162,12 @@ export default function LabOrders() {
     }
   }
 
-    function handleSampleCollected(orderId, patientName) {
-      setModalOrder(null);
-      navigate(`/lab-orders/${orderId}`, {
-        state: { justCollected: { orderId, patientName } },
-      });
-    }
+  function handleSampleCollected(orderId, patientName) {
+    setModalOrder(null);
+    navigate(`/lab-orders/${orderId}`, {
+      state: { justCollected: { orderId, patientName } },
+    });
+  }
 
   const filteredOrders = useMemo(() => orders, [orders]);
 

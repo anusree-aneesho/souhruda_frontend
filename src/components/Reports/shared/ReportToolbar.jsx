@@ -87,7 +87,7 @@ export default function ReportToolbar({
             {onExportPdf && (
               <button
                 onClick={onExportPdf}
-                className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-100 hover:border-red-300 transition-colors cursor-pointer"
               >
                 <FileDown size={15} />
                 Export PDF
@@ -96,7 +96,7 @@ export default function ReportToolbar({
             {onExportCsv && (
               <button
                 onClick={onExportCsv}
-                className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-100 hover:border-green-300 transition-colors cursor-pointer"
               >
                 <FileSpreadsheet size={15} />
                 Export Excel

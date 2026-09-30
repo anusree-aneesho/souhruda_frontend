@@ -98,7 +98,7 @@ export default function Doctors() {
           </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 transition-colors text-white px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap"
+            className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 transition-colors text-white px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap cursor-pointer"
           >
             <Plus size={16} />
             Add Doctor
@@ -184,14 +184,14 @@ export default function Doctors() {
                       <button
                         onClick={() => setEditingDoctor(doc)}
                         title="Edit"
-                        className="p-1.5 rounded-md text-teal-600 hover:bg-teal-50 transition-colors"
+                        className="p-1.5 rounded-md text-teal-600 hover:bg-teal-50 transition-colors cursor-pointer"
                       >
                         <Pencil size={15} />
                       </button>
                       <button
                         onClick={() => handleDelete(doc.id)}
                         title="Delete"
-                        className="p-1.5 rounded-md text-red-500 hover:bg-red-50 transition-colors"
+                        className="p-1.5 rounded-md text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
                       >
                         <Trash2 size={15} />
                       </button>

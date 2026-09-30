@@ -14,7 +14,7 @@ export default function OrdersTableRow({ order, patient, tests, status, time, ra
       <td className="py-3 text-right">
         <button
           onClick={() => onOpen({ order, patient, tests, status, time, rawStatus, regNo, testNames })}
-          className="text-sm text-teal-600 font-medium hover:underline"
+          className="text-sm text-teal-600 font-medium hover:underline cursor-pointer"
         >
           View →
         </button>

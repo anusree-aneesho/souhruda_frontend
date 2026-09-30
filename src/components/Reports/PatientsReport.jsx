@@ -631,7 +631,7 @@ export default function PatientsReport({ onBack }) {
                         safeCurrentPage ===
                         1
                       }
-                      className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 cursor-pointer disabled:opacity-40"
                     >
                       <ChevronLeft
                         size={16}
@@ -665,7 +665,7 @@ export default function PatientsReport({ onBack }) {
                         safeCurrentPage ===
                         totalPages
                       }
-                      className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 cursor-pointer disabled:opacity-40"
                     >
                       <span className="mr-1">
                         Next

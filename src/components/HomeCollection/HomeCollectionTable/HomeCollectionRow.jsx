@@ -68,7 +68,7 @@ export default function HomeCollectionRow({ requestId, patient, tests, distance,
           onClick={() => setConfirmingCancel(true)}
           disabled={!canCancel || isCancelling}
           title={canCancel ? undefined : "A technician has already been assigned — this request can no longer be cancelled."}
-          className="text-xs font-medium text-red-600 hover:underline disabled:text-gray-300 disabled:cursor-not-allowed disabled:no-underline"
+          className="text-xs font-medium text-red-600 hover:underline disabled:text-gray-300 disabled:cursor-not-allowed disabled:no-underline cursor-pointer"
         >
           {isCancelling ? "Cancelling…" : "Cancel"}
         </button>

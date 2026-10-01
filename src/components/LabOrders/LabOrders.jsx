@@ -10,6 +10,7 @@ import SampleCollectionModal from "./SampleCollectionModal";
 import Toast from "../common/Toast/Toast";
 import { useToast } from "../common/Toast/useToast";
 import { getOrdersApi } from "../../api/api";
+import CancelledOrderModal from "./CancelledOrderModal";
 
 const PER_PAGE = 9;
 
@@ -27,6 +28,7 @@ function statusLabel(status) {
 // needs converting, since the DB stores it as "sample_collected".
 function tabToStatus(tab) {
   if (tab === "Sample Collected") return "sample_collected";
+  if (tab === "Cancelled") return "cancelled";
   return tab;
 }
 
@@ -68,6 +70,7 @@ export default function LabOrders() {
   const [lastPage, setLastPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [modalOrder, setModalOrder] = useState(null);
+  const [cancelledOrder, setCancelledOrder] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   // OrderDetail navigates here with { justDeleted: { orderId, patientName } }
@@ -154,13 +157,15 @@ export default function LabOrders() {
   // Pending orders need a "sample collected" confirmation step before
   // opening the order detail / results page. Anything past pending
   // (sample_collected, completed) opens straight through, as before.
-  function handleOpenOrder(order) {
-    if (order.rawStatus === "pending") {
-      setModalOrder(order);
-    } else {
-      navigate(`/lab-orders/${order.orderId}`);
-    }
+function handleOpenOrder(order) {
+  if (order.rawStatus === "pending") {
+    setModalOrder(order);
+  } else if (order.rawStatus === "cancelled") {
+    setCancelledOrder(order);
+  } else {
+    navigate(`/lab-orders/${order.orderId}`);
   }
+}
 
   function handleSampleCollected(orderId, patientName) {
     setModalOrder(null);
@@ -232,6 +237,12 @@ export default function LabOrders() {
           </>
         )}
       </div>
+      {cancelledOrder && (
+  <CancelledOrderModal
+    order={cancelledOrder}
+    onClose={() => setCancelledOrder(null)}
+  />
+)}
 
       {modalOrder && (
         <SampleCollectionModal

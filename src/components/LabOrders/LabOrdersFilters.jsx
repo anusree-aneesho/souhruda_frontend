@@ -2,7 +2,7 @@
 import { Search } from "lucide-react";
 import { useAuth } from "../../Context/AuthContext";
 
-const tabs = ["All", "Pending", "Sample Collected", "Completed"];
+const tabs = ["All", "Pending", "Sample Collected", "Completed", "Cancelled"];
 
 export default function LabOrdersFilters({ search, onSearchChange, activeTab, onTabChange }) {
   const { user } = useAuth();

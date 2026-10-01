@@ -30,6 +30,17 @@ export default function CancelledOrderModal({ order, onClose }) {
     : order.patient;
 
   const testNames = (details?.items || []).map((item) => item.lab_test?.name).filter(Boolean);
+  const orderedAt = details?.ordered_at
+  ? new Date(details.ordered_at).toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  : order.date;
+
+const bill = details?.bill_total ?? order.bill;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -90,11 +101,11 @@ export default function CancelledOrderModal({ order, onClose }) {
               <div className="grid grid-cols-2 gap-4 pt-3 border-t border-gray-100">
                 <div>
                   <p className="text-xs font-medium text-gray-400 tracking-wide mb-1">ORDERED</p>
-                  <p className="text-sm text-gray-700">{order.date}</p>
+                  <p className="text-sm text-gray-700">{orderedAt || "-"}</p>
                 </div>
                 <div>
                   <p className="text-xs font-medium text-gray-400 tracking-wide mb-1">BILL</p>
-                  <p className="text-sm font-semibold text-gray-900">₹{order.bill}</p>
+                  <p className="text-sm font-semibold text-gray-900">₹{Number(bill ?? 0).toFixed(2)}</p>
                 </div>
               </div>
 

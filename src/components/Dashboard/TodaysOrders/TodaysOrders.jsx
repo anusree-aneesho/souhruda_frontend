@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import OrdersTableRow from "./OrdersTableRow";
 import SampleCollectionModal from "../../LabOrders/SampleCollectionModal";
 import { getTodaysOrdersApi } from "../../../api/api";
+import CancelledOrderModal from "../../LabOrders/CancelledOrderModal";
 
 function capitalize(str) {
   return str ? str.charAt(0).toUpperCase() + str.slice(1) : str;
@@ -36,6 +37,7 @@ export default function TodaysOrders() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [modalOrder, setModalOrder] = useState(null);
+  const [cancelledOrder, setCancelledOrder] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,6 +61,13 @@ export default function TodaysOrders() {
   function handleOpenOrder(order) {
     if (order.rawStatus === "pending") {
       setModalOrder(order);
+    } else if (order.rawStatus === "cancelled") {
+      setCancelledOrder({
+        orderId: order.order,
+        patient: order.patient,
+        regNo: order.regNo,
+        tests: order.tests,
+      });
     } else {
       navigate(`/lab-orders/${order.order}`);
     }
@@ -113,6 +122,14 @@ export default function TodaysOrders() {
     }}
     onClose={() => setModalOrder(null)}
     onConfirmed={handleSampleCollected}
+  />
+)}
+
+{/* ⬇️ ADD THIS */}
+{cancelledOrder && (
+  <CancelledOrderModal
+    order={cancelledOrder}
+    onClose={() => setCancelledOrder(null)}
   />
 )}
     </div>

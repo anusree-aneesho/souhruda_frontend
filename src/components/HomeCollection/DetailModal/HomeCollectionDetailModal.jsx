@@ -204,7 +204,19 @@ export default function HomeCollectionDetailModal() {
 
         {!isLoading && !error && hc && (
           <>
-            <StatusStepper currentStatus={hc.status} />
+            {hc.status === "Cancelled" ? (
+  <div className="mx-6 mt-4 flex items-start gap-3 rounded-lg border border-red-100 bg-red-50 px-4 py-3">
+    <span className="text-lg leading-none">⛔</span>
+    <div>
+      <p className="text-sm font-semibold text-red-700">This request was cancelled</p>
+      <p className="text-xs text-red-600/80 mt-0.5">
+        Cancelled before a technician was assigned. No collection will take place.
+      </p>
+    </div>
+  </div>
+) : (
+  <StatusStepper currentStatus={hc.status} />
+)}
 
             <div className="px-6 py-4 space-y-5 max-h-[60vh] overflow-y-auto">
               <RequestInfoBar hc={hc} />

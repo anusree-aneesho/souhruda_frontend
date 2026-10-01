@@ -3,12 +3,17 @@ import { Pencil, Trash2 } from "lucide-react";
 import { getBranchesApi, deleteBranchApi } from "../../api/api";
 import { useAuth } from "../../Context/AuthContext";
 import EditBranchModal from "./modals/EditBranchModal";
+import ConfirmModal from "../common/Modal/ConfirmModal";
+import AlertModal from "../common/Modal/AlertModal";
 
 const BranchesList = forwardRef(function BranchesList(_, ref) {
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [editingBranch, setEditingBranch] = useState(null);
+  const [branchToDelete, setBranchToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [alert, setAlert] = useState(null); // { title, message }
   const { user } = useAuth();
   const canManageBranches = user?.role === "super_admin";
 
@@ -32,13 +37,21 @@ const BranchesList = forwardRef(function BranchesList(_, ref) {
     refresh: loadBranches,
   }));
 
-  async function handleDelete(branch) {
-    if (!window.confirm(`Delete "${branch.name}"? This cannot be undone.`)) return;
+  async function confirmDelete() {
+    if (!branchToDelete) return;
+    setDeleting(true);
     try {
-      await deleteBranchApi(branch.id);
+      await deleteBranchApi(branchToDelete.id);
+      setBranchToDelete(null);
       await loadBranches();
     } catch (err) {
-      setError(err.message || "Failed to delete branch.");
+      setBranchToDelete(null);
+      setAlert({
+        title: "Delete failed",
+        message: err.message || "Failed to delete branch. Please try again.",
+      });
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -76,7 +89,7 @@ const BranchesList = forwardRef(function BranchesList(_, ref) {
                     <Pencil size={14} />
                   </button>
                   <button
-                    onClick={() => handleDelete(b)}
+                    onClick={() => setBranchToDelete(b)}
                     className="text-gray-400 hover:text-red-600 p-1 rounded-md hover:bg-gray-50 cursor-pointer"
                     title="Delete branch"
                   >
@@ -94,6 +107,25 @@ const BranchesList = forwardRef(function BranchesList(_, ref) {
           branch={editingBranch}
           onClose={() => setEditingBranch(null)}
           onBranchUpdated={loadBranches}
+        />
+      )}
+
+      {branchToDelete && (
+        <ConfirmModal
+          title="Delete Branch"
+          message={`Delete "${branchToDelete.name}"? This cannot be undone.`}
+          confirmLabel="Delete"
+          loading={deleting}
+          onConfirm={confirmDelete}
+          onClose={() => setBranchToDelete(null)}
+        />
+      )}
+
+      {alert && (
+        <AlertModal
+          title={alert.title}
+          message={alert.message}
+          onClose={() => setAlert(null)}
         />
       )}
     </div>

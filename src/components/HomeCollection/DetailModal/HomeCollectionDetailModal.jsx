@@ -229,7 +229,7 @@ export default function HomeCollectionDetailModal() {
                 <div className="flex justify-end">
                   <button
                     onClick={() => setLabelOpen(true)}
-                    className="text-xs font-medium text-teal-600 hover:underline"
+                    className="text-xs font-medium text-teal-600 hover:underline cursor-pointer"
                   >
                     🖨️ Print sample label
                   </button>
@@ -260,7 +260,7 @@ export default function HomeCollectionDetailModal() {
               {hc.status === "Processing" && (
                 <p className="text-sm text-gray-500 text-right">
                   Waiting on lab results —{" "}
-                  <button onClick={handleOpenOrder} className="text-teal-600 font-medium hover:underline">
+                  <button onClick={handleOpenOrder} className="text-teal-600 font-medium hover:underline cursor-pointer">
                     open the order →
                   </button>
                 </p>
@@ -277,7 +277,7 @@ export default function HomeCollectionDetailModal() {
                   )}
                   <button
                     onClick={() => setConfirmingCancel(true)}
-                    className="w-full sm:w-auto px-4 py-2.5 rounded-lg border border-red-200 text-sm font-medium text-red-600 hover:bg-red-50"
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-lg border border-red-200 text-sm font-medium text-red-600 hover:bg-red-50 cursor-pointer"
                   >
                     Cancel Request
                   </button>
@@ -285,7 +285,7 @@ export default function HomeCollectionDetailModal() {
                     onClick={() => setAssignOpen(true)}
                     disabled={!hc.assignable}
                     title={!hc.assignable ? `Available on ${hc.slotDate}` : undefined}
-                    className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:bg-gray-300 cursor-pointer disabled:hover:bg-gray-300"
                   >
                     Assign Technician
                   </button>
@@ -293,7 +293,7 @@ export default function HomeCollectionDetailModal() {
               )}
 
               {hc.status === "Assigned" && (
-                <button onClick={handleMarkEnRoute} className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700">
+                <button onClick={handleMarkEnRoute} className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer">
                   Mark Technician En Route
                 </button>
               )}
@@ -320,7 +320,7 @@ export default function HomeCollectionDetailModal() {
                   <button
                     onClick={handleConfirmCollected}
                     disabled={hc.otpLocked}
-                    className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 whitespace-nowrap disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 whitespace-nowrap disabled:bg-gray-300 cursor-pointer"
                   >
                     Confirm Sample Collected
                   </button>
@@ -329,17 +329,17 @@ export default function HomeCollectionDetailModal() {
 
               {hc.status === "Collected" && (
                 <>
-                  <button onClick={handleMarkProcessing} className="w-full sm:w-auto px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  <button onClick={handleMarkProcessing} className="w-full sm:w-auto px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
                     Mark In-Lab Processing
                   </button>
-                  <button onClick={handleEnterResults} className="w-full sm:w-auto text-sm text-teal-600 font-medium hover:underline">
+                  <button onClick={handleEnterResults} className="w-full sm:w-auto text-sm text-teal-600 font-medium hover:underline cursor-pointer">
                     Enter results →
                   </button>
                 </>
               )}
 
               {hc.status === "Report Ready" && (
-                <button onClick={handleSendWhatsApp} className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700">
+                <button onClick={handleSendWhatsApp} className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer">
                   💬 Send Report via WhatsApp
                 </button>
               )}

@@ -52,6 +52,7 @@ function mapOrder(o) {
     referredBy: o.referred_by || "Self",
     billTotal: o.bill_total != null ? Number(o.bill_total) : null,
     homeVisitFee: Number(o.home_visit_fee) || 0,
+    isHomeCollection: Boolean(o.home_collection_id),
   };
 }
 
@@ -240,6 +241,7 @@ export default function OrderDetail() {
         gender={patient.gender}
         orderedAt={formattedOrderedAt}
         onDelete={() => setConfirmingDelete(true)}
+        isHomeCollection={Boolean(order?.isHomeCollection)}
       />
       <ResultsTable
       tests={tests}

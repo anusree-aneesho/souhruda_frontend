@@ -72,7 +72,7 @@ export default function OrdersOverTimeModal({ initialRange = "Today", onClose })
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <h2 className="text-lg font-semibold text-gray-900">Orders Over Time</h2>
-          <button onClick={onClose} className="rounded-full p-2 text-gray-500 hover:bg-gray-100">
+          <button onClick={onClose} className="rounded-full p-2 text-gray-500 hover:bg-gray-100 cursor-pointer">
             <X size={18} />
           </button>
         </div>
@@ -83,7 +83,7 @@ export default function OrdersOverTimeModal({ initialRange = "Today", onClose })
             <button
               key={r}
               onClick={() => setRange(r)}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium ${
+              className={`rounded-md px-3 py-1.5 text-xs font-medium cursor-pointer ${
                 r === range
                   ? "bg-teal-600 text-white"
                   : "border border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -164,7 +164,7 @@ export default function OrdersOverTimeModal({ initialRange = "Today", onClose })
           <p className="text-sm text-gray-500">
             Total bill: <span className="font-semibold text-gray-900">₹{totalBill.toLocaleString("en-IN")}</span>
           </p>
-          <button onClick={onClose} className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          <button onClick={onClose} className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
             Close
           </button>
         </div>

@@ -290,7 +290,7 @@ export default function SelectTestsStep({
                   setTestSearch("");
                   onCategoryChange(cat.id);
                 }}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap shrink-0 transition-colors inline-flex items-center gap-1.5 ${
+                className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap shrink-0 transition-colors inline-flex items-center gap-1.5 cursor-pointer ${
                   isActive
                     ? "bg-teal-600 text-white"
                     : count > 0

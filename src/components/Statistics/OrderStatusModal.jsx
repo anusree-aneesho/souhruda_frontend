@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
-import { getOrdersListForRangeApi } from "../../api/api";
-import { RANGES } from "../../utils/dateRange";
+import { getOrdersApi } from "../../api/api";
+import { RANGES, getRangeBounds } from "../../utils/dateRange";
 
 const STATUS_STYLES = {
   completed: "bg-green-100 text-green-700",
@@ -21,20 +21,34 @@ export default function OrderStatusModal({ initialRange = "Today", onClose }) {
   const navigate = useNavigate();
   const [range, setRange] = useState(initialRange);
   const [tab, setTab] = useState("all");
-  const [inRange, setInRange] = useState([]);
+  const [allOrders, setAllOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    getOrdersListForRangeApi(range)
+
+    getOrdersApi({ per_page: 500 })
       .then((res) => {
-        if (!cancelled) setInRange(Array.isArray(res) ? res : res.data || []);
+        if (!cancelled) setAllOrders(res.data || []);
       })
-      .catch(() => { if (!cancelled) setInRange([]); })
-      .finally(() => { if (!cancelled) setLoading(false); });
+      .catch(() => {
+        if (!cancelled) setAllOrders([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
     return () => { cancelled = true; };
-  }, [range]);
+  }, []);
+
+  // Orders in the selected range
+  const inRange = useMemo(() => {
+    const [start, end] = getRangeBounds(range);
+    return allOrders.filter((o) => {
+      const d = new Date(o.ordered_at);
+      return d >= start && d < end;
+    });
+  }, [allOrders, range]);
 
   const count = (status) => {
     if (status === "cancelled") {

@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
-import { getOrdersApi } from "../../api/api";
-import { RANGES, getRangeBounds } from "../../utils/dateRange";
+import { getOrdersListForRangeApi } from "../../api/api";
+import { RANGES } from "../../utils/dateRange";
 
 const STATUS_STYLES = {
   completed: "bg-green-100 text-green-700",
@@ -20,34 +20,26 @@ const inr = (n) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 export default function RevenueOverTimeModal({ initialRange = "Today", onClose }) {
   const navigate = useNavigate();
   const [range, setRange] = useState(initialRange);
-  const [allOrders, setAllOrders] = useState([]);
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-
-    getOrdersApi({ per_page: 500 })
+    setLoading(true);
+    getOrdersListForRangeApi(range)
       .then((res) => {
-        if (!cancelled) setAllOrders(res.data || []);
+        if (!cancelled) setRows(Array.isArray(res) ? res : res.data || []);
       })
-      .catch(() => {
-        if (!cancelled) setAllOrders([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
+      .catch(() => { if (!cancelled) setRows([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, []);
+  }, [range]);
 
   // Revenue excludes cancelled orders
-  const orders = useMemo(() => {
-    const [start, end] = getRangeBounds(range);
-    return allOrders.filter((o) => {
-      const d = new Date(o.ordered_at);
-      return d >= start && d < end && o.status !== "cancelled";
-    });
-  }, [allOrders, range]);
+  const orders = useMemo(
+    () => rows.filter((o) => o.status !== "cancelled"),
+    [rows]
+  );
 
   const sum = (list) => list.reduce((t, o) => t + Number(o.bill_total || 0), 0);
   const totalRevenue = sum(orders);

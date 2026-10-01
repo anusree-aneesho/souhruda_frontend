@@ -90,7 +90,7 @@ export async function deleteTechnicianApi(id) {
 
 // ── Patients ───────────────────────────────────────────────
 
-export async function getPatientsApi(query = "", page = 1) {       //<-paginate
+export async function getPatientsApi(query = "", page = 1) {       
   const params = new URLSearchParams();
   if (query) params.append("q", query);
   params.append("page", page);
@@ -278,6 +278,7 @@ export async function resolveHomeCollectionOrderApi(hcCode) {
     method: "POST",
   });
 }
+
 // ── Lab Test ───────────────────────────────────────────────
 
 export function getLabTests(categoryId = null) {
@@ -567,6 +568,7 @@ export async function deleteDoctorApi(id) {
     method: "DELETE",
   });
 }
+
 // ── Reports ──────────────────────────────────────────────
 
 export async function getPatientsReportApi({
@@ -654,19 +656,6 @@ export async function getPatientTestHistoryApi({
     `/reports/patients/test-history?${params.toString()}`
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 export async function getFinanceReportApi({ dateFrom, dateTo } = {}) {
   const params = new URLSearchParams();
@@ -872,4 +861,8 @@ export async function getTestVolumeReportApi({ dateFrom, dateTo, q } = {}) {
   if (q) params.append("q", q);
   const qs = params.toString();
   return request(`/reports/tests/volume${qs ? `?${qs}` : ""}`);
+}
+
+export async function getOrdersListForRangeApi(range = "Today") {
+  return request(`/statistics/orders-list?range=${encodeURIComponent(range)}`);
 }

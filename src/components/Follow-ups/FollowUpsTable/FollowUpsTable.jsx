@@ -7,8 +7,8 @@ export default function FollowUpsTable({ followUps, onView }) {
   if (followUps.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
-        <div className="hidden md:grid grid-cols-4 px-5 py-3 border-b border-gray-100">
-          {["PATIENT", "TEST", "DUE", "STATUS"].map((h) => (
+        <div className="hidden md:grid grid-cols-5 px-5 py-3 border-b border-gray-100">
+          {["REG NO", "PATIENT", "TEST", "DUE", "STATUS"].map((h) => (
             <span key={h} className="text-xs font-medium text-gray-400 tracking-wide">
               {h}
             </span>
@@ -25,6 +25,7 @@ export default function FollowUpsTable({ followUps, onView }) {
         <table className="w-full min-w-[600px]">
           <thead>
             <tr className="text-left border-b border-gray-100">
+              <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">REG NO</th>
               <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">PATIENT</th>
               <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">TEST</th>
               <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">DUE</th>

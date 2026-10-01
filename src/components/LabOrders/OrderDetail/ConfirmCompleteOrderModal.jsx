@@ -1,4 +1,5 @@
 import ModalShell from "../../common/Modal/ModalShell";
+import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
 
 export default function ConfirmCompleteOrderModal({
   tests,
@@ -39,17 +40,7 @@ export default function ConfirmCompleteOrderModal({
                     />
                   </td>
                   <td className="py-2.5">
-                    {flags[test.id] && (
-                      <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                          flags[test.id] === "normal"
-                            ? "bg-gray-100 text-gray-600"
-                            : "bg-amber-100 text-amber-700"
-                        }`}
-                      >
-                        {flags[test.id]}
-                      </span>
-                    )}
+                    <StatusBadge status={flags[test.id]} />
                   </td>
                 </tr>
               ))}

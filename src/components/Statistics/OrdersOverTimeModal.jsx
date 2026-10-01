@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
-import { getOrdersApi } from "../../api/api";
-import { RANGES, getRangeBounds } from "../../utils/dateRange";
+import { getOrdersListForRangeApi } from "../../api/api";
+import { RANGES } from "../../utils/dateRange";
 
 const STATUS_STYLES = {
   completed: "bg-green-100 text-green-700",
@@ -18,33 +18,20 @@ function statusLabel(s) {
 export default function OrdersOverTimeModal({ initialRange = "Today", onClose }) {
   const navigate = useNavigate();
   const [range, setRange] = useState(initialRange);
-  const [allOrders, setAllOrders] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-
-    getOrdersApi({ per_page: 500 })
+    setLoading(true);
+    getOrdersListForRangeApi(range)
       .then((res) => {
-        if (!cancelled) setAllOrders(res.data || []);
+        if (!cancelled) setOrders(Array.isArray(res) ? res : res.data || []);
       })
-      .catch(() => {
-        if (!cancelled) setAllOrders([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
+      .catch(() => { if (!cancelled) setOrders([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, []);
-
-  const orders = useMemo(() => {
-    const [start, end] = getRangeBounds(range);
-    return allOrders.filter((o) => {
-      const d = new Date(o.ordered_at);
-      return d >= start && d < end;
-    });
-  }, [allOrders, range]);
+  }, [range]);
 
   const count = (status) => {
     if (status === "cancelled") {

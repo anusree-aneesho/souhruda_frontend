@@ -6,6 +6,7 @@ import TestsTable from "../TestMaster/CategoryList/TestsTable/TestsTable";
 import AddCategoryModal from "./modals/AddCategoryModal";
 import AddTestModal from "./modals/AddTestModal";
 import Toast from "../common/Toast/Toast";
+import ConfirmModal from "../Patients/modals/ConfirmModal";
 import {
   getTestCategories,
   getLabTests,
@@ -28,6 +29,7 @@ export default function TestMaster() {
   const [testModalState, setTestModalState] = useState(null);
   const [editingCategory, setEditingCategory] = useState(null);
   const [toast, setToast] = useState(null); // { message, type }
+  const [confirmingRemove, setConfirmingRemove] = useState(null); // test | null
 
   useEffect(() => {
     let cancelled = false;
@@ -223,8 +225,13 @@ export default function TestMaster() {
     }
   }
 
-  async function handleRemoveTest(test) {
-    if (!window.confirm(`Remove "${test.name}"? This can't be undone.`)) return;
+  function handleRemoveTest(test) {
+    setConfirmingRemove(test);
+  }
+
+  async function confirmRemoveTest() {
+    const test = confirmingRemove;
+    setConfirmingRemove(null);
     try {
       await deleteLabTest(test.id);
       setTestsByCategory((prev) => ({
@@ -283,6 +290,18 @@ export default function TestMaster() {
           editingTest={testModalState.editingTest}
           onClose={() => setTestModalState(null)}
           onSave={handleSaveTest}
+        />
+      )}
+
+      {confirmingRemove && (
+        <ConfirmModal
+          title="Remove Test"
+          message={`Do you want to remove "${confirmingRemove.name}" from ${activeCategory}?`}
+          confirmLabel="Remove"
+          cancelLabel="Cancel"
+          danger
+          onConfirm={confirmRemoveTest}
+          onClose={() => setConfirmingRemove(null)}
         />
       )}
 

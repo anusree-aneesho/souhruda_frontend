@@ -7,6 +7,7 @@ export default function StatCard({ label, value, sublabel, icon: Icon, color, on
     purple: "bg-purple-500",
     gray: "bg-gray-400",
     green: "bg-green-500",
+    red: "bg-red-500",
   };
 
   const ringMap = {
@@ -16,6 +17,7 @@ export default function StatCard({ label, value, sublabel, icon: Icon, color, on
     purple: "ring-purple-500",
     gray: "ring-gray-400",
     green: "ring-green-500",
+    red: "ring-red-500",
   };
 
   const isClickable = typeof onClick === "function";

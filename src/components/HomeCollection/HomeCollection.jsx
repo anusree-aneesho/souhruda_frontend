@@ -72,6 +72,7 @@ const FILTER_LABELS = {
   inProgress: "In Progress",
   reportReady: "Report Ready",
   sentToPatient: "Sent to Patient",
+  cancelled: "Cancelled",
 };
 
 // Bucket the raw statuses into the four summary cards
@@ -80,8 +81,9 @@ function bucketStatus(status) {
   if (status === "requested") return "requested";
   if (inProgressStatuses.includes(status)) return "inProgress";
   if (status === "report_ready") return "reportReady";
-  if (status === "sent") return "sentToPatient";
-  return null; // cancelled, or anything else — excluded from the stat cards
+    if (status === "sent") return "sentToPatient";
+  if (status === "cancelled") return "cancelled";
+  return null;
 }
 
 function computeCounts(rows) {
@@ -91,8 +93,8 @@ function computeCounts(rows) {
       if (bucket) acc[bucket] += 1;
       return acc;
     },
-    { requested: 0, inProgress: 0, reportReady: 0, sentToPatient: 0 }
-  );
+    { requested: 0, inProgress: 0, reportReady: 0, sentToPatient: 0, cancelled: 0 }
+    );
 }
 
 export default function HomeCollection() {

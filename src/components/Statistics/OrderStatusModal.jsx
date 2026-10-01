@@ -50,13 +50,20 @@ export default function OrderStatusModal({ initialRange = "Today", onClose }) {
     });
   }, [allOrders, range]);
 
-  const count = (status) => inRange.filter((o) => o.status === status).length;
+  const count = (status) => {
+    if (status === "cancelled") {
+      return inRange.filter((o) => o.is_cancelled).length;
+    }
+    return inRange.filter((o) => o.status === status && !o.is_cancelled).length;
+  };
+
   const total = inRange.length;
   const pct = (n) => (total ? `${((n / total) * 100).toFixed(1)}%` : "0%");
 
-  const tiles = [
+ const tiles = [
     { label: "Total Orders", value: total, sub: null, cls: "bg-gray-50 text-gray-900" },
     { label: "Completed", value: count("completed"), sub: pct(count("completed")), cls: "bg-green-50 text-green-700" },
+    { label: "Sample Collected", value: count("sample_collected"), sub: pct(count("sample_collected")), cls: "bg-blue-50 text-blue-700" },
     { label: "Pending", value: count("pending"), sub: pct(count("pending")), cls: "bg-amber-50 text-amber-700" },
     { label: "Cancelled", value: count("cancelled"), sub: pct(count("cancelled")), cls: "bg-red-50 text-red-700" },
   ];
@@ -64,11 +71,18 @@ export default function OrderStatusModal({ initialRange = "Today", onClose }) {
   const tabs = [
     { key: "all", label: "All", n: total },
     { key: "completed", label: "Completed", n: count("completed") },
+    { key: "sample_collected", label: "Sample Collected", n: count("sample_collected") },
     { key: "pending", label: "Pending", n: count("pending") },
     { key: "cancelled", label: "Cancelled", n: count("cancelled") },
   ];
 
-  const visible = tab === "all" ? inRange : inRange.filter((o) => o.status === tab);
+  const visible =
+    tab === "all"
+      ? inRange
+      : tab === "cancelled"
+      ? inRange.filter((o) => o.is_cancelled)
+      : inRange.filter((o) => o.status === tab && !o.is_cancelled);
+
   const totalBill = visible.reduce((sum, o) => sum + Number(o.bill_total || 0), 0);
 
   return (
@@ -103,7 +117,7 @@ export default function OrderStatusModal({ initialRange = "Today", onClose }) {
         </div>
 
         {/* Summary tiles */}
-        <div className="grid grid-cols-2 gap-3 px-6 py-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 px-6 py-4 sm:grid-cols-3 lg:grid-cols-5">
           {tiles.map((t) => (
             <div key={t.label} className={`rounded-lg p-3 ${t.cls}`}>
               <p className="text-xs opacity-80">{t.label}</p>
@@ -171,8 +185,10 @@ export default function OrderStatusModal({ initialRange = "Today", onClose }) {
                       })}
                     </td>
                     <td className="py-3">
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[o.status] || "bg-gray-100 text-gray-500"}`}>
-                        {statusLabel(o.status)}
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        o.is_cancelled ? STATUS_STYLES.cancelled : (STATUS_STYLES[o.status] || "bg-gray-100 text-gray-500")
+                      }`}>
+                        {o.is_cancelled ? "Cancelled" : statusLabel(o.status)}
                       </span>
                     </td>
                     <td className="px-6 py-3 text-right font-medium text-gray-900">

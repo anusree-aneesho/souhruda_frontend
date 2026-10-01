@@ -46,13 +46,20 @@ export default function OrdersOverTimeModal({ initialRange = "Today", onClose })
     });
   }, [allOrders, range]);
 
-  const count = (status) => orders.filter((o) => o.status === status).length;
+  const count = (status) => {
+    if (status === "cancelled") {
+      return orders.filter((o) => o.is_cancelled).length;
+    }
+    return orders.filter((o) => o.status === status && !o.is_cancelled).length;
+  };
+
   const totalBill = orders.reduce((sum, o) => sum + Number(o.bill_total || 0), 0);
 
   const tiles = [
     { label: "Total Orders", value: orders.length, cls: "bg-gray-50 text-gray-900" },
     { label: "Completed", value: count("completed"), cls: "bg-green-50 text-green-700" },
     { label: "Pending", value: count("pending"), cls: "bg-amber-50 text-amber-700" },
+    { label: "Sample Collected", value: count("sample_collected"), cls: "bg-blue-50 text-blue-700" },
     { label: "Cancelled", value: count("cancelled"), cls: "bg-red-50 text-red-700" },
   ];
 
@@ -88,7 +95,7 @@ export default function OrdersOverTimeModal({ initialRange = "Today", onClose })
         </div>
 
         {/* Summary tiles */}
-        <div className="grid grid-cols-2 gap-3 px-6 py-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 px-6 py-4 sm:grid-cols-3 lg:grid-cols-5">
           {tiles.map((t) => (
             <div key={t.label} className={`rounded-lg p-3 ${t.cls}`}>
               <p className="text-xs opacity-80">{t.label}</p>
@@ -136,8 +143,10 @@ export default function OrdersOverTimeModal({ initialRange = "Today", onClose })
                       })}
                     </td>
                     <td className="py-3">
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[o.status] || "bg-gray-100 text-gray-500"}`}>
-                        {statusLabel(o.status)}
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        o.is_cancelled ? STATUS_STYLES.cancelled : (STATUS_STYLES[o.status] || "bg-gray-100 text-gray-500")
+                      }`}>
+                        {o.is_cancelled ? "Cancelled" : statusLabel(o.status)}
                       </span>
                     </td>
                     <td className="px-6 py-3 text-right font-medium text-gray-900">

@@ -110,8 +110,8 @@ export default function LabOrders() {
       .then((res) => {
         if (!cancelled) {
           setOrders((res.data || []).map(mapOrder));
-          setLastPage(res.last_page ?? 1);
-          setTotal(res.total ?? 0);
+          setLastPage(res.last_page ?? res.meta?.last_page ?? 1);
+          setTotal(res.total ?? res.meta?.total ?? 0);
         }
       })
       .catch((err) => {

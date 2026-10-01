@@ -11,14 +11,18 @@ export default function LabOrderRow({ orderId, patient, regNo, tests, status, da
       <td className="py-3"><StatusBadge status={status} /></td>
       <td className="py-3 text-sm text-gray-500">{date}</td>
       <td className="py-3 text-sm text-gray-900">₹{bill}</td>
-      <td className="py-3 text-right">
-        <button
-          onClick={() => onOpen({ orderId, patient, regNo, tests, status, date, bill, rawStatus, testNames })}
-          className="text-sm text-teal-600 font-medium hover:underline cursor-pointer"
-        >
-          Open →
-        </button>
-      </td>
+<td className="py-3 text-right">
+  {rawStatus === "cancelled" ? (
+    <span className="text-sm text-gray-300">—</span>
+  ) : (
+    <button
+      onClick={() => onOpen({ orderId, patient, regNo, tests, status, date, bill, rawStatus, testNames })}
+      className="text-sm text-teal-600 font-medium hover:underline cursor-pointer"
+    >
+      Open →
+    </button>
+  )}
+</td>
     </tr>
   );
 }

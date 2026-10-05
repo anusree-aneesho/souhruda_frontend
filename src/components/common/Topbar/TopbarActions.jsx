@@ -66,7 +66,7 @@ export default function TopbarActions() {
         {date} <span className="ml-1">{time}</span>
       </p>
 
-      <button className="relative text-gray-500 hover:text-gray-700">
+      <button className="relative text-gray-500 hover:text-gray-700 cursor-pointer">
         <Bell size={20} />
         <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-white" />
       </button>

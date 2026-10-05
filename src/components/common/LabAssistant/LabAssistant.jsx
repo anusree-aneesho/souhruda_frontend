@@ -24,7 +24,7 @@ export default function LabAssistant() {
 
       <button
         onClick={() => setIsOpen((prev) => !prev)}
-        className="h-14 w-14 rounded-full bg-gradient-to-br from-purple-600 to-teal-600 text-white flex items-center justify-center text-2xl shadow-lg hover:scale-105 transition-transform"
+        className="h-14 w-14 rounded-full bg-gradient-to-br from-purple-600 to-teal-600 text-white flex items-center justify-center text-2xl shadow-lg hover:scale-105 transition-transform cursor-pointer"
       >
         🤖
       </button>

@@ -92,6 +92,20 @@ function buildNewPatientPayload(newPatientData) {
   };
 }
 
+const REMINDER_WINDOW_DAYS = 5;
+
+function isReminderDueSoon(dueDate) {
+  const due = new Date(dueDate);
+  if (isNaN(due.getTime())) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+
+  const daysLeft = Math.round((due - today) / (1000 * 60 * 60 * 24));
+  return daysLeft <= REMINDER_WINDOW_DAYS; 
+}
+
 export default function NewOrderModal() {
   const { isOpen, close, flowType, presetPatientRegNo } = useOrderModal();
   const navigate = useNavigate();
@@ -230,11 +244,14 @@ export default function NewOrderModal() {
     getPatientFollowUpRemindersApi(patientId)
       .then((res) => {
         if (cancelled) return;
-        setPatientReminders((res.data || []).filter((r) => ["pending", "overdue"].includes(r.status)));
+        setPatientReminders(
+          (res.data || []).filter(
+            (r) =>
+              ["pending", "overdue"].includes(r.status) &&
+              isReminderDueSoon(r.due_date)
+          )
+        );
       })
-      .catch(() => {
-        if (!cancelled) setPatientReminders([]);
-      });
     return () => {
       cancelled = true;
     };

@@ -81,7 +81,7 @@ export default function Report() {
     useEffect(() => {
       if (location.state?.justCompleted) {
         const { orderId: completedId, patientName } = location.state.justCompleted;
-        showToast(`Order #${completedId} completed — report ready for ${patientName || "patient"}`);
+        showToast(`Order ${completedId} completed — report ready for ${patientName || "patient"}`);
         navigate(location.pathname, { replace: true, state: { ...location.state, justCompleted: undefined } });
       }
     }, [location.state, location.pathname, navigate, showToast]);
@@ -352,7 +352,7 @@ export default function Report() {
 
       <div className="no-print">
         <h1 className="text-2xl font-bold text-gray-900">Report — {patient.name}</h1>
-        <p className="text-sm text-gray-500 mt-1">Order #{orderId} · {reportDate}</p>
+        <p className="text-sm text-gray-500 mt-1">Order {orderId} · {reportDate}</p>
       </div>
 
       {/* Main Report Container — pure Tailwind, matches the reference image */}

@@ -17,12 +17,13 @@ function statusLabel(s) {
 
 const inr = (n) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
-export default function OrderStatusModal({ initialRange = "Today", onClose }) {
+export default function OrderStatusModal({ initialRange = "Today", initialTab = "all", onClose }) {
   const navigate = useNavigate();
   const [range, setRange] = useState(initialRange);
-  const [tab, setTab] = useState("all");
+  const [tab, setTab] = useState(initialTab);
   const [allOrders, setAllOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [orderStatusModal, setOrderStatusModal] = useState(null); // { tab: "all" | "completed" | ... } | null
 
   useEffect(() => {
     let cancelled = false;

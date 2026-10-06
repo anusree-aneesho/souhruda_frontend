@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getOrdersForRangeApi, getNewPatientsForRangeApi } from "../../api/api";
 import CollectionReportModal from "./CollectionReportModal";
+import OrderStatusModal from "./OrderStatusModal";
 import {
   getStatisticsSummaryApi,
   getStatisticsRankingsApi,
@@ -49,9 +50,14 @@ function rangeLabel(range, noun) {
 }
 
 
-function StatCard({ label, value, icon: Icon, bg, color }) {
+function StatCard({ label, value, icon: Icon, bg, color, onClick }) {
   return (
-    <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+    <div
+      onClick={onClick}
+      className={`bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] ${
+        onClick ? "cursor-pointer hover:shadow-md transition-shadow" : ""
+      }`}
+    >
       <div className="flex items-center gap-2 mb-3">
         <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center`}>
           <Icon size={16} className={color} />
@@ -668,6 +674,7 @@ export default function Statistics() {
   const [collectionRange, setCollectionRange] = useState("Today");
   const [hasSwitchedCollectionRange, setHasSwitchedCollectionRange] = useState(false);
   const [collectionReportOpen, setCollectionReportOpen] = useState(false);
+  const [orderStatusModal, setOrderStatusModal] = useState(null); 
 
   useEffect(() => {
     let cancelled = false;
@@ -891,6 +898,7 @@ useEffect(() => {
       icon: Briefcase,
       bg: "bg-blue-50",
       color: "text-blue-600",
+      onClick: () => setOrderStatusModal({ tab: "all" }),
     },
     { label: "Total Revenue", value: "₹150000", icon: IndianRupee, bg: "bg-green-50", color: "text-green-600" },
     {
@@ -906,6 +914,7 @@ useEffect(() => {
       icon: CheckCircle2,
       bg: "bg-purple-50",
       color: "text-purple-600",
+      onClick: () => setOrderStatusModal({ tab: "completed" }),
     },
     {
       label: "Pending Orders",
@@ -913,23 +922,25 @@ useEffect(() => {
       icon: Clock,
       bg: "bg-amber-50",
       color: "text-amber-600",
+      onClick: () => setOrderStatusModal({ tab: "pending" }),
     },
-
     {
-  label: "Sample Collected",
-  value: summaryLoading ? "…" : (summary?.sampleCollectedOrders ?? 0).toLocaleString(),
-  icon: FlaskConical,
-  bg: "bg-indigo-50",
-  color: "text-indigo-600",
-},
+      label: "Sample Collected",
+      value: summaryLoading ? "…" : (summary?.sampleCollectedOrders ?? 0).toLocaleString(),
+      icon: FlaskConical,
+      bg: "bg-indigo-50",
+      color: "text-indigo-600",
+      onClick: () => setOrderStatusModal({ tab: "sample_collected" }),
+    },
     {
       label: "Cancelled Orders",
       value: summaryLoading ? "…" : (summary?.cancelledOrders ?? 0).toLocaleString(),
       icon: XCircle,
       bg: "bg-red-50",
       color: "text-red-600",
+      onClick: () => setOrderStatusModal({ tab: "cancelled" }),
     },
-  ];
+];
 
   const pct = (count, total) => (total > 0 ? Math.round((count / total) * 1000) / 10 : 0);
 
@@ -1238,6 +1249,13 @@ useEffect(() => {
         }}
         onClose={() => setCollectionReportOpen(false)}
       />
+        {orderStatusModal && (
+          <OrderStatusModal
+            initialRange="1 Year"
+            initialTab={orderStatusModal.tab}
+            onClose={() => setOrderStatusModal(null)}
+          />
+        )}
     </div>
   );
 }

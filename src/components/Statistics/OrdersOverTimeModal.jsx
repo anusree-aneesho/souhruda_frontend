@@ -18,6 +18,7 @@ function statusLabel(s) {
 export default function OrdersOverTimeModal({ initialRange = "Today", onClose }) {
   const navigate = useNavigate();
   const [range, setRange] = useState(initialRange);
+  const [statusFilter, setStatusFilter] = useState("all");
   const [allOrders, setAllOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,6 +39,7 @@ export default function OrdersOverTimeModal({ initialRange = "Today", onClose })
     return () => { cancelled = true; };
   }, []);
 
+  // Orders in the selected range
   const orders = useMemo(() => {
     const [start, end] = getRangeBounds(range);
     return allOrders.filter((o) => {
@@ -53,14 +55,22 @@ export default function OrdersOverTimeModal({ initialRange = "Today", onClose })
     return orders.filter((o) => o.status === status && !o.is_cancelled).length;
   };
 
-  const totalBill = orders.reduce((sum, o) => sum + Number(o.bill_total || 0), 0);
+  // Orders after applying the selected tile filter
+  const visible =
+    statusFilter === "all"
+      ? orders
+      : statusFilter === "cancelled"
+      ? orders.filter((o) => o.is_cancelled)
+      : orders.filter((o) => o.status === statusFilter && !o.is_cancelled);
+
+  const totalBill = visible.reduce((sum, o) => sum + Number(o.bill_total || 0), 0);
 
   const tiles = [
-    { label: "Total Orders", value: orders.length, cls: "bg-gray-50 text-gray-900" },
-    { label: "Completed", value: count("completed"), cls: "bg-green-50 text-green-700" },
-    { label: "Pending", value: count("pending"), cls: "bg-amber-50 text-amber-700" },
-    { label: "Sample Collected", value: count("sample_collected"), cls: "bg-blue-50 text-blue-700" },
-    { label: "Cancelled", value: count("cancelled"), cls: "bg-red-50 text-red-700" },
+    { key: "all", label: "Total Orders", value: orders.length, cls: "bg-gray-50 text-gray-900" },
+    { key: "completed", label: "Completed", value: count("completed"), cls: "bg-green-50 text-green-700" },
+    { key: "pending", label: "Pending", value: count("pending"), cls: "bg-amber-50 text-amber-700" },
+    { key: "sample_collected", label: "Sample Collected", value: count("sample_collected"), cls: "bg-blue-50 text-blue-700" },
+    { key: "cancelled", label: "Cancelled", value: count("cancelled"), cls: "bg-red-50 text-red-700" },
   ];
 
   return (
@@ -94,13 +104,20 @@ export default function OrdersOverTimeModal({ initialRange = "Today", onClose })
           ))}
         </div>
 
-        {/* Summary tiles */}
+        {/* Summary tiles (click to filter, click again to clear) */}
         <div className="grid grid-cols-2 gap-3 px-6 py-4 sm:grid-cols-3 lg:grid-cols-5">
           {tiles.map((t) => (
-            <div key={t.label} className={`rounded-lg p-3 ${t.cls}`}>
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setStatusFilter(statusFilter === t.key ? "all" : t.key)}
+              className={`rounded-lg p-3 text-left cursor-pointer transition hover:shadow-md ${t.cls} ${
+                statusFilter === t.key ? "ring-2 ring-teal-600 ring-offset-1" : ""
+              }`}
+            >
               <p className="text-xs opacity-80">{t.label}</p>
               <p className="text-xl font-bold">{t.value}</p>
-            </div>
+            </button>
           ))}
         </div>
 
@@ -108,8 +125,8 @@ export default function OrdersOverTimeModal({ initialRange = "Today", onClose })
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <p className="py-10 text-center text-xs text-gray-400">Loading…</p>
-          ) : orders.length === 0 ? (
-            <p className="py-10 text-center text-xs text-gray-400">No orders in this range.</p>
+          ) : visible.length === 0 ? (
+            <p className="py-10 text-center text-xs text-gray-400">No orders match this filter.</p>
           ) : (
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-left text-xs text-gray-500">
@@ -122,7 +139,7 @@ export default function OrdersOverTimeModal({ initialRange = "Today", onClose })
                 </tr>
               </thead>
               <tbody>
-                {orders.map((o) => (
+                {visible.map((o) => (
                   <tr
                     key={o.order_no}
                     onClick={() => navigate(`/lab-orders/${o.order_no}`)}

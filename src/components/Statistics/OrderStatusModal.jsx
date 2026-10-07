@@ -61,13 +61,13 @@ export default function OrderStatusModal({ initialRange = "Today", initialTab = 
   const total = inRange.length;
   const pct = (n) => (total ? `${((n / total) * 100).toFixed(1)}%` : "0%");
 
- const tiles = [
-    { label: "Total Orders", value: total, sub: null, cls: "bg-gray-50 text-gray-900" },
-    { label: "Completed", value: count("completed"), sub: pct(count("completed")), cls: "bg-green-50 text-green-700" },
-    { label: "Sample Collected", value: count("sample_collected"), sub: pct(count("sample_collected")), cls: "bg-blue-50 text-blue-700" },
-    { label: "Pending", value: count("pending"), sub: pct(count("pending")), cls: "bg-amber-50 text-amber-700" },
-    { label: "Cancelled", value: count("cancelled"), sub: pct(count("cancelled")), cls: "bg-red-50 text-red-700" },
-  ];
+const tiles = [
+  { key: "all", label: "Total Orders", value: total, sub: null, cls: "bg-gray-50 text-gray-900" },
+  { key: "completed", label: "Completed", value: count("completed"), sub: pct(count("completed")), cls: "bg-green-50 text-green-700" },
+  { key: "sample_collected", label: "Sample Collected", value: count("sample_collected"), sub: pct(count("sample_collected")), cls: "bg-blue-50 text-blue-700" },
+  { key: "pending", label: "Pending", value: count("pending"), sub: pct(count("pending")), cls: "bg-amber-50 text-amber-700" },
+  { key: "cancelled", label: "Cancelled", value: count("cancelled"), sub: pct(count("cancelled")), cls: "bg-red-50 text-red-700" },
+];
 
   const tabs = [
     { key: "all", label: "All", n: total },
@@ -117,18 +117,25 @@ export default function OrderStatusModal({ initialRange = "Today", initialTab = 
           ))}
         </div>
 
-        {/* Summary tiles */}
-        <div className="grid grid-cols-2 gap-3 px-6 py-4 sm:grid-cols-3 lg:grid-cols-5">
-          {tiles.map((t) => (
-            <div key={t.label} className={`rounded-lg p-3 ${t.cls}`}>
-              <p className="text-xs opacity-80">{t.label}</p>
-              <p className="text-xl font-bold">
-                {t.value}
-                {t.sub && <span className="ml-1.5 text-xs font-normal opacity-70">({t.sub})</span>}
-              </p>
-            </div>
-          ))}
-        </div>
+{/* Summary tiles */}
+<div className="grid grid-cols-2 gap-3 px-6 py-4 sm:grid-cols-3 lg:grid-cols-5">
+  {tiles.map((t) => (
+    <button
+      key={t.key}
+      type="button"
+      onClick={() => setTab(t.key)}
+      className={`rounded-lg p-3 text-left cursor-pointer transition hover:shadow-md ${t.cls} ${
+        tab === t.key ? "ring-2 ring-teal-600 ring-offset-1" : ""
+      }`}
+    >
+      <p className="text-xs opacity-80">{t.label}</p>
+      <p className="text-xl font-bold">
+        {t.value}
+        {t.sub && <span className="ml-1.5 text-xs font-normal opacity-70">({t.sub})</span>}
+      </p>
+    </button>
+  ))}
+</div>
 
         {/* Status tabs */}
         <div className="flex gap-5 border-b border-gray-100 px-6">
@@ -136,7 +143,7 @@ export default function OrderStatusModal({ initialRange = "Today", initialTab = 
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`-mb-px border-b-2 pb-2 text-sm font-medium ${
+              className={`-mb-px border-b-2 pb-2 text-sm font-medium cursor-pointer${
                 tab === t.key
                   ? "border-teal-600 text-teal-600"
                   : "border-transparent text-gray-500 hover:text-gray-700"

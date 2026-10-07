@@ -106,27 +106,47 @@ export default function CollectionReportModal({ open, range, onRangeChange, onCl
           </div>
         )}
 
-        {/* Summary tiles */}
-        <div className="grid grid-cols-3 gap-3 px-6 py-4">
-          <div className="rounded-xl bg-gray-50 px-4 py-3">
-            <p className="text-xs text-gray-500">Total Orders</p>
-            <p className="text-xl font-bold text-gray-900 mt-1">{loading ? "…" : report?.total ?? 0}</p>
-          </div>
-          <div className="rounded-xl bg-teal-50 px-4 py-3">
-            <p className="text-xs text-teal-700">Lab Orders</p>
-            <p className="text-xl font-bold text-gray-900 mt-1">
-              {loading ? "…" : report?.lab ?? 0}
-              <span className="text-xs font-normal text-gray-400 ml-1.5">({report?.labPercentage ?? 0}%)</span>
-            </p>
-          </div>
-          <div className="rounded-xl bg-purple-50 px-4 py-3">
-            <p className="text-xs text-purple-700">Home Collection</p>
-            <p className="text-xl font-bold text-gray-900 mt-1">
-              {loading ? "…" : report?.home ?? 0}
-              <span className="text-xs font-normal text-gray-400 ml-1.5">({report?.homePercentage ?? 0}%)</span>
-            </p>
-          </div>
-        </div>
+{/* Summary tiles */}
+<div className="grid grid-cols-3 gap-3 px-6 py-4">
+  <button
+    type="button"
+    onClick={() => setTab("all")}
+    className={`rounded-xl bg-gray-50 px-4 py-3 text-left cursor-pointer transition hover:shadow-md ${
+      tab === "all" ? "ring-2 ring-teal-600 ring-offset-1" : ""
+    }`}
+  >
+    <p className="text-xs text-gray-500">Total Orders</p>
+    <p className="text-xl font-bold text-gray-900 mt-1">{loading ? "…" : report?.total ?? 0}</p>
+  </button>
+
+  <button
+    type="button"
+    onClick={() => setTab("lab")}
+    className={`rounded-xl bg-teal-50 px-4 py-3 text-left cursor-pointer transition hover:shadow-md ${
+      tab === "lab" ? "ring-2 ring-teal-600 ring-offset-1" : ""
+    }`}
+  >
+    <p className="text-xs text-teal-700">Lab Orders</p>
+    <p className="text-xl font-bold text-gray-900 mt-1">
+      {loading ? "…" : report?.lab ?? 0}
+      <span className="text-xs font-normal text-gray-400 ml-1.5">({report?.labPercentage ?? 0}%)</span>
+    </p>
+  </button>
+
+  <button
+    type="button"
+    onClick={() => setTab("home")}
+    className={`rounded-xl bg-purple-50 px-4 py-3 text-left cursor-pointer transition hover:shadow-md ${
+      tab === "home" ? "ring-2 ring-purple-600 ring-offset-1" : ""
+    }`}
+  >
+    <p className="text-xs text-purple-700">Home Collection</p>
+    <p className="text-xl font-bold text-gray-900 mt-1">
+      {loading ? "…" : report?.home ?? 0}
+      <span className="text-xs font-normal text-gray-400 ml-1.5">({report?.homePercentage ?? 0}%)</span>
+    </p>
+  </button>
+</div>
 
         {/* Tabs */}
         <div className="flex gap-1 px-5 border-b border-gray-100">
@@ -135,7 +155,7 @@ export default function CollectionReportModal({ open, range, onRangeChange, onCl
               key={t.key}
               type="button"
               onClick={() => setTab(t.key)}
-              className={`px-3 py-2 text-sm font-medium border-b-2 transition ${
+              className={`px-3 py-2 text-sm font-medium border-b-2 transition cursor-pointer ${
                 tab === t.key ? t.active : "text-gray-400 border-transparent hover:text-gray-600"
               }`}
             >

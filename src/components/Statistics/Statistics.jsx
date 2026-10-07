@@ -907,6 +907,7 @@ useEffect(() => {
       icon: Users,
       bg: "bg-indigo-50",
       color: "text-indigo-600",
+      onClick: () => setReportModal("patient"),
     },
     {
       label: "Completed Orders",

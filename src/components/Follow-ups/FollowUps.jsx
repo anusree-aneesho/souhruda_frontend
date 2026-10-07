@@ -27,62 +27,86 @@ function mapReminder(r) {
 export default function FollowUps() {
   const [followUps, setFollowUps] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [viewingId, setViewingId] = useState(null);
-
-  function fetchReminders() {
-    setIsLoading(true);
-    getFollowUpRemindersApi(page)
-      .then((res) => {
-        setFollowUps((res.data || []).map(mapReminder));
-        setLastPage(res.last_page ?? 1);
-        setTotal(res.total ?? 0);
-      })
-      .catch(() => setFollowUps([]))
-      .finally(() => setIsLoading(false));
-  }
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    fetchReminders();
-  }, [page]);
+    let cancelled = false;
+    setIsLoading(true);
+    setLoadError(null);
+
+    getFollowUpRemindersApi(page)
+      .then((res) => {
+        if (cancelled) return;
+        const last = res.last_page ?? res.meta?.last_page ?? 1;
+        setFollowUps((res.data || []).map(mapReminder));
+        setLastPage(last);
+        setTotal(res.total ?? res.meta?.total ?? 0);
+
+        // If the last item on the final page was just actioned, the page
+        // no longer exists, so step back instead of showing an empty list.
+        if (page > last) setPage(Math.max(1, last));
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setFollowUps([]);
+          setLoadError(err.message);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [page, refreshKey]);
 
   return (
     <div className="space-y-6">
       <FollowUpsHeader />
 
-      {isLoading ? (
-        <p className="text-sm text-gray-400 text-center py-6">Loading follow-ups...</p>
-      ) : (
-        <>
-          <FollowUpsTable followUps={followUps} onView={setViewingId} />
+      <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-5">
+        {loadError && (
+          <p className="text-sm text-red-500 text-center py-2">{loadError}</p>
+        )}
 
-          {followUps.length > 0 && lastPage > 1 && (
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-500">
-                Page {page} of {lastPage} · {total} follow-ups
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page <= 1}
-                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 cursor-pointer"
-                >
-                  ← Prev
-                </button>
-                <button
-                  onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
-                  disabled={page >= lastPage}
-                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 cursor-pointer"
-                >
-                  Next →
-                </button>
+        {isLoading ? (
+          <p className="text-sm text-gray-400 text-center py-6">Loading follow-ups…</p>
+        ) : (
+          <>
+            <FollowUpsTable followUps={followUps} onView={setViewingId} />
+
+            {followUps.length > 0 && lastPage > 1 && (
+              <div className="flex items-center justify-between border-t border-gray-100 pt-2 !mt-1">
+                <p className="text-xs text-gray-500">
+                  Page {page} of {lastPage} · {total} follow-ups
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1}
+                    className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 cursor-pointer"
+                  >
+                    ← Prev
+                  </button>
+                  <button
+                    onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
+                    disabled={page >= lastPage}
+                    className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 cursor-pointer"
+                  >
+                    Next →
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
-        </>
-      )}
+            )}
+          </>
+        )}
+      </div>
 
       {viewingId && (
         <FollowUpDetailModal
@@ -90,7 +114,7 @@ export default function FollowUps() {
           onClose={() => setViewingId(null)}
           onActionComplete={() => {
             setViewingId(null);
-            fetchReminders();
+            setRefreshKey((k) => k + 1);
           }}
         />
       )}

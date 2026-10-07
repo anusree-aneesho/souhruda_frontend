@@ -6,8 +6,8 @@ import EmptyState from "./EmptyState";
 export default function FollowUpsTable({ followUps, onView }) {
   if (followUps.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
-        <div className="hidden md:grid grid-cols-5 px-5 py-3 border-b border-gray-100">
+      <div>
+        <div className="hidden md:grid grid-cols-5 pb-2 border-b border-gray-100">
           {["REG NO", "PATIENT", "TEST", "DUE", "STATUS"].map((h) => (
             <span key={h} className="text-xs font-medium text-gray-400 tracking-wide">
               {h}
@@ -20,7 +20,7 @@ export default function FollowUpsTable({ followUps, onView }) {
   }
 
   return (
-    <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+    <div>
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full min-w-[600px]">
           <thead>

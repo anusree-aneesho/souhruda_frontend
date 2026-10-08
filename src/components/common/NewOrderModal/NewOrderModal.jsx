@@ -1,5 +1,5 @@
 // src/components/NewOrderModal/NewOrderModal.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import ModalShell from "../../common/Modal/ModalShell";
 import StepProgressBar from "./StepProgressBar";
@@ -10,6 +10,8 @@ import AddressSlotStep from "./steps/AddressSlotStep";
 import PaymentStep from "./steps/PaymentStep";
 import { useOrderModal } from "../../../Context/OrderModalContext";
 import EditPatientModal from "../../Patients/modals/EditPatientModal";
+import QuickAddDoctorModal from "./QuickAddDoctorModal";
+import Toast from "../../common/Toast/Toast";
 import {
   getPatientsApi,
   getPatientApi,
@@ -19,11 +21,10 @@ import {
   quoteHomeCollectionApi,
   createOrderApi,
   getTestPackages,
+  getDoctorsApi,
+  getPatientFollowUpRemindersApi,
 } from "../../../api/api";
-import { getDoctorsApi } from "../../../api/api";
 import { computeOrderPricing } from "../../../utils/orderPricing";
-import { getPatientFollowUpRemindersApi } from "../../../api/api";
-
 
 function mapPatient(p) {
   return {
@@ -103,7 +104,7 @@ function isReminderDueSoon(dueDate) {
   due.setHours(0, 0, 0, 0);
 
   const daysLeft = Math.round((due - today) / (1000 * 60 * 60 * 24));
-  return daysLeft <= REMINDER_WINDOW_DAYS; 
+  return daysLeft <= REMINDER_WINDOW_DAYS;
 }
 
 export default function NewOrderModal() {
@@ -117,10 +118,10 @@ export default function NewOrderModal() {
   const [patientType, setPatientType] = useState("existing");
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [newPatientData, setNewPatientData] = useState(emptyNewPatient);
-  const [createdPatient, setCreatedPatient] = useState(null); // holds the freshly-created patient (from step 1)
+  const [createdPatient, setCreatedPatient] = useState(null);
   const [activeCategory, setActiveCategory] = useState(null);
   const [selectedTests, setSelectedTests] = useState([]);
-  const [appliedPackageIds, setAppliedPackageIds] = useState([]); // packages the staff explicitly applied
+  const [appliedPackageIds, setAppliedPackageIds] = useState([]);
   const [paymentDone, setPaymentDone] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -129,14 +130,18 @@ export default function NewOrderModal() {
   const [editingPatient, setEditingPatient] = useState(null);
   const [isLoadingPatientToEdit, setIsLoadingPatientToEdit] = useState(false);
 
-  const [doctors, setDoctors] = useState([]); 
-  const [packages, setPackages] = useState([]); // active test packages, for package-aware pricing
+  const [doctors, setDoctors] = useState([]);
+  const [packages, setPackages] = useState([]);
   const [referredBy, setReferredBy] = useState("");
-
   const [referredByTouched, setReferredByTouched] = useState(false);
+  const [showAddDoctor, setShowAddDoctor] = useState(false);
 
   const [patientReminders, setPatientReminders] = useState([]);
   const [selectedReminderId, setSelectedReminderId] = useState(null);
+
+  const closeToast = useCallback(() => setToast(null), []);
+  // Success toast (e.g. "Dr. X added successfully")
+  const [toast, setToast] = useState(null);
 
   async function handleEditSelectedPatient() {
     if (!selectedPatient?.id) return;
@@ -175,6 +180,22 @@ export default function NewOrderModal() {
       setEditingPatient(null);
     }
   }
+
+  // Called after the quick-add form saves a doctor. The dropdown options use
+  // the value `Dr. ${name}`, so the selected value must use the same format.
+function handleDoctorCreated(doctor) {
+  if (!doctor?.name) return;
+
+  setDoctors((prev) =>
+    doctor.id && prev.some((d) => d.id === doctor.id) ? prev : [...prev, doctor]
+  );
+  setReferredBy(`Dr. ${doctor.name}`);
+  setReferredByTouched(false);
+  setShowAddDoctor(false);
+  setToast(`Dr. ${doctor.name} added successfully`);
+}
+
+  // Auto-dismiss the toast after 2.5s
 
   useEffect(() => {
     if (isOpen && skipPatientStep) {
@@ -222,7 +243,6 @@ export default function NewOrderModal() {
     (async () => {
       try {
         const res = await getTestPackages();
-        // Only active packages are ever offered for selection / pricing.
         if (!cancelled) setPackages((res.data || []).filter((p) => p.is_active));
       } catch (err) {
         console.error("Failed to load test packages:", err.message);
@@ -252,6 +272,9 @@ export default function NewOrderModal() {
           )
         );
       })
+      .catch((err) => {
+        console.error("Failed to load follow-up reminders:", err.message);
+      });
     return () => {
       cancelled = true;
     };
@@ -298,8 +321,10 @@ export default function NewOrderModal() {
     setEditingPatient(null);
     setReferredBy("");
     setReferredByTouched(false);
+    setShowAddDoctor(false);
     setPatientReminders([]);
     setSelectedReminderId(null);
+    setToast(null);
     close();
   }
 
@@ -309,10 +334,6 @@ export default function NewOrderModal() {
     );
   }
 
-  // Applying a package never changes which tests are selected — it only
-  // marks the package as the pricing to use for the tests it covers (the
-  // "Apply Package" button only appears once every required test is already
-  // ticked). The staff stays in full control of the price.
   function applyPackageId(packageId) {
     setAppliedPackageIds((prev) => (prev.includes(packageId) ? prev : [...prev, packageId]));
   }
@@ -321,8 +342,6 @@ export default function NewOrderModal() {
     setAppliedPackageIds((prev) => prev.filter((id) => !packageIds.includes(id)));
   }
 
-  // Pin the location, then ask the backend for the real distance + home visit
-  // fee (same code path that runs at booking time) instead of estimating here.
   async function pinAt(lat, lng) {
     const location = { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) };
     try {
@@ -343,8 +362,6 @@ export default function NewOrderModal() {
     }
   }
 
-  // Uses the device's real position. If it can't be read we say so instead of
-  // silently pinning the lab (which would show 0 km and a base-fee-only price).
   function handlePinLocation() {
     setBookingError("");
     setPinnedLocation(null);
@@ -448,9 +465,9 @@ export default function NewOrderModal() {
       const { appliedPackages } = computeOrderPricing(selectedTests, packages, appliedPackageIds);
 
       const payload = {
-         patient_id: patientId,
-         tests: selectedTests.map((t) => ({
-         lab_test_id: t.id,
+        patient_id: patientId,
+        tests: selectedTests.map((t) => ({
+          lab_test_id: t.id,
         })),
         package_ids: appliedPackages.map((p) => p.id),
         referred_by: referredBy,
@@ -462,7 +479,7 @@ export default function NewOrderModal() {
       const order = res.data;
 
       resetAndClose();
-      navigate('/lab-orders', {
+      navigate("/lab-orders", {
         state: { justCreated: { orderId: order.order_no, patientName: currentPatient?.first_name } },
       });
     } catch (err) {
@@ -506,7 +523,7 @@ export default function NewOrderModal() {
         slot_date: preferredDate,
         slot_label: timeSlot,
         payment_mode: paymentMethod.toLowerCase(),
-        referred_by: referredBy, 
+        referred_by: referredBy,
       };
 
       const created = await createHomeCollectionRequestApi(payload);
@@ -518,14 +535,14 @@ export default function NewOrderModal() {
     }
   }
 
-const isNextDisabled =
-  (step === 1 && patientType === "existing" && !selectedPatient) ||
-  (step === 1 && patientType === "new" && (!newPatientData.name.trim() || !newPatientData.dateOfBirth)) ||
-  (step === 1 && !referredBy) ||
-  (step === 1 && isCreatingPatient) ||
-  (step === 2 && skipPatientStep && !referredBy) ||
-  (step === 2 && (selectedTests.length === 0 || !currentPatient)) ||
-  (isHomeCollection && step === 3 && (!address.trim() || !preferredDate || !pinnedLocation || !pinnedLocation.withinRadius));
+  const isNextDisabled =
+    (step === 1 && patientType === "existing" && !selectedPatient) ||
+    (step === 1 && patientType === "new" && (!newPatientData.name.trim() || !newPatientData.dateOfBirth)) ||
+    (step === 1 && !referredBy) ||
+    (step === 1 && isCreatingPatient) ||
+    (step === 2 && skipPatientStep && !referredBy) ||
+    (step === 2 && (selectedTests.length === 0 || !currentPatient)) ||
+    (isHomeCollection && step === 3 && (!address.trim() || !preferredDate || !pinnedLocation || !pinnedLocation.withinRadius));
 
   if (!isOpen) return null;
 
@@ -585,6 +602,7 @@ const isNextDisabled =
               if (val) setReferredByTouched(false);
             }}
             referredByError={referredByTouched && !referredBy}
+            onAddDoctor={() => setShowAddDoctor(true)}
           />
         )}
 
@@ -598,6 +616,7 @@ const isNextDisabled =
                 if (val) setReferredByTouched(false);
               }}
               referredByError={referredByTouched && !referredBy}
+              onAddDoctor={() => setShowAddDoctor(true)}
             />
           </div>
         )}
@@ -686,7 +705,7 @@ const isNextDisabled =
               disabled={isNextDisabled || isSubmitting || isCreatingPatient}
               className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40 cursor-pointer"
             >
-            {isCreatingPatient ? "Saving patient…" : nextButtonLabels[step]}
+              {isCreatingPatient ? "Saving patient…" : nextButtonLabels[step]}
             </button>
           ) : (
             <button
@@ -707,6 +726,17 @@ const isNextDisabled =
           onSave={handleSaveEditedPatient}
         />
       )}
+
+      {showAddDoctor && (
+        <QuickAddDoctorModal
+          onClose={() => setShowAddDoctor(false)}
+          onCreated={handleDoctorCreated}
+        />
+      )}
+
+{toast && (
+  <Toast message={toast} type="success" duration={2500} onClose={closeToast} />
+)}
     </>
   );
 }

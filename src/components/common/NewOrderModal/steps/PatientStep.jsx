@@ -46,8 +46,6 @@ function PatientCombobox({ selectedPatient, onSelectPatient }) {
   useEffect(() => {
     if (!isOpen) return;
 
-    // If the box currently just shows the selected patient's label (user
-    // hasn't typed anything new), treat it as "no filter" and load the list.
     const isShowingSelectedLabel =
       selectedPatient && query === `${selectedPatient.name} (${selectedPatient.regNo})`;
     const search = isShowingSelectedLabel ? "" : query.trim();
@@ -137,7 +135,7 @@ function PatientCombobox({ selectedPatient, onSelectPatient }) {
                 type="button"
                 onClick={() => handleSelect(p)}
                 onMouseEnter={() => setHighlightedIndex(index)}
-                className={`flex w-full flex-col items-start gap-0.5 px-3.5 py-2.5 text-left text-sm transition-colors ${
+                className={`flex w-full flex-col items-start gap-0.5 px-3.5 py-2.5 text-left text-sm transition-colors cursor-pointer ${
                   index === highlightedIndex ? "bg-teal-50" : "hover:bg-gray-50"
                 } ${p.regNo === selectedPatient?.regNo ? "font-semibold text-teal-700" : "text-gray-900"}`}
               >
@@ -154,29 +152,46 @@ function PatientCombobox({ selectedPatient, onSelectPatient }) {
   );
 }
 
-export function ReferredByField({ doctors, referredBy, onReferredByChange, referredByError }) {
+// ⬅️ NEW: now exported (NewOrderModal imports it), and accepts onAddDoctor
+export function ReferredByField({
+  doctors = [],
+  referredBy,
+  onReferredByChange,
+  referredByError,
+  onAddDoctor,
+}) {
   return (
     <div>
-      <label className="block text-sm font-semibold text-gray-900 mb-1.5">Referred By</label>
+      {/* Label row: "Referred By" on the left, "+ Add doctor" on the right */}
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-sm font-medium text-gray-900">Referred By</label>
+        <button
+          type="button"
+          onClick={onAddDoctor}
+          className="flex items-center gap-1 text-xs font-medium text-teal-600 hover:text-teal-700 cursor-pointer"
+        >
+          <span className="text-base leading-none">+</span> Add doctor
+        </button>
+      </div>
+
       <select
         value={referredBy}
         onChange={(e) => onReferredByChange(e.target.value)}
-        className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
-          referredByError
-            ? "border-red-400 focus:border-red-500 focus:ring-red-500"
-            : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+        className={`w-full rounded-lg border px-3 py-2.5 text-sm outline-none focus:border-teal-500 ${
+          referredByError ? "border-red-400" : "border-gray-200"
         }`}
       >
-        <option value="" disabled>Select</option>
+        <option value="">Select</option>
         <option value="Self">Self</option>
-        {doctors.map((doc) => (
-          <option key={doc.id} value={`Dr. ${doc.name}`}>
-            Dr. {doc.name}
+        {doctors.map((d) => (
+          <option key={d.id ?? d.name} value={`Dr. ${d.name}`}>
+            Dr. {d.name}
           </option>
         ))}
       </select>
+
       {referredByError && (
-        <p className="text-xs text-red-500 mt-1">This field is required.</p>
+        <p className="mt-1 text-xs text-red-500">Please select who referred the patient.</p>
       )}
     </div>
   );
@@ -188,6 +203,7 @@ export default function PatientStep({
   newPatientData, onNewPatientChange,
   onEditSelectedPatient, isLoadingPatientToEdit,
   doctors, referredBy, onReferredByChange, referredByError,
+  onAddDoctor, // ⬅️ NEW
 }) {
   return (
     <div className="px-6 py-5 space-y-5">
@@ -201,13 +217,13 @@ export default function PatientStep({
           Existing patient
         </button>
         <button
-  onClick={() => onPatientTypeChange("new")}
-  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer ${
-    patientType === "new" ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-500 "
-  }`}
->
-  New patient
-</button>
+          onClick={() => onPatientTypeChange("new")}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer ${
+            patientType === "new" ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-500 "
+          }`}
+        >
+          New patient
+        </button>
       </div>
 
       {patientType === "existing" ? (
@@ -238,6 +254,7 @@ export default function PatientStep({
           referredBy={referredBy}
           onReferredByChange={onReferredByChange}
           referredByError={referredByError}
+          onAddDoctor={onAddDoctor} // ⬅️ NEW
         />
       )}
 
@@ -326,6 +343,7 @@ export default function PatientStep({
             referredBy={referredBy}
             onReferredByChange={onReferredByChange}
             referredByError={referredByError}
+            onAddDoctor={onAddDoctor} // ⬅️ NEW
           />
         </div>
       )}

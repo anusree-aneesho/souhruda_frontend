@@ -123,12 +123,14 @@ export async function deletePatientApi(id) {
 
 // ── Settings ───────────────────────────────────────────────
 
-export async function getSettingsApi() {
-  return request("/settings");
+export async function getSettingsApi(branchId) {
+  const qs = branchId ? `?branch_id=${branchId}` : "";
+  return request(`/settings${qs}`);
 }
 
-export async function updateSettingsApi(settingsData) {
-  return request("/settings", {
+export async function updateSettingsApi(settingsData, branchId) {
+  const qs = branchId ? `?branch_id=${branchId}` : "";
+  return request(`/settings${qs}`, {
     method: "PUT",
     body: JSON.stringify(settingsData),
   });
@@ -526,6 +528,13 @@ export async function updateStaffMemberApi(id, payload) {
   return request(`/staff-members/${id}`, {
     method: "PUT",
     body: JSON.stringify(payload),
+  });
+}
+
+export async function updateTechnicianRatingApi(id, rating) {
+  return request(`/staff-members/${id}/rating`, {
+    method: "PATCH",
+    body: JSON.stringify({ rating }),
   });
 }
 

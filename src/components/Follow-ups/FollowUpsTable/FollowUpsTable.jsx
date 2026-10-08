@@ -3,7 +3,7 @@ import FollowUpRow from "./FollowUpRow";
 import FollowUpCard from "./FollowUpCard";
 import EmptyState from "./EmptyState";
 
-export default function FollowUpsTable({ followUps, onView }) {
+export default function FollowUpsTable({ followUps, onView, onViewPatient }) {
   if (followUps.length === 0) {
     return (
       <div>
@@ -35,14 +35,14 @@ export default function FollowUpsTable({ followUps, onView }) {
           </thead>
           <tbody>
             {followUps.map((f) => (
-              <FollowUpRow key={f.id} {...f} onView={() => onView(f.id)} />
+              <FollowUpRow key={f.id} {...f} onView={() => onView(f.id)} onViewPatient={() => onViewPatient(f.patientNumber)} />
             ))}
           </tbody>
         </table>
       </div>
       <div className="md:hidden space-y-3">
         {followUps.map((f) => (
-          <FollowUpCard key={f.id} {...f} onView={() => onView(f.id)} />
+          <FollowUpCard key={f.id} {...f} onView={() => onView(f.id)} onViewPatient={() => onViewPatient(f.patientNumber)} />
         ))}
       </div>
     </div>

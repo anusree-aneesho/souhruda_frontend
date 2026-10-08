@@ -12,6 +12,7 @@ import Staff from "../components/Staff/Staff";
 import Technicians from "../components/Technicians/Technicians";
 import LabAssistants from "../components/LabAssistants/LabAssistants";
 import FollowUps from "../components/Follow-ups/FollowUps";
+import PatientDetails from "../components/Follow-ups/PatientDetails";
 import Statistics from "../components/Statistics/Statistics";
 import Settings from "../components/SettingPage/Settings";
 import OrderDetail from "../components/LabOrders/OrderDetail/OrderDetail";
@@ -42,6 +43,7 @@ export default function AppRoutes() {
           <Route path="/test-master" element={<TestMaster />} />
           <Route path="/patients" element={<Patients />} />
           <Route path="/follow-ups" element={<FollowUps />} />
+          <Route path="/follow-ups/patient/:patientNumber" element={<PatientDetails />} />
 
           <Route
             path="/reports"

@@ -27,13 +27,13 @@ import {
 
 const allNavItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
+  { label: "Patients", icon: Users, path: "/patients" },
   { label: "Lab Orders", icon: ClipboardList, path: "/lab-orders" },
   { label: "Home Collection", icon: MapPin, path: "/home-collection" },
   // { label: "Front Office", icon: UserCog, path: "/staff" },
   { label: "Technicians", icon: Wrench, path: "/technicians" },
   // { label: "Lab Assistant", icon: Beaker, path: "/lab-assistants" },
   { label: "Test Master", icon: FlaskConical, path: "/test-master" },
-  { label: "Patients", icon: Users, path: "/patients" },
   { label: "Follow-ups", icon: Clock, path: "/follow-ups" },
   { label: "Statistics", icon: BarChart3, path: "/statistics" },
   // Reports is rendered separately below as a dropdown, not a flat link.

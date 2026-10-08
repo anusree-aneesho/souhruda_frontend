@@ -8,7 +8,7 @@ export default function FollowUpRow({ patient, patientNumber, test, due, status,
       <td className="py-3 text-sm font-medium text-gray-900">
         <button
           onClick={onViewPatient}
-          className="font-medium text-gray-900 hover:text-teal-600 hover:underline cursor-pointer text-left"
+          className="font-medium text-gray-900 hover:text-teal-600 cursor-pointer text-left"
         >
           {patient}
         </button>
@@ -21,7 +21,7 @@ export default function FollowUpRow({ patient, patientNumber, test, due, status,
       <td className="py-3 text-right">
         <button
           onClick={onView}
-          className="text-xs text-teal-600 font-medium hover:underline cursor-pointer"
+          className="text-xs text-teal-600 font-medium cursor-pointer"
         >
           View
         </button>

@@ -7,7 +7,7 @@ export default function FollowUpCard({ patient, test, due, status, onView, onVie
       <div className="flex items-center justify-between">
         <button
           onClick={onViewPatient}
-          className="text-sm font-semibold text-gray-900 hover:text-teal-600 hover:underline cursor-pointer"
+          className="text-sm font-semibold text-gray-900 hover:text-teal-600 cursor-pointer"
         >
           {patient}
         </button>
@@ -18,7 +18,7 @@ export default function FollowUpCard({ patient, test, due, status, onView, onVie
         <p className="text-xs text-gray-400">Due {due}</p>
         <button
           onClick={onView}
-          className="text-xs text-teal-600 font-medium hover:underline cursor-pointer"
+          className="text-xs text-teal-600 font-medium cursor-pointer"
         >
           View
         </button>

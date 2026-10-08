@@ -20,6 +20,7 @@ function mapTest(t, categoryId) {
   return {
     id: t.id,
     name: t.name,
+    code: t.code || "",
     unit: t.unit || "",
     range: t.range_text || t.range_raw || "",
     price: Number(t.price) || 0,
@@ -384,13 +385,32 @@ export default function SelectTestsStep({
 
       <div className="bg-teal-50 rounded-lg px-4 py-3 space-y-1">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-teal-700">
-            {pricing.appliedPackages.length > 0
-              ? pricing.appliedPackages.map((p) => p.name).join(" + ") +
-                (pricing.individualTests.length > 0 ? ` + ${pricing.individualTests.length} test(s)` : "")
-              : `${selectedTests.length} test(s) selected`}
+          <span className="text-xs font-semibold text-teal-600">
+            Total
           </span>
-          <span className="text-base font-bold text-teal-700">₹{pricing.total.toFixed(2)}</span>
+
+          <span className="text-base font-bold text-teal-700">
+            ₹{pricing.total.toFixed(2)}
+          </span>
+        </div>
+
+        <div className="text-sm font-medium text-teal-700">
+          {pricing.appliedPackages.length > 0
+            ? pricing.appliedPackages.map((p) => p.name).join(" + ") +
+              (pricing.individualTests.length > 0
+                ? ` + ${pricing.individualTests.length} test(s)`
+                : "")
+            : selectedTests
+              .map((selected) => {
+                const test = allTests.find((t) => t.id === selected.id);
+                return (
+                  test?.code ||
+                  selected.code ||
+                  selected.name.match(/\(([^)]+)\)$/)?.[1] ||
+                  selected.name
+                );
+              })
+              .join(", ")}
         </div>
       </div>
     </div>

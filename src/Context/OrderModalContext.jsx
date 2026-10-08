@@ -6,9 +6,6 @@ const OrderModalContext = createContext(null);
 export function OrderModalProvider({ children }) {
   const [isOpen, setIsOpen] = useState(false);
   const [flowType, setFlowType] = useState("order"); // "order" | "homeCollection"
-  // When set, the modal was opened for a specific, already-known patient
-  // (e.g. "Book test" / "Home collection" from the Patients page), so the
-  // Patient step is skipped and the flow starts at Select Tests instead.
   const [presetPatientRegNo, setPresetPatientRegNo] = useState(null);
 
   const open = useCallback((type = "order", patientRegNo = null) => {
@@ -23,7 +20,9 @@ export function OrderModalProvider({ children }) {
   }, []);
 
   return (
-    <OrderModalContext.Provider value={{ isOpen, open, close, flowType, presetPatientRegNo }}>
+    <OrderModalContext.Provider
+      value={{ isOpen, open, close, flowType, setFlowType, presetPatientRegNo }}
+    >
       {children}
     </OrderModalContext.Provider>
   );

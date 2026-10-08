@@ -106,8 +106,39 @@ function isReminderDueSoon(dueDate) {
   return daysLeft <= REMINDER_WINDOW_DAYS; 
 }
 
+function FlowTypeToggle({ value, onChange }) {
+  const options = [
+    { key: "order", label: "Lab Orders" },
+    { key: "homeCollection", label: "Home Collection" },
+  ];
+
+  return (
+    <div role="radiogroup" aria-label="Order type" className="flex gap-2">
+      {options.map((o) => {
+        const active = value === o.key;
+        return (
+          <button
+            key={o.key}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => onChange(o.key)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
+              active
+                ? "bg-teal-600 text-white"
+                : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+            }`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function NewOrderModal() {
-  const { isOpen, close, flowType, presetPatientRegNo } = useOrderModal();
+  const { isOpen, close, flowType, setFlowType, presetPatientRegNo } = useOrderModal();
   const navigate = useNavigate();
   const isHomeCollection = flowType === "homeCollection";
   const totalSteps = isHomeCollection ? 4 : 3;
@@ -589,7 +620,8 @@ const isNextDisabled =
         )}
 
         {step === 2 && skipPatientStep && (
-          <div className="px-6 pt-5">
+          <div className="px-6 pt-5 space-y-4">
+            <FlowTypeToggle value={flowType} onChange={setFlowType} />
             <ReferredByField
               doctors={doctors}
               referredBy={referredBy}

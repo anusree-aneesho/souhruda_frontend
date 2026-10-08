@@ -123,12 +123,14 @@ export async function deletePatientApi(id) {
 
 // ── Settings ───────────────────────────────────────────────
 
-export async function getSettingsApi() {
-  return request("/settings");
+export async function getSettingsApi(branchId) {
+  const qs = branchId ? `?branch_id=${branchId}` : "";
+  return request(`/settings${qs}`);
 }
 
-export async function updateSettingsApi(settingsData) {
-  return request("/settings", {
+export async function updateSettingsApi(settingsData, branchId) {
+  const qs = branchId ? `?branch_id=${branchId}` : "";
+  return request(`/settings${qs}`, {
     method: "PUT",
     body: JSON.stringify(settingsData),
   });

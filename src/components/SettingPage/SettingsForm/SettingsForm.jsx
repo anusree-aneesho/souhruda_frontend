@@ -92,7 +92,7 @@ const BACKEND_FIELD_MAP = {
   max_distance_km: "maxDistanceKm",
 };
 
-export default function SettingsForm() {
+export default function SettingsForm({ branchId = null, branchName = "" }) {
   const [formData, setFormData] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(true);
@@ -109,9 +109,15 @@ export default function SettingsForm() {
   const canEdit = ["admin", "super_admin", "superadmin"].includes(role);
 
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+    setFieldErrors({});
+
     async function loadSettings() {
       try {
-        const res = await getSettingsApi();
+        const res = await getSettingsApi(branchId);
+        if (cancelled) return;
         const s = res.data;
         setFormData({
           labName: s.lab_name || "",
@@ -134,13 +140,17 @@ export default function SettingsForm() {
           maxDistanceKm: s.max_distance_km ?? "",
         });
       } catch (err) {
-        setError(err.message || "Failed to load settings.");
+        if (!cancelled) setError(err.message || "Failed to load settings.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     loadSettings();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [branchId]);
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -171,26 +181,29 @@ export default function SettingsForm() {
     setSaving(true);
 
     try {
-      await updateSettingsApi({
-        lab_name: formData.labName,
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        pincode: formData.pincode,
-        reg_no_prefix: formData.regNoPrefix,
-        order_no_start: Number(formData.orderNoStart) || 0,
-        whatsapp_number: formData.whatsappNumber,
-        phone: formData.phone,
-        email: formData.email,
-        website: formData.website,
-        license_no: formData.licenseNo,
-        working_hours: formData.workingHours,
-        footer_note: formData.footerNote,
-        base_fee: Number(formData.baseFee) || 0,
-        per_km_rate: Number(formData.perKmRate) || 0,
-        free_radius: Number(formData.freeRadius) || 0,
-        max_distance_km: Number(formData.maxDistanceKm) || 0,
-      });
+      await updateSettingsApi(
+        {
+          lab_name: formData.labName,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          pincode: formData.pincode,
+          reg_no_prefix: formData.regNoPrefix,
+          order_no_start: Number(formData.orderNoStart) || 0,
+          whatsapp_number: formData.whatsappNumber,
+          phone: formData.phone,
+          email: formData.email,
+          website: formData.website,
+          license_no: formData.licenseNo,
+          working_hours: formData.workingHours,
+          footer_note: formData.footerNote,
+          base_fee: Number(formData.baseFee) || 0,
+          per_km_rate: Number(formData.perKmRate) || 0,
+          free_radius: Number(formData.freeRadius) || 0,
+          max_distance_km: Number(formData.maxDistanceKm) || 0,
+        },
+        branchId
+      );
       showToast("Settings saved successfully.");
     } catch (err) {
       // Laravel validation errors: { errors: { field_name: ["message1", "message2"] } }
@@ -224,6 +237,12 @@ export default function SettingsForm() {
       onSubmit={handleSubmit}
       className="bg-white rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)] max-w-2xl space-y-5"
     >
+      {branchName && (
+        <p className="text-sm text-teal-700 bg-teal-50 border border-teal-100 rounded-lg px-3 py-2">
+          Viewing settings for <span className="font-semibold">{branchName}</span>
+        </p>
+      )}
+
       {error && (
         <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
       )}

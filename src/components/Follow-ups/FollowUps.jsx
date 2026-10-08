@@ -1,5 +1,6 @@
 // src/components/FollowUps/FollowUps.jsx
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import FollowUpsHeader from "./FollowUpsHeader";
 import FollowUpsTable from "./FollowUpsTable/FollowUpsTable";
 import FollowUpDetailModal from "./modals/FollowUpDetailModal";
@@ -32,6 +33,7 @@ export default function FollowUps() {
   const [lastPage, setLastPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [viewingId, setViewingId] = useState(null);
+  const navigate = useNavigate();
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -79,7 +81,11 @@ export default function FollowUps() {
           <p className="text-sm text-gray-400 text-center py-6">Loading follow-ups…</p>
         ) : (
           <>
-            <FollowUpsTable followUps={followUps} onView={setViewingId} />
+            <FollowUpsTable
+              followUps={followUps}
+              onView={setViewingId}
+              onViewPatient={(patientNumber) => navigate(`/follow-ups/patient/${patientNumber}`)}
+            />
 
             {followUps.length > 0 && lastPage > 1 && (
               <div className="flex items-center justify-between border-t border-gray-100 pt-2 !mt-1">

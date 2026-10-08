@@ -531,6 +531,13 @@ export async function updateStaffMemberApi(id, payload) {
   });
 }
 
+export async function updateTechnicianRatingApi(id, rating) {
+  return request(`/staff-members/${id}/rating`, {
+    method: "PATCH",
+    body: JSON.stringify({ rating }),
+  });
+}
+
 export async function deleteStaffMemberApi(id) {
   return request(`/staff-members/${id}`, {
     method: "DELETE",

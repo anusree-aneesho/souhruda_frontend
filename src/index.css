@@ -2,3 +2,44 @@
 @theme {
   --color-brand: #0f9c8f;
 }
+
+@layer components {
+  .assist-tbl-wrap {
+    overflow: auto;
+    max-height: 300px;
+  }
+  .assist-tbl {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+    min-width: max-content;
+  }
+  .assist-tbl thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f9fafb;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+    font-weight: 700;
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid #e5e7eb;
+    white-space: nowrap;
+  }
+  .assist-tbl tbody td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 12px;
+    color: #374151;
+    white-space: nowrap;
+  }
+  .assist-tbl tbody tr:nth-child(even) {
+    background: #f9fafb;
+  }
+  .assist-tbl tbody tr:hover {
+    background: #f0fdfa;
+  }
+}

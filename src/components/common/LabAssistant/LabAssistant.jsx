@@ -1,5 +1,6 @@
 // src/components/common/LabAssistant/LabAssistant.jsx
 import { useState, useRef, useEffect } from "react";
+import { Bot } from "lucide-react";
 import ChatPanel from "./ChatPanel";
 
 export default function LabAssistant() {
@@ -24,9 +25,9 @@ export default function LabAssistant() {
 
       <button
         onClick={() => setIsOpen((prev) => !prev)}
-        className="h-14 w-14 rounded-full bg-gradient-to-br from-purple-600 to-teal-600 text-white flex items-center justify-center text-2xl shadow-lg hover:scale-105 transition-transform"
+        className="h-14 w-14 rounded-full bg-teal-600 text-white flex items-center justify-center shadow-lg hover:bg-teal-700 hover:scale-105 transition-all"
       >
-        🤖
+        <Bot size={26} />
       </button>
     </div>
   );

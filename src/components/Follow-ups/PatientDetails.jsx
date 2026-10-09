@@ -1,7 +1,16 @@
 // src/components/Follow-ups/PatientDetails.jsx
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, ChevronRight, ChevronDown, PlusCircle } from "lucide-react";
+import {
+  ChevronDown,
+  PlusCircle,
+  User,
+  Phone,
+  MapPin,
+  Mail,
+  Home,
+  CalendarDays,
+} from "lucide-react";
 import { getPatientTestHistoryApi } from "../../api/api";
 import { useOrderModal } from "../../Context/OrderModalContext";
 import { daysAgoIso } from "../Reports/shared/format";
@@ -9,7 +18,7 @@ import { daysAgoIso } from "../Reports/shared/format";
 const PAGE_SIZE = 10;
 
 const PERIOD_OPTIONS = [
-  { value: "", label: "-", days: null },
+  { value: "", label: "All time", days: null },
   { value: "30", label: "Last 30 days", days: 30 },
   { value: "90", label: "Last 3 months", days: 90 },
   { value: "180", label: "Last 6 months", days: 180 },
@@ -23,11 +32,16 @@ function formatDate(value) {
   });
 }
 
-function Info({ label, value }) {
+function InfoItem({ icon: Icon, label, value }) {
   return (
-    <div className="flex gap-2 text-sm">
-      <span className="w-24 shrink-0 text-gray-700">{label}</span>
-      <span className="text-gray-900 break-words">: {value || "-"}</span>
+    <div className="flex items-start gap-3 min-w-0">
+      <span className="h-8 w-8 shrink-0 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center">
+        <Icon size={15} />
+      </span>
+      <div className="min-w-0">
+        <p className="text-[10px] font-medium text-gray-400 tracking-wide uppercase">{label}</p>
+        <p className="text-sm font-semibold text-gray-900 break-words">{value || "-"}</p>
+      </div>
     </div>
   );
 }
@@ -75,155 +89,206 @@ export default function PatientDetails() {
   }, [patientNumber, period]);
 
   const patient = data?.patient;
+  const summary = data?.summary;
   const orders = data?.orders || [];
   const lastPage = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
   const currentPage = Math.min(page, lastPage);
   const pageStart = (currentPage - 1) * PAGE_SIZE;
   const pagedOrders = orders.slice(pageStart, pageStart + PAGE_SIZE);
 
-  return (
-    <div className="space-y-4">
-      <button
-        onClick={() => navigate("/follow-ups")}
-        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 cursor-pointer"
-      >
-        <ArrowLeft size={16} /> Back to Follow-ups
-      </button>
+  const gender = patient?.gender
+    ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)
+    : null;
+  const ageGender =
+    patient && (patient.age != null || gender)
+      ? [patient.age != null ? `${patient.age} Years` : null, gender].filter(Boolean).join(" · ")
+      : null;
 
-      <div className="bg-white rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-6">
-        {isLoading && !patient && (
-          <p className="text-sm text-gray-400 text-center py-6">Loading…</p>
-        )}
-        {error && <p className="text-sm text-red-500 text-center py-2">{error}</p>}
+  return (
+    <div className="space-y-6">
+      {/* Top bar */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <button
+          onClick={() => navigate("/follow-ups")}
+          className="text-sm text-teal-600 font-medium hover:underline cursor-pointer"
+        >
+          ← Back to follow-ups
+        </button>
 
         {patient && (
-          <>
-            <div className="flex items-baseline gap-6 flex-wrap">
-              <h1 className="text-2xl font-bold text-gray-900 uppercase">{patient.name}</h1>
-              <p className="text-sm text-gray-600">
-                Reg no. : <span className="font-bold text-gray-900">{patient.id}</span>
-              </p>
-            </div>
+          <button
+            onClick={() => open("order", patient.id)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer"
+          >
+            <PlusCircle size={16} />
+            New Order
+          </button>
+        )}
+      </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-3 rounded-lg bg-teal-50/60 px-5 py-4">
-              <Info label="Age" value={patient.age != null ? `${patient.age} Years` : null} />
-              <Info
-                label="Gender"
-                value={patient.gender ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) : null}
-              />
-              <Info label="Contact No." value={patient.phone || "NIL"} />
-              <Info label="Venue" value={patient.venue} />
-              <Info label="Email" value={patient.email} />
-              <Info label="Address" value={patient.address} />
-            </div>
+      {isLoading && !patient && (
+        <p className="text-sm text-gray-400 text-center py-10">Loading patient…</p>
+      )}
+      {error && <p className="text-sm text-red-500 text-center py-4">{error}</p>}
 
-            <div>
-              <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
-                <h2 className="text-lg font-semibold text-gray-900">Completed Tests</h2>
+      {patient && (
+        <>
+          {/* Patient header card */}
+          <div className="bg-white rounded-xl overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+            <div className="h-1 bg-gradient-to-r from-teal-500 via-teal-600 to-gray-900" />
 
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <select
-                      value={period}
-                      onChange={(e) => setPeriod(e.target.value)}
-                      className="appearance-none w-44 rounded-lg border border-gray-200 bg-white pl-3.5 pr-9 py-2.5 text-sm text-gray-700 focus:outline-none focus:border-teal-500 cursor-pointer"
-                    >
-                      {PERIOD_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      size={16}
-                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-                    />
+            <div className="flex flex-col lg:flex-row lg:items-center gap-6 p-6">
+              {/* Identity */}
+              <div className="flex items-center gap-4 lg:w-[34%] shrink-0">
+                <div className="h-14 w-14 shrink-0 rounded-full bg-teal-600 text-white text-xl font-semibold flex items-center justify-center ring-4 ring-teal-50">
+                  {(patient.name || "?").charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <h1 className="text-lg font-bold text-gray-900 uppercase truncate">
+                    {patient.name}
+                  </h1>
+                  <div className="flex flex-wrap gap-2 mt-1.5">
+                    <span className="px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 text-xs font-medium">
+                      Reg. {patient.id}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full border border-gray-200 text-gray-600 text-xs">
+                      {summary?.orders ?? orders.length} {(summary?.orders ?? orders.length) === 1 ? "order" : "orders"}
+                    </span>
                   </div>
-
-                  <button
-                    onClick={() => open("order", patient.id)}
-                    className="flex items-center gap-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 px-4 py-2.5 text-sm font-medium text-white cursor-pointer"
-                  >
-                    <PlusCircle size={16} /> New Order
-                  </button>
                 </div>
               </div>
 
-              <div className={`border border-gray-200 rounded-lg overflow-x-auto transition-opacity ${isLoading ? "opacity-50" : ""}`}>
-                <table className="w-full min-w-[560px]">
-                  <thead>
-                    <tr className="bg-gray-50 text-left text-sm font-semibold text-gray-900">
-                      <th className="px-4 py-3">Sl.No.</th>
-                      <th className="px-4 py-3">Date</th>
-                      <th className="px-4 py-3">Prescribed Test</th>
-                      <th className="px-4 py-3">Order ID</th>
-                      <th className="px-4 py-3">Action</th>
+              {/* Details grid */}
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4 lg:border-l lg:border-gray-100 lg:pl-6">
+                <InfoItem icon={User} label="Age / Gender" value={ageGender} />
+                <InfoItem icon={Phone} label="Contact" value={patient.phone || "NIL"} />
+                <InfoItem icon={MapPin} label="Venue" value={patient.venue} />
+                <InfoItem icon={Mail} label="Email" value={patient.email} />
+                <InfoItem icon={Home} label="Address" value={patient.address} />
+                <InfoItem icon={CalendarDays} label="Last visit" value={summary?.last_visit ? formatDate(summary.last_visit) : null} />
+              </div>
+            </div>
+          </div>
+
+          {/* Completed tests card */}
+          <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
+            <div className="flex items-center justify-between flex-wrap gap-3 px-6 py-4">
+              <div>
+                <h2 className="text-sm font-semibold text-gray-900">
+                  Completed Tests ({orders.length})
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Click View Details to open the order and its results
+                </p>
+              </div>
+
+              <div className="relative">
+                <select
+                  value={period}
+                  onChange={(e) => setPeriod(e.target.value)}
+                  className="appearance-none w-40 rounded-lg border border-gray-200 bg-white pl-3.5 pr-9 py-2 text-sm text-gray-700 focus:outline-none focus:border-teal-500 cursor-pointer"
+                >
+                  {PERIOD_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={16}
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                />
+              </div>
+            </div>
+
+            <div className={`overflow-x-auto transition-opacity ${isLoading ? "opacity-50" : ""}`}>
+              <table className="w-full min-w-[620px]">
+                <thead>
+                  <tr className="bg-gray-50 text-left text-[11px] font-medium text-gray-400 tracking-wide uppercase">
+                    <th className="px-6 py-3 w-16">#</th>
+                    <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3">Prescribed Test</th>
+                    <th className="px-4 py-3">Order ID</th>
+                    <th className="px-6 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-10 text-center text-sm text-gray-400">
+                        No tests found for this patient.
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {orders.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-400">
-                          No tests found for this patient.
-                        </td>
-                      </tr>
-                    ) : (
-                      pagedOrders.map((order, i) => (
-                        <tr key={order.orderId} className="border-t border-gray-100 text-sm text-gray-800">
-                          <td className="px-4 py-3">{pageStart + i + 1}</td>
-                          <td className="px-4 py-3">{formatDate(order.date)}</td>
-                          <td className="px-4 py-3">
-                            <span
-                              className="inline-flex items-center gap-2"
-                              title={order.tests.map((t) => t.name).join(", ")}
+                  ) : (
+                    pagedOrders.map((order, i) => {
+                      const names = order.tests.map((t) => t.name);
+                      return (
+                        <tr
+                          key={order.orderId}
+                          className="border-t border-gray-100 text-sm hover:bg-teal-50/40"
+                        >
+                          <td className="px-6 py-4 text-gray-400">{pageStart + i + 1}</td>
+                          <td className="px-4 py-4 text-gray-800">{formatDate(order.date)}</td>
+                          <td className="px-4 py-4">
+                            <p className="font-semibold text-gray-900">
+                              <span
+                                className="inline-flex items-center gap-2"
+                                title={order.tests.map((t) => t.name).join(", ")}
+                                >
+                                <span className="h-5 min-w-5 px-1.5 rounded-full bg-teal-600 text-white text-[10px] font-semibold flex items-center justify-center">
+                                    {order.tests.length}
+                                </span>
+                                {order.tests.length === 1 ? "Test" : "Tests"}
+                                </span>
+                            </p>
+                            <p
+                              className="text-xs text-gray-400 mt-0.5 max-w-[360px] truncate"
+                              title={names.join(", ")}
                             >
-                              <span className="h-5 min-w-5 px-1.5 rounded-full bg-cyan-500 text-white text-[10px] font-semibold flex items-center justify-center">
-                                {order.tests.length}
-                              </span>
-                              {order.tests.length === 1 ? "Test" : "Tests"}
-                            </span>
+                              {names.join(", ")}
+                            </p>
                           </td>
-                          <td className="px-4 py-3">{order.orderId}</td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-4 text-gray-800">{order.orderId}</td>
+                          <td className="px-6 py-4 text-right">
                             <button
                               onClick={() => navigate(`/lab-orders/${order.orderId}`)}
-                              className="inline-flex items-center text-indigo-700 hover:underline cursor-pointer"
+                              className="px-4 py-1.5 rounded-lg border border-teal-200 bg-teal-50 text-xs font-medium text-teal-700 hover:bg-teal-100 cursor-pointer"
                             >
-                              View Details <ChevronRight size={14} />
+                              View Details
                             </button>
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {orders.length > PAGE_SIZE && (
-                <div className="flex items-center justify-between pt-3">
-                  <p className="text-xs text-gray-500">
-                    Page {currentPage} of {lastPage} · {orders.length} orders
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage <= 1}
-                      className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 cursor-pointer"
-                    >
-                      ← Prev
-                    </button>
-                    <button
-                      onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
-                      disabled={currentPage >= lastPage}
-                      className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 cursor-pointer"
-                    >
-                      Next →
-                    </button>
-                  </div>
-                </div>
-              )}
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
-          </>
-        )}
-      </div>
+
+            {orders.length > PAGE_SIZE && (
+              <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100">
+                <p className="text-xs text-gray-500">
+                  Page {currentPage} of {lastPage} · {orders.length} orders
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage <= 1}
+                    className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 cursor-pointer"
+                  >
+                    ← Prev
+                  </button>
+                  <button
+                    onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
+                    disabled={currentPage >= lastPage}
+                    className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 cursor-pointer"
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

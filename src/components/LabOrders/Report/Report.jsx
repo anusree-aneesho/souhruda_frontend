@@ -11,6 +11,7 @@ import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
 import FollowUpSuggestions from "./FollowUpSuggestions";
 import BillModal from "./BillModal";
 import WhatsAppSentModal from "./WhatsAppSentModal";
+import TestDetailView from "./TestDetailView";
 import { findOrderById } from "../../../data/labOrders";
 import { calculateFlag } from "../../../utils/calculateFlag";
 import { getOrderReportUrlApi, getSettingsApi, getGstSettingsApi } from "../../../api/api";
@@ -356,232 +357,166 @@ export default function Report() {
 
   return (
     <div className="space-y-6">
-      {/* ── Top action bar ───────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={() => navigate("/lab-orders")}
-          className="text-sm font-medium text-teal-600 hover:underline cursor-pointer"
-        >
-          ← Back to orders
-        </button>
+      {viewTest ? (
+        /* ── Single-test detail view (replaces the old popup) ───────── */
+        <TestDetailView
+          patient={patient}
+          orderId={orderId}
+          test={viewTest}
+          flag={flags[viewTest.id]}
+          ageText={ageText}
+          registered={registered}
+          reportDate={reportDate}
+          referredBy={order?.referredBy || "Self"}
+          letterheadOn={letterheadOn}
+          onLetterheadChange={setLetterheadOn}
+          onBack={() => setViewTest(null)}
+          onBill={() => setBillOpen(true)}
+          onWhatsApp={() => setWhatsAppOpen(true)}
+          onPrint={handlePrint}
+        />
+      ) : (
+        <>
+          {/* ── Top action bar ───────────────────────────────────────── */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => navigate("/lab-orders")}
+              className="text-sm font-medium text-teal-600 hover:underline cursor-pointer"
+            >
+              ← Back to orders
+            </button>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => setBillOpen(true)} className={actionBtn}>
-            <Receipt size={16} /> Bill
-          </button>
-          <button type="button" onClick={() => setWhatsAppOpen(true)} className={actionBtn}>
-            <MessageCircle size={16} /> WhatsApp
-          </button>
-          <button type="button" onClick={handlePrint} className={actionBtn}>
-            <Printer size={16} /> Print
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setDownloadError("");
-              setPreviewOpen(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer"
-          >
-            <Download size={16} /> Download PDF
-          </button>
-        </div>
-      </div>
-
-      {/* ── Patient summary card ─────────────────────────────────── */}
-      <div className="rounded-2xl bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
-        <div className="h-1.5 bg-gradient-to-r from-teal-500 via-teal-500 to-gray-900" />
-        <div className="p-6 flex flex-col lg:flex-row lg:items-center gap-6">
-          <div className="flex items-center gap-4 lg:w-[34%]">
-            <span className="h-16 w-16 shrink-0 rounded-full bg-teal-600 text-white text-xl font-bold flex items-center justify-center ring-4 ring-teal-100">
-              {initials}
-            </span>
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-gray-900 uppercase truncate">{patient.name}</h1>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                <span className="rounded-full bg-teal-50 text-teal-700 text-xs font-semibold px-2.5 py-0.5">
-                  Order #{orderId}
-                </span>
-                <span className="rounded-full border border-gray-200 text-gray-600 text-xs px-2.5 py-0.5">
-                  Reg. {patient.regNo}
-                </span>
-              </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => setBillOpen(true)} className={actionBtn}>
+                <Receipt size={16} /> Bill
+              </button>
+              <button type="button" onClick={() => setWhatsAppOpen(true)} className={actionBtn}>
+                <MessageCircle size={16} /> WhatsApp
+              </button>
+              <button type="button" onClick={handlePrint} className={actionBtn}>
+                <Printer size={16} /> Print
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDownloadError("");
+                  setPreviewOpen(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer"
+              >
+                <Download size={16} /> Download PDF
+              </button>
             </div>
           </div>
 
-          <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 lg:border-l lg:border-gray-100 lg:pl-6">
-            {[
-              { icon: User, label: "Age / Gender", value: `${ageText} · ${patient.gender || "—"}` },
-              { icon: Phone, label: "Contact", value: patient.phone || "Not recorded" },
-              { icon: Stethoscope, label: "Referred by", value: order?.referredBy || "Self" },
-              { icon: CalendarDays, label: "Registered", value: registered },
-              { icon: FileCheck2, label: "Reported", value: reportDate },
-            ].map(({ icon: Icon, label, value }) => (
-              <div key={label} className="flex items-start gap-2.5">
-                <span className="mt-0.5 h-7 w-7 shrink-0 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center">
-                  <Icon size={14} />
+          {/* ── Patient summary card ─────────────────────────────────── */}
+          <div className="rounded-2xl bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
+            <div className="h-1.5 bg-gradient-to-r from-teal-500 via-teal-500 to-gray-900" />
+            <div className="p-6 flex flex-col lg:flex-row lg:items-center gap-6">
+              <div className="flex items-center gap-4 lg:w-[34%]">
+                <span className="h-16 w-16 shrink-0 rounded-full bg-teal-600 text-white text-xl font-bold flex items-center justify-center ring-4 ring-teal-100">
+                  {initials}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-400">{label}</p>
-                  <p className="text-sm font-medium text-gray-900 capitalize truncate">{value}</p>
+                  <h1 className="text-xl font-bold text-gray-900 uppercase truncate">{patient.name}</h1>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    <span className="rounded-full bg-teal-50 text-teal-700 text-xs font-semibold px-2.5 py-0.5">
+                      Order #{orderId}
+                    </span>
+                    <span className="rounded-full border border-gray-200 text-gray-600 text-xs px-2.5 py-0.5">
+                      Reg. {patient.regNo}
+                    </span>
+                  </div>
                 </div>
               </div>
-            ))}
 
-          </div>
-        </div>
-      </div>
+              <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 lg:border-l lg:border-gray-100 lg:pl-6">
+                {[
+                  { icon: User, label: "Age / Gender", value: `${ageText} · ${patient.gender || "—"}` },
+                  { icon: Phone, label: "Contact", value: patient.phone || "Not recorded" },
+                  { icon: Stethoscope, label: "Referred by", value: order?.referredBy || "Self" },
+                  { icon: CalendarDays, label: "Registered", value: registered },
+                  { icon: FileCheck2, label: "Reported", value: reportDate },
+                ].map(({ icon: Icon, label, value }) => (
+                  <div key={label} className="flex items-start gap-2.5">
+                    <span className="mt-0.5 h-7 w-7 shrink-0 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center">
+                      <Icon size={14} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[11px] uppercase tracking-wide text-gray-400">{label}</p>
+                      <p className="text-sm font-medium text-gray-900 capitalize truncate">{value}</p>
+                    </div>
+                  </div>
+                ))}
 
-      {downloadError && !isPreviewOpen && <p className="text-sm text-red-600">{downloadError}</p>}
-
-      {/* ── Tests table ──────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h3 className="font-semibold text-sm text-gray-900">Tests ({testsWithResults.length})</h3>
-          <p className="text-xs text-gray-400">Click View for the normal range and details</p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px]">
-            <thead>
-              <tr className="bg-gray-50 text-left">
-                <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide">#</th>
-                <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">TEST</th>
-                <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">RESULT</th>
-                <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">FLAG</th>
-                <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">BILL AMOUNT</th>
-                <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide text-right">ACTION</th>
-              </tr>
-            </thead>
-            <tbody>
-              {testsWithResults.map((t, i) => (
-                <tr key={t.id} className="border-t border-gray-100 hover:bg-teal-50/30 transition-colors">
-                  <td className="px-6 py-3.5 text-sm text-gray-400">{i + 1}</td>
-                  <td className="py-3.5">
-                    <p className="text-sm font-medium text-gray-900">{t.name}</p>
-                    <p className="text-xs text-gray-400">{t.category}</p>
-                  </td>
-                  <td className="py-3.5 text-sm font-semibold text-gray-900">
-                    {t.result || "—"}
-                    {t.result && t.unit ? <span className="ml-1 text-xs font-normal text-gray-400">{t.unit}</span> : null}
-                  </td>
-                  <td className="py-3.5"><StatusBadge status={flags[t.id]} /></td>
-                  <td className="py-3.5 text-sm text-gray-900">
-                    {t.packageId != null ? (
-                      <span className="text-teal-600 text-xs font-medium">In package</span>
-                    ) : (
-                      `₹${Number(t.price || 0).toFixed(2)}`
-                    )}
-                  </td>
-                  <td className="px-6 py-3.5 text-right">
-                    <button
-                      type="button"
-                      onClick={() => setViewTest(t)}
-                      className="px-4 py-1.5 rounded-lg border border-teal-200 bg-teal-50 text-xs font-semibold text-teal-700 hover:bg-teal-100 cursor-pointer"
-                    >
-                      View
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <FollowUpSuggestions
-        tests={testsWithResults}
-        flags={flags}
-        reportDate={reportDate}
-        onSchedule={handleScheduleReminder}
-      />
-
-      {/* ── Test "View" popup ────────────────────────────────────── */}
-      {viewTest && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-          onClick={() => setViewTest(null)}
-        >
-          <div
-            className="w-full max-w-3xl max-h-[92vh] flex flex-col rounded-2xl bg-white shadow-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100">
-              <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
-                <h2 className="text-xl font-bold text-gray-900 uppercase">{patient.name}</h2>
-                <p className="text-sm text-gray-500">
-                  Reg. no.: <span className="font-semibold text-gray-900">{patient.regNo}</span>
-                </p>
-                <p className="text-sm text-gray-500">
-                  Order no.: <span className="font-semibold text-gray-900">{orderId}</span>
-                </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setViewTest(null)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition cursor-pointer"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-              {/* Info card */}
-              <div className="rounded-xl bg-teal-50/60 border border-teal-100 px-5 py-4 grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-3 text-sm">
-                <p><span className="text-gray-500">Age</span> <span className="ml-3 text-gray-900">: {ageText}</span></p>
-                <p className="capitalize"><span className="text-gray-500">Gender</span> <span className="ml-3 text-gray-900">: {patient.gender || "—"}</span></p>
-                <p><span className="text-gray-500">Contact No.</span> <span className="ml-3 text-gray-900">: {patient.phone || "NIL"}</span></p>
-                <p><span className="text-gray-500">Collection Date</span> <span className="ml-3 text-gray-900">: {registered}</span></p>
-                <p><span className="text-gray-500">Referred By</span> <span className="ml-3 text-gray-900">: {order?.referredBy || "Self"}</span></p>
-                <p><span className="text-gray-500">Report Date</span> <span className="ml-3 text-gray-900">: {reportDate}</span></p>
-              </div>
-
-              {/* Test name + parameters table */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 uppercase mb-3">{viewTest.name}</h3>
-                <div className="rounded-xl border border-gray-200 overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left bg-gray-50">
-                        <th className="px-5 py-3 font-semibold text-gray-700">Test parameters</th>
-                        <th className="py-3 font-semibold text-gray-700">Result</th>
-                        <th className="py-3 font-semibold text-gray-700">Reference range</th>
-                        <th className="px-5 py-3 font-semibold text-gray-700">Flag</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="border-t border-gray-100">
-                        <td className="px-5 py-4 text-gray-800 uppercase">{viewTest.name}</td>
-                        <td className="py-4 font-bold text-gray-900">
-                          {viewTest.result || "—"}
-                          {viewTest.result && viewTest.unit ? (
-                            <span className="ml-1 text-xs font-normal text-gray-400">{viewTest.unit}</span>
-                          ) : null}
-                        </td>
-                        <td className="py-4 text-gray-600">
-                          {viewTest.range && viewTest.range !== "-" ? viewTest.range : "—"}
-                          {viewTest.unit ? <span className="ml-1">{viewTest.unit}</span> : null}
-                        </td>
-                        <td className="px-5 py-4"><StatusBadge status={flags[viewTest.id]} /></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end px-6 py-4 border-t border-gray-100 bg-gray-50">
-              <button
-                type="button"
-                onClick={() => setViewTest(null)}
-                className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition cursor-pointer"
-              >
-                Close
-              </button>
             </div>
           </div>
-        </div>
+
+          {downloadError && !isPreviewOpen && <p className="text-sm text-red-600">{downloadError}</p>}
+
+          {/* ── Tests table ──────────────────────────────────────────── */}
+          <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h3 className="font-semibold text-sm text-gray-900">Tests ({testsWithResults.length})</h3>
+              <p className="text-xs text-gray-400">Click View for the normal range and details</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px]">
+                <thead>
+                  <tr className="bg-gray-50 text-left">
+                    <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide">#</th>
+                    <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">TEST</th>
+                    <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">RESULT</th>
+                    <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">FLAG</th>
+                    <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">BILL AMOUNT</th>
+                    <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide text-right">ACTION</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {testsWithResults.map((t, i) => (
+                    <tr key={t.id} className="border-t border-gray-100 hover:bg-teal-50/30 transition-colors">
+                      <td className="px-6 py-3.5 text-sm text-gray-400">{i + 1}</td>
+                      <td className="py-3.5">
+                        <p className="text-sm font-medium text-gray-900">{t.name}</p>
+                        <p className="text-xs text-gray-400">{t.category}</p>
+                      </td>
+                      <td className="py-3.5 text-sm font-semibold text-gray-900">
+                        {t.result || "—"}
+                        {t.result && t.unit ? <span className="ml-1 text-xs font-normal text-gray-400">{t.unit}</span> : null}
+                      </td>
+                      <td className="py-3.5"><StatusBadge status={flags[t.id]} /></td>
+                      <td className="py-3.5 text-sm text-gray-900">
+                        {t.packageId != null ? (
+                          <span className="text-teal-600 text-xs font-medium">In package</span>
+                        ) : (
+                          `₹${Number(t.price || 0).toFixed(2)}`
+                        )}
+                      </td>
+                      <td className="px-6 py-3.5 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setViewTest(t)}
+                          className="px-4 py-1.5 rounded-lg border border-teal-200 bg-teal-50 text-xs font-semibold text-teal-700 hover:bg-teal-100 cursor-pointer"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <FollowUpSuggestions
+            tests={testsWithResults}
+            flags={flags}
+            reportDate={reportDate}
+            onSchedule={handleScheduleReminder}
+          />
+        </>
       )}
 
       {/* ── Download PDF modal: letterhead preview ───────────────── */}

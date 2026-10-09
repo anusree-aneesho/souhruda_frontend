@@ -1,8 +1,8 @@
 // src/components/NewOrderModal/steps/SelectTestsStep.jsx
 import { useEffect, useState, useMemo, useRef } from "react";
-import { Loader2, Search, PartyPopper, Lightbulb, CheckCircle2, X } from "lucide-react";
+import { Loader2, Search, PartyPopper, Lightbulb, CheckCircle2, X, Package } from "lucide-react";
 import { getTestCategories, getLabTests } from "../../../../api/api";
-import { computeOrderPricing, matchPackages } from "../../../../utils/orderPricing";
+import { computeOrderPricing, matchPackages, toId } from "../../../../utils/orderPricing";
 import Toast from "../../../common/Toast/Toast";
 import { useToast } from "../../../common/Toast/useToast";
 
@@ -111,6 +111,17 @@ export default function SelectTestsStep({
     return allTests.filter((t) => t.name.toLowerCase().includes(query));
   }, [allTests, query]);
 
+  // While searching: active packages whose name matches the query
+  const packageResults = useMemo(() => {
+    if (!query) return [];
+    return packages.filter(
+      (p) =>
+        p.is_active &&
+        (p.lab_tests || p.tests || []).length > 0 &&
+        p.name.toLowerCase().includes(query)
+    );
+  }, [packages, query]);
+
   // What the list shows: search results (all categories) or the active category
   const visibleTests = useMemo(() => {
     if (query) return searchResults;
@@ -172,6 +183,44 @@ export default function SelectTestsStep({
   const appliedIdSet = useMemo(() => new Set(appliedPackageIds), [appliedPackageIds]);
   const unappliedFullMatches = fullMatches.filter((m) => !appliedIdSet.has(m.id));
   const appliedFullMatches = fullMatches.filter((m) => appliedIdSet.has(m.id));
+
+  // Packages that are currently applied AND still fully matching (what the order is billed with)
+  const appliedPackageIdSet = useMemo(
+    () => new Set(pricing.appliedPackages.map((p) => toId(p.id))),
+    [pricing]
+  );
+
+  // Turn a package's test (from the packages API) into the same shape the checkbox list uses
+  function resolvePackageTest(t) {
+    const full = allTests.find((a) => toId(a.id) === toId(t.id));
+    if (full) return { ...full, category: full.categoryId };
+    const categoryId = t.category_id ?? t.test_category_id ?? null;
+    return {
+      id: t.id,
+      name: t.name,
+      code: t.code || "",
+      unit: t.unit || "",
+      range: "",
+      price: Number(t.price) || 0,
+      categoryId,
+      category: categoryId,
+    };
+  }
+
+  // Ticking a package selects all of its tests and applies the package price;
+  // unticking removes the package and its tests again.
+  function togglePackage(pkg) {
+    const pkgTests = (pkg.lab_tests || pkg.tests || []).map(resolvePackageTest);
+    const selectedIdSet = new Set(selectedTests.map((t) => toId(t.id)));
+
+    if (appliedPackageIdSet.has(toId(pkg.id))) {
+      onRemovePackageIds([pkg.id]);
+      pkgTests.filter((t) => selectedIdSet.has(toId(t.id))).forEach((t) => onToggleTest(t));
+    } else {
+      pkgTests.filter((t) => !selectedIdSet.has(toId(t.id))).forEach((t) => onToggleTest(t));
+      onApplyPackageId(pkg.id);
+    }
+  }
 
   // If a required test gets unticked after a package was applied, the match
   // breaks — drop it from applied state and tell the staff why, rather than
@@ -322,7 +371,7 @@ export default function SelectTestsStep({
             type="text"
             value={testSearch}
             onChange={(e) => setTestSearch(e.target.value)}
-            placeholder="Search tests in all categories..."
+            placeholder="Search tests or packages..."
             className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
           />
         </div>
@@ -338,12 +387,41 @@ export default function SelectTestsStep({
             <p className="flex items-center gap-2 py-4 px-3.5 text-sm text-gray-400">
               <Loader2 size={14} className="animate-spin" /> Loading tests...
             </p>
-          ) : visibleTests.length === 0 ? (
+          ) : visibleTests.length === 0 && packageResults.length === 0 ? (
             <p className="py-4 px-3.5 text-sm text-gray-400">
-              {query ? "No tests match your search." : "No tests found in this category."}
+              {query ? "No tests or packages match your search." : "No tests found in this category."}
             </p>
           ) : (
-            visibleTests.map((test) => {
+            <>
+              {packageResults.map((pkg) => {
+                const isApplied = appliedPackageIdSet.has(toId(pkg.id));
+                const pkgTests = pkg.lab_tests || pkg.tests || [];
+                return (
+                  <label
+                    key={`pkg-${pkg.id}`}
+                    className="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer bg-teal-50/40 hover:bg-teal-50 transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isApplied}
+                      onChange={() => togglePackage(pkg)}
+                      className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 shrink-0"
+                    />
+                    <span className="text-sm font-medium text-gray-900 flex-1 truncate flex items-center gap-2">
+                      <Package size={14} className="text-teal-600 shrink-0" />
+                      <span className="truncate">{pkg.name}</span>
+                      <span className="text-xs font-normal text-gray-400 shrink-0">
+                        Package · {pkgTests.length} test{pkgTests.length === 1 ? "" : "s"}
+                      </span>
+                    </span>
+                    <span className="text-sm font-semibold text-teal-600 shrink-0 w-16 text-right">
+                      ₹{(Number(pkg.price) || 0).toFixed(2)}
+                    </span>
+                  </label>
+                );
+              })}
+
+              {visibleTests.map((test) => {
               const isChecked = selectedTests.some((s) => s.id === test.id);
               return (
                 <label
@@ -374,7 +452,8 @@ export default function SelectTestsStep({
                   )}
                 </label>
               );
-            })
+              })}
+            </>
           )}
         </div>
 

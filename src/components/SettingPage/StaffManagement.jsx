@@ -123,7 +123,7 @@ function StaffName({ staff, onView }) {
   return (
     <button
       onClick={() => onView(staff)}
-      className="font-medium text-gray-900 hover:text-teal-600 hover:underline text-left cursor-pointer"
+      className="font-medium text-gray-900 hover:text-teal-600 text-left cursor-pointer"
       title="View technician details"
     >
       {staff.name}

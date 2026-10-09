@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import {
-  Download, Printer, MessageCircle, Receipt, X,
+  Download, Printer, MessageCircle, Receipt, X, Pencil,  
   User, Phone, Stethoscope, CalendarDays, FileCheck2,
 } from "lucide-react";
 import Toast from "../../common/Toast/Toast";
@@ -10,11 +10,12 @@ import { useToast } from "../../common/Toast/useToast";
 import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
 import FollowUpSuggestions from "./FollowUpSuggestions";
 import BillModal from "./BillModal";
+import EditBillModal from "./EditBillModal";  
 import WhatsAppSentModal from "./WhatsAppSentModal";
 import TestDetailView from "./TestDetailView";
 import { findOrderById } from "../../../data/labOrders";
 import { calculateFlag } from "../../../utils/calculateFlag";
-import { getOrderReportUrlApi, getSettingsApi, getGstSettingsApi } from "../../../api/api";
+import { getOrderReportUrlApi, getOrderApi, getSettingsApi, getGstSettingsApi } from "../../../api/api";
 
 export default function Report() {
   const { orderId } = useParams();
@@ -24,6 +25,8 @@ export default function Report() {
   const { toast, showToast, hideToast } = useToast();
   const [letterheadOn, setLetterheadOn] = useState(true);
   const [isBillOpen, setBillOpen] = useState(false);
+  const [isEditBillOpen, setEditBillOpen] = useState(false);
+  const [discountPercent, setDiscountPercent] = useState(0);
   const [isWhatsAppOpen, setWhatsAppOpen] = useState(false);
   const [isPreviewOpen, setPreviewOpen] = useState(false);
   const [viewTest, setViewTest] = useState(null);
@@ -40,6 +43,17 @@ export default function Report() {
 
   useEffect(() => {
     setPaymentDone(Boolean(order?.paymentDone));
+  }, [orderId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDiscountPercent(0);
+    getOrderApi(orderId)
+      .then((res) => {
+        if (!cancelled) setDiscountPercent(Number(res.data?.discount_percent) || 0);
+      })
+      .catch((err) => console.error("Failed to load order discount:", err.message));
+    return () => { cancelled = true; };
   }, [orderId]);
 
   useEffect(() => {
@@ -391,6 +405,9 @@ export default function Report() {
               <button type="button" onClick={() => setBillOpen(true)} className={actionBtn}>
                 <Receipt size={16} /> Bill
               </button>
+              <button type="button" onClick={() => setEditBillOpen(true)} className={actionBtn}>
+                <Pencil size={16} /> Edit
+              </button>
               <button type="button" onClick={() => setWhatsAppOpen(true)} className={actionBtn}>
                 <MessageCircle size={16} /> WhatsApp
               </button>
@@ -412,7 +429,7 @@ export default function Report() {
 
           {/* ── Patient summary card ─────────────────────────────────── */}
           <div className="rounded-2xl bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
-            <div className="h-1.5 bg-gradient-to-r from-teal-500 via-teal-500 to-gray-900" />
+            <div className="h-1 bg-gradient-to-r from-teal-500 via-teal-500 to-gray-900" />
             <div className="p-6 flex flex-col lg:flex-row lg:items-center gap-6">
               <div className="flex items-center gap-4 lg:w-[34%]">
                 <span className="h-16 w-16 shrink-0 rounded-full bg-teal-600 text-white text-xl font-bold flex items-center justify-center ring-4 ring-teal-100">
@@ -422,7 +439,7 @@ export default function Report() {
                   <h1 className="text-xl font-bold text-gray-900 uppercase truncate">{patient.name}</h1>
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     <span className="rounded-full bg-teal-50 text-teal-700 text-xs font-semibold px-2.5 py-0.5">
-                      Order #{orderId}
+                      Order {orderId}
                     </span>
                     <span className="rounded-full border border-gray-200 text-gray-600 text-xs px-2.5 py-0.5">
                       Reg. {patient.regNo}
@@ -466,7 +483,7 @@ export default function Report() {
               <table className="w-full min-w-[720px]">
                 <thead>
                   <tr className="bg-gray-50 text-left">
-                    <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide">#</th>
+                    <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide">No.</th>
                     <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">TEST</th>
                     <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">RESULT</th>
                     <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">FLAG</th>
@@ -726,8 +743,25 @@ export default function Report() {
           tests={testsWithResults}
           billTotal={order?.billTotal}
           homeVisitFee={order?.homeVisitFee || 0}
+          discountPercent={discountPercent}
           paymentDone={paymentDone}
           onClose={() => setBillOpen(false)}
+        />
+      )}
+
+      {isEditBillOpen && (
+        <EditBillModal
+          orderId={orderId}
+          tests={testsWithResults}
+          billTotal={order?.billTotal != null ? Number(order.billTotal) : null}
+          homeVisitFee={order?.homeVisitFee || 0}
+          initialDiscount={discountPercent}
+          onClose={() => setEditBillOpen(false)}
+          onSaved={(updated) => {
+            setDiscountPercent(Number(updated.discount_percent) || 0);
+            setEditBillOpen(false);
+            showToast("Discount updated");
+          }}
         />
       )}
 

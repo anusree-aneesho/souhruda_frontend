@@ -479,6 +479,13 @@ export async function deleteOrderApi(orderId) {
   });
 }
 
+export async function updateOrderDiscountApi(orderId, discountPercent) {
+  return request(`/orders/${orderId}/discount`, {
+    method: "PATCH",
+    body: JSON.stringify({ discount_percent: discountPercent }),
+  });
+}
+
 // ── Order Reports ──────────────────────────────────────
 
 export async function getOrderReportUrlApi(orderId, letterhead = true) {

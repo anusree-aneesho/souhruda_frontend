@@ -144,6 +144,14 @@ export function groupTestsByPackage(tests) {
   return { packageGroups, individualTests };
 }
 
+export function calcBillTotals({ testsTotal, discountPercent = 0, homeVisitFee = 0, gstRate = 0 }) {
+  const pct = Math.min(100, Math.max(0, Number(discountPercent) || 0));
+  const discountAmount = Math.round(testsTotal * pct) / 100;
+  const subtotal = testsTotal - discountAmount + Number(homeVisitFee || 0);
+  const gstAmount = Math.round(subtotal * gstRate) / 100;
+  return { discountAmount, subtotal, gstAmount, grandTotal: subtotal + gstAmount };
+}
+
 export function computeOrderPricing(selectedTests, packages = [], appliedPackageIds = []) {
   const appliedIdSet = new Set(appliedPackageIds.map(toId));
   const { fullMatches } = matchPackages(selectedTests, packages);

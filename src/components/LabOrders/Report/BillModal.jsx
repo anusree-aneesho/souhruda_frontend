@@ -3,9 +3,9 @@ import { useState, useEffect, useRef } from "react";
 import { CheckCircle2, Download } from "lucide-react";
 import ModalShell from "../../common/Modal/ModalShell";
 import { getOrderBillUrlApi, getSettingsApi, getGstSettingsApi } from "../../../api/api";
-import { groupTestsByPackage } from "../../../utils/orderPricing";
+import { groupTestsByPackage, calcBillTotals } from "../../../utils/orderPricing";
 
-export default function BillModal({ orderId, patient, tests, billTotal, homeVisitFee = 0, paymentDone, onClose }) {
+export default function BillModal({ orderId, patient, tests, billTotal, homeVisitFee = 0, discountPercent = 0, paymentDone, onClose }) {
   // Group by the package each test was actually billed under — same
   // grouping used on the Confirm Order step and the order-detail Bill
   // section — instead of listing every test flat at its own price.
@@ -22,13 +22,14 @@ export default function BillModal({ orderId, patient, tests, billTotal, homeVisi
     };
   });
 
-  // billTotal comes from the server (order.bill_total) — the amount the
-  // patient was actually charged. Fall back to summing catalog prices only
+  // billTotal comes from the server (order.bill_total) — the gross amount for
+  // the tests, before any discount. Fall back to summing catalog prices only
   // if it's ever missing (e.g. an older order), so the modal never breaks.
   const fallbackSubtotal = tests.reduce((sum, t) => sum + t.price, 0);
-  const testsSubtotal = billTotal != null ? billTotal : fallbackSubtotal;
-  // Home collection orders: the home visit fee is billed on top of the tests.
-  const subtotal = testsSubtotal + Number(homeVisitFee || 0);
+  const testsSubtotal = billTotal != null ? Number(billTotal) : fallbackSubtotal;
+
+  // discount_percent comes back from the API as a string like "10.00"
+  const discountPct = Number(discountPercent) || 0;
 
   const [labInfo, setLabInfo] = useState(null);
   const [gstInfo, setGstInfo] = useState(null);
@@ -57,8 +58,15 @@ export default function BillModal({ orderId, patient, tests, billTotal, homeVisi
 
   const gstEnabled = gstInfo?.is_gst_registered;
   const gstRate = gstEnabled ? Number(gstInfo.gst_rate) || 0 : 0;
-  const gstAmount = gstEnabled ? (subtotal * gstRate) / 100 : 0;
-  const grandTotal = subtotal + gstAmount;
+
+  // Discount applies to the tests only; home visit fee is added at full
+  // price afterwards, then GST is calculated on the result.
+  const { discountAmount, subtotal, gstAmount, grandTotal } = calcBillTotals({
+    testsTotal: testsSubtotal,
+    discountPercent: discountPct,
+    homeVisitFee,
+    gstRate,
+  });
 
   const invoiceNumber =
     gstEnabled && gstInfo?.invoice_prefix
@@ -188,6 +196,7 @@ export default function BillModal({ orderId, patient, tests, billTotal, homeVisi
   .totals td { padding: 5px 12px; font-size: 12px; }
   .totals .label { color: #6b7280; text-align: right; }
   .totals .value { color: #374151; text-align: right; width: 110px; font-weight: 500; }
+  .totals .discount-row .label, .totals .discount-row .value { color: #15803d; }
   .totals .grand-row td { border-top: 2px solid #0d9488; padding-top: 12px; font-size: 15px; font-weight: 700; }
   .totals .grand-row .label { color: #0f766e; }
   .totals .grand-row .value { color: #0f766e; }
@@ -247,9 +256,18 @@ export default function BillModal({ orderId, patient, tests, billTotal, homeVisi
 
   <table class="totals">
     ${
+      homeVisitFee > 0 || discountPct > 0
+        ? `<tr><td class="label" style="width:auto;">Tests total</td><td class="value">Rs. ${testsSubtotal.toFixed(2)}</td></tr>`
+        : ""
+    }
+    ${
+      discountPct > 0
+        ? `<tr class="discount-row"><td class="label" style="width:auto;">Discount (${discountPct}%)</td><td class="value">- Rs. ${discountAmount.toFixed(2)}</td></tr>`
+        : ""
+    }
+    ${
       homeVisitFee > 0
-        ? `<tr><td class="label" style="width:auto;">Tests total</td><td class="value">Rs. ${testsSubtotal.toFixed(2)}</td></tr>
-           <tr><td class="label" style="width:auto;">Home visit fee</td><td class="value">Rs. ${Number(homeVisitFee).toFixed(2)}</td></tr>`
+        ? `<tr><td class="label" style="width:auto;">Home visit fee</td><td class="value">Rs. ${Number(homeVisitFee).toFixed(2)}</td></tr>`
         : ""
     }
     ${
@@ -332,25 +350,24 @@ export default function BillModal({ orderId, patient, tests, billTotal, homeVisi
         )}
 
         {/* ── Billed To block ────────────────────────────────── */}
-{/* ── Billed To block ────────────────────────────────── */}
-          <div className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3 mb-4">
-            <div>
-              <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
-                Billed To
-              </p>
-              <p className="text-sm font-semibold text-gray-900">{patient.name}</p>
-              <p className="text-xs text-gray-500">Reg No: {patient.regNo || "-"}</p>
-              {patient.phone && (
-                <p className="text-xs text-gray-500">Phone: {patient.phone}</p>
-              )}
-            </div>
-            {paymentDone && (
-              <span className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
-                <CheckCircle2 size={13} />
-                Paid
-              </span>
+        <div className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3 mb-4">
+          <div>
+            <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
+              Billed To
+            </p>
+            <p className="text-sm font-semibold text-gray-900">{patient.name}</p>
+            <p className="text-xs text-gray-500">Reg No: {patient.regNo || "-"}</p>
+            {patient.phone && (
+              <p className="text-xs text-gray-500">Phone: {patient.phone}</p>
             )}
           </div>
+          {paymentDone && (
+            <span className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
+              <CheckCircle2 size={13} />
+              Paid
+            </span>
+          )}
+        </div>
 
         {/* ── Items list — grouped by applied package, same as Confirm
               Order, instead of every test flat ────────────────── */}
@@ -398,17 +415,25 @@ export default function BillModal({ orderId, patient, tests, billTotal, homeVisi
           </div>
         )}
 
-        {/* ── Home visit fee (home collection orders) ────────── */}
-        {homeVisitFee > 0 && (
+        {/* ── Tests total / discount / home visit fee ────────── */}
+        {(homeVisitFee > 0 || discountPct > 0) && (
           <div className="mt-3 space-y-1">
             <div className="flex items-center justify-between text-sm text-gray-600">
               <span>Tests total</span>
               <span>Rs. {testsSubtotal.toFixed(2)}</span>
             </div>
-            <div className="flex items-center justify-between text-sm text-gray-600">
-              <span>Home visit fee</span>
-              <span>Rs. {Number(homeVisitFee).toFixed(2)}</span>
-            </div>
+            {discountPct > 0 && (
+              <div className="flex items-center justify-between text-sm text-green-700">
+                <span>Discount ({discountPct}%)</span>
+                <span>− Rs. {discountAmount.toFixed(2)}</span>
+              </div>
+            )}
+            {homeVisitFee > 0 && (
+              <div className="flex items-center justify-between text-sm text-gray-600">
+                <span>Home visit fee</span>
+                <span>Rs. {Number(homeVisitFee).toFixed(2)}</span>
+              </div>
+            )}
           </div>
         )}
 

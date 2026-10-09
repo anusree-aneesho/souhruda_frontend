@@ -123,12 +123,14 @@ export async function deletePatientApi(id) {
 
 // ── Settings ───────────────────────────────────────────────
 
-export async function getSettingsApi() {
-  return request("/settings");
+export async function getSettingsApi(branchId) {
+  const qs = branchId ? `?branch_id=${branchId}` : "";
+  return request(`/settings${qs}`);
 }
 
-export async function updateSettingsApi(settingsData) {
-  return request("/settings", {
+export async function updateSettingsApi(settingsData, branchId) {
+  const qs = branchId ? `?branch_id=${branchId}` : "";
+  return request(`/settings${qs}`, {
     method: "PUT",
     body: JSON.stringify(settingsData),
   });
@@ -185,12 +187,19 @@ export async function deleteBranchApi(id) {
   });
 }
 
-export async function getGstSettingsApi() {
-  return request("/settings/gst");
+export async function getGstSettingsApi(branchId) {
+  const qs = branchId ? `?branch_id=${branchId}` : "";
+  return request(`/settings/gst${qs}`);
 }
 
-export async function updateGstSettingsApi(gstData) {
-  return request("/settings/gst", {
+// Super admin only: GST details of every branch.
+export async function getAllBranchesGstApi() {
+  return request("/settings/gst/branches");
+}
+
+export async function updateGstSettingsApi(gstData, branchId) {
+  const qs = branchId ? `?branch_id=${branchId}` : "";
+  return request(`/settings/gst${qs}`, {
     method: "PUT",
     body: JSON.stringify(gstData),
   });
@@ -526,6 +535,13 @@ export async function updateStaffMemberApi(id, payload) {
   return request(`/staff-members/${id}`, {
     method: "PUT",
     body: JSON.stringify(payload),
+  });
+}
+
+export async function updateTechnicianRatingApi(id, rating) {
+  return request(`/staff-members/${id}/rating`, {
+    method: "PATCH",
+    body: JSON.stringify({ rating }),
   });
 }
 

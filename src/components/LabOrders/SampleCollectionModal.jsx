@@ -1,9 +1,10 @@
 // src/components/LabOrders/SampleCollectionModal.jsx
 import { useState } from "react";
-import { markSampleCollectedApi } from "../../api/api";
+import { markSampleCollectedApi, deleteOrderApi } from "../../api/api";
 
-export default function SampleCollectionModal({ order, onClose, onConfirmed }) {
+export default function SampleCollectionModal({ order, onClose, onConfirmed, onCancelled }) {
   const [loading, setLoading] = useState(false);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [error, setError] = useState(null);
 
   async function handleConfirm() {
@@ -18,6 +19,23 @@ export default function SampleCollectionModal({ order, onClose, onConfirmed }) {
       setLoading(false);
     }
   }
+
+  async function handleCancelOrder() {
+    setLoading(true);
+    setError(null);
+    try {
+      await deleteOrderApi(order.orderId);
+      onCancelled(order.orderId);
+    } catch (err) {
+      setError(err.message || "Couldn't cancel this order.");
+      setConfirmingCancel(false);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Home collection orders are managed from the Home Collection page, not cancelled here.
+  const canCancelOrder = Boolean(onCancelled) && !order.isHomeCollection;
 
   const testList = order.testNames?.length ? order.testNames : null;
 
@@ -70,7 +88,9 @@ export default function SampleCollectionModal({ order, onClose, onConfirmed }) {
           </div>
 
           <p className="text-sm text-gray-500 pt-1">
-            Confirm that the sample for this order has been physically collected.
+            {confirmingCancel
+              ? "Cancel this order? This cannot be undone from here."
+              : "Confirm that the sample for this order has been physically collected."}
           </p>
 
           {error && <p className="text-sm text-red-500">{error}</p>}
@@ -78,19 +98,49 @@ export default function SampleCollectionModal({ order, onClose, onConfirmed }) {
 
         {/* Footer */}
         <div className="flex justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-100">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleConfirm}
-            disabled={loading}
-            className="px-5 py-2 text-sm rounded-lg bg-teal-600 text-white font-medium hover:bg-teal-700 disabled:opacity-50 cursor-pointer"
-          >
-            {loading ? "Marking…" : "Mark Sample Collected"}
-          </button>
+          {confirmingCancel ? (
+            <>
+              <button
+                onClick={() => setConfirmingCancel(false)}
+                disabled={loading}
+                className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium cursor-pointer"
+              >
+                Keep Order
+              </button>
+              <button
+                onClick={handleCancelOrder}
+                disabled={loading}
+                className="px-5 py-2 text-sm rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 disabled:opacity-50 cursor-pointer"
+              >
+                {loading ? "Cancelling…" : "Yes, Cancel Order"}
+              </button>
+            </>
+          ) : (
+            <>
+              {canCancelOrder ? (
+                <button
+                  onClick={() => setConfirmingCancel(true)}
+                  className="px-4 py-2 text-sm rounded-lg border border-red-200 text-red-600 hover:bg-red-50 font-medium cursor-pointer"
+                >
+                  Cancel Order
+                </button>
+              ) : (
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium cursor-pointer"
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                onClick={handleConfirm}
+                disabled={loading}
+                className="px-5 py-2 text-sm rounded-lg bg-teal-600 text-white font-medium hover:bg-teal-700 disabled:opacity-50 cursor-pointer"
+              >
+                {loading ? "Marking…" : "Mark Sample Collected"}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

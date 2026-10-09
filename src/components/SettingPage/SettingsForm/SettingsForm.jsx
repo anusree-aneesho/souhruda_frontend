@@ -10,24 +10,59 @@ function validate(formData) {
 
   if (!formData.labName.trim()) errors.labName = "Lab name is required.";
   if (!formData.address.trim()) errors.address = "Address is required.";
+  if (!formData.city.trim()) errors.city = "City is required.";
+  if (!formData.state.trim()) errors.state = "State is required.";
 
-  if (formData.pincode && !/^\d{6}$/.test(formData.pincode)) {
+  if (!formData.pincode) {
+    errors.pincode = "Pincode is required.";
+  } else if (!/^\d{6}$/.test(formData.pincode)) {
     errors.pincode = "Pincode must be 6 digits.";
   }
-  if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-    errors.email = "Enter a valid email address.";
+
+  if (!formData.regNoPrefix) {
+    errors.regNoPrefix = "Reg. No. Prefix is required.";
+  } else if (!/^.{4}$/.test(formData.regNoPrefix)) {
+    errors.regNoPrefix = "Reg. No. Prefix must be exactly 4 characters.";
   }
-  if (formData.phone && !/^[0-9\s\-+()]{7,20}$/.test(formData.phone)) {
-    errors.phone = "Enter a valid phone number.";
+
+  if (!formData.orderNoStart) {
+    errors.orderNoStart = "Order No. Start is required.";
+  } else if (!/^\d{4}$/.test(String(formData.orderNoStart))) {
+    errors.orderNoStart = "Order No. Start must be exactly 4 digits.";
   }
-  if (formData.whatsappNumber && !/^\+?[0-9\s]{10,15}$/.test(formData.whatsappNumber)) {
+
+  if (!formData.whatsappNumber) {
+    errors.whatsappNumber = "WhatsApp number is required.";
+  } else if (!/^\+?[0-9\s]{10,15}$/.test(formData.whatsappNumber)) {
     errors.whatsappNumber = "Enter a valid WhatsApp number.";
   }
-  if (formData.website && !/^https?:\/\/.+\..+/.test(formData.website)) {
+
+  if (!formData.phone) {
+    errors.phone = "Phone number is required.";
+  } else if (!/^[0-9\s\-+()]{7,20}$/.test(formData.phone)) {
+    errors.phone = "Enter a valid phone number.";
+  }
+
+  if (!formData.email) {
+    errors.email = "Email address is required.";
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    errors.email = "Enter a valid email address.";
+  }
+
+  if (!formData.website) {
+    errors.website = "Website is required.";
+  } else if (!/^https?:\/\/.+\..+/.test(formData.website)) {
     errors.website = "Website must start with http:// or https://.";
   }
+
+  if (!formData.licenseNo.trim()) errors.licenseNo = "Lab License No. is required.";
+  if (!formData.workingHours.trim()) errors.workingHours = "Working hours are required.";
+  if (!formData.footerNote.trim()) errors.footerNote = "Report footer note is required.";
+
   ["baseFee", "perKmRate", "freeRadius", "maxDistanceKm"].forEach((key) => {
-    if (formData[key] !== "" && Number(formData[key]) < 0) {
+    if (formData[key] === "") {
+      errors[key] = "This field is required.";
+    } else if (Number(formData[key]) < 0) {
       errors[key] = "Value cannot be negative.";
     }
   });
@@ -35,7 +70,29 @@ function validate(formData) {
   return errors;
 }
 
-export default function SettingsForm() {
+// Maps backend snake_case field names to this form's camelCase state keys
+const BACKEND_FIELD_MAP = {
+  lab_name: "labName",
+  address: "address",
+  city: "city",
+  state: "state",
+  pincode: "pincode",
+  reg_no_prefix: "regNoPrefix",
+  order_no_start: "orderNoStart",
+  whatsapp_number: "whatsappNumber",
+  phone: "phone",
+  email: "email",
+  website: "website",
+  license_no: "licenseNo",
+  working_hours: "workingHours",
+  footer_note: "footerNote",
+  base_fee: "baseFee",
+  per_km_rate: "perKmRate",
+  free_radius: "freeRadius",
+  max_distance_km: "maxDistanceKm",
+};
+
+export default function SettingsForm({ branchId = null, branchName = "" }) {
   const [formData, setFormData] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(true);
@@ -52,9 +109,15 @@ export default function SettingsForm() {
   const canEdit = ["admin", "super_admin", "superadmin"].includes(role);
 
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+    setFieldErrors({});
+
     async function loadSettings() {
       try {
-        const res = await getSettingsApi();
+        const res = await getSettingsApi(branchId);
+        if (cancelled) return;
         const s = res.data;
         setFormData({
           labName: s.lab_name || "",
@@ -77,13 +140,17 @@ export default function SettingsForm() {
           maxDistanceKm: s.max_distance_km ?? "",
         });
       } catch (err) {
-        setError(err.message || "Failed to load settings.");
+        if (!cancelled) setError(err.message || "Failed to load settings.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     loadSettings();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [branchId]);
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -102,36 +169,60 @@ export default function SettingsForm() {
     const errors = validate(formData);
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
-      setError("Please fix the errors below before saving.");
+      const errorCount = Object.keys(errors).length;
+      setError(
+        errorCount > 1
+          ? `Please fix the ${errorCount} errors below before saving.`
+          : "Please fix the error below before saving."
+      );
       return;
     }
     setFieldErrors({});
     setSaving(true);
 
     try {
-      await updateSettingsApi({
-        lab_name: formData.labName,
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        pincode: formData.pincode,
-        reg_no_prefix: formData.regNoPrefix,
-        order_no_start: Number(formData.orderNoStart) || 0,
-        whatsapp_number: formData.whatsappNumber,
-        phone: formData.phone,
-        email: formData.email,
-        website: formData.website,
-        license_no: formData.licenseNo,
-        working_hours: formData.workingHours,
-        footer_note: formData.footerNote,
-        base_fee: Number(formData.baseFee) || 0,
-        per_km_rate: Number(formData.perKmRate) || 0,
-        free_radius: Number(formData.freeRadius) || 0,
-        max_distance_km: Number(formData.maxDistanceKm) || 0,
-      });
+      await updateSettingsApi(
+        {
+          lab_name: formData.labName,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          pincode: formData.pincode,
+          reg_no_prefix: formData.regNoPrefix,
+          order_no_start: Number(formData.orderNoStart) || 0,
+          whatsapp_number: formData.whatsappNumber,
+          phone: formData.phone,
+          email: formData.email,
+          website: formData.website,
+          license_no: formData.licenseNo,
+          working_hours: formData.workingHours,
+          footer_note: formData.footerNote,
+          base_fee: Number(formData.baseFee) || 0,
+          per_km_rate: Number(formData.perKmRate) || 0,
+          free_radius: Number(formData.freeRadius) || 0,
+          max_distance_km: Number(formData.maxDistanceKm) || 0,
+        },
+        branchId
+      );
       showToast("Settings saved successfully.");
     } catch (err) {
-      setError(err.message || "Failed to save settings.");
+      // Laravel validation errors: { errors: { field_name: ["message1", "message2"] } }
+      if (err.errors) {
+        const mapped = {};
+        Object.entries(err.errors).forEach(([backendField, messages]) => {
+          const frontendField = BACKEND_FIELD_MAP[backendField] || backendField;
+          mapped[frontendField] = messages.join(" ");
+        });
+        setFieldErrors(mapped);
+        const errorCount = Object.keys(mapped).length;
+        setError(
+          errorCount > 1
+            ? `Please fix the ${errorCount} errors below before saving.`
+            : "Please fix the error below before saving."
+        );
+      } else {
+        setError(err.message || "Failed to save settings.");
+      }
     } finally {
       setSaving(false);
     }
@@ -146,6 +237,12 @@ export default function SettingsForm() {
       onSubmit={handleSubmit}
       className="bg-white rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)] max-w-2xl space-y-5"
     >
+      {branchName && (
+        <p className="text-sm text-teal-700 bg-teal-50 border border-teal-100 rounded-lg px-3 py-2">
+          Viewing settings for <span className="font-semibold">{branchName}</span>
+        </p>
+      )}
+
       {error && (
         <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
       )}
@@ -155,8 +252,8 @@ export default function SettingsForm() {
       <FormField label="Address" name="address" value={formData.address} onChange={handleChange} error={fieldErrors.address} />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <FormField label="City" name="city" value={formData.city} onChange={handleChange} />
-        <FormField label="State" name="state" value={formData.state} onChange={handleChange} />
+        <FormField label="City" name="city" value={formData.city} onChange={handleChange} error={fieldErrors.city} />
+        <FormField label="State" name="state" value={formData.state} onChange={handleChange} error={fieldErrors.state} />
         <FormField label="Pincode" name="pincode" value={formData.pincode} onChange={handleChange} error={fieldErrors.pincode} />
       </div>
 
@@ -171,13 +268,13 @@ export default function SettingsForm() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <FormField label="Reg. No. Prefix" name="regNoPrefix" value={formData.regNoPrefix} onChange={handleChange} />
-        <FormField label="Order No. Start" name="orderNoStart" value={formData.orderNoStart} onChange={handleChange} />
+        <FormField label="Reg. No. Prefix" name="regNoPrefix" value={formData.regNoPrefix} onChange={handleChange} error={fieldErrors.regNoPrefix} />
+        <FormField label="Order No. Start" name="orderNoStart" value={formData.orderNoStart} onChange={handleChange} error={fieldErrors.orderNoStart} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <FormField label="Lab License No." name="licenseNo" value={formData.licenseNo} onChange={handleChange} placeholder="NABL / ICMR / State License No." />
-        <FormField label="Working Hours" name="workingHours" value={formData.workingHours} onChange={handleChange} placeholder="Mon-Sat, 7 AM - 8 PM" />
+        <FormField label="Lab License No." name="licenseNo" value={formData.licenseNo} onChange={handleChange} placeholder="NABL / ICMR / State License No." error={fieldErrors.licenseNo} />
+        <FormField label="Working Hours" name="workingHours" value={formData.workingHours} onChange={handleChange} placeholder="Mon-Sat, 7 AM - 8 PM" error={fieldErrors.workingHours} />
       </div>
 
       <div>
@@ -191,8 +288,13 @@ export default function SettingsForm() {
           value={formData.footerNote}
           onChange={handleChange}
           placeholder="e.g. Reports are not valid for medico-legal purposes."
-          className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm text-gray-900 outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors"
+          className={`w-full rounded-lg border px-3.5 py-2.5 text-sm text-gray-900 outline-none focus:ring-1 transition-colors ${
+            fieldErrors.footerNote
+              ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+              : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+          }`}
         />
+        {fieldErrors.footerNote && <p className="text-xs text-red-600 mt-1">{fieldErrors.footerNote}</p>}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

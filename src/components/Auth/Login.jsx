@@ -120,6 +120,9 @@ export default function Login() {
           Authorized personnel only. For account or access assistance,
           please contact your system administrator.
         </p>
+        <p className="mt-3 text-[11px] text-gray-400 text-center">
+          © {new Date().getFullYear()} KIWISOFT. All rights reserved. · Version 2.0
+        </p>
       </div>
 
       {isForgotPasswordOpen && (

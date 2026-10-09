@@ -17,10 +17,10 @@ function statusLabel(s) {
 
 const inr = (n) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
-export default function OrderStatusModal({ initialRange = "Today", onClose }) {
+export default function OrderStatusModal({ initialRange = "Today", initialTab = "all", onClose }) {
   const navigate = useNavigate();
   const [range, setRange] = useState(initialRange);
-  const [tab, setTab] = useState("all");
+  const [tab, setTab] = useState(initialTab);
   const [allOrders, setAllOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -60,20 +60,12 @@ export default function OrderStatusModal({ initialRange = "Today", onClose }) {
   const total = inRange.length;
   const pct = (n) => (total ? `${((n / total) * 100).toFixed(1)}%` : "0%");
 
- const tiles = [
-    { label: "Total Orders", value: total, sub: null, cls: "bg-gray-50 text-gray-900" },
-    { label: "Completed", value: count("completed"), sub: pct(count("completed")), cls: "bg-green-50 text-green-700" },
-    { label: "Sample Collected", value: count("sample_collected"), sub: pct(count("sample_collected")), cls: "bg-blue-50 text-blue-700" },
-    { label: "Pending", value: count("pending"), sub: pct(count("pending")), cls: "bg-amber-50 text-amber-700" },
-    { label: "Cancelled", value: count("cancelled"), sub: pct(count("cancelled")), cls: "bg-red-50 text-red-700" },
-  ];
-
-  const tabs = [
-    { key: "all", label: "All", n: total },
-    { key: "completed", label: "Completed", n: count("completed") },
-    { key: "sample_collected", label: "Sample Collected", n: count("sample_collected") },
-    { key: "pending", label: "Pending", n: count("pending") },
-    { key: "cancelled", label: "Cancelled", n: count("cancelled") },
+  const tiles = [
+    { key: "all", label: "Total Orders", value: total, sub: null, cls: "bg-gray-50 text-gray-900" },
+    { key: "completed", label: "Completed", value: count("completed"), sub: pct(count("completed")), cls: "bg-green-50 text-green-700" },
+    { key: "sample_collected", label: "Sample Collected", value: count("sample_collected"), sub: pct(count("sample_collected")), cls: "bg-blue-50 text-blue-700" },
+    { key: "pending", label: "Pending", value: count("pending"), sub: pct(count("pending")), cls: "bg-amber-50 text-amber-700" },
+    { key: "cancelled", label: "Cancelled", value: count("cancelled"), sub: pct(count("cancelled")), cls: "bg-red-50 text-red-700" },
   ];
 
   const visible =
@@ -88,7 +80,7 @@ export default function OrderStatusModal({ initialRange = "Today", onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-xl cursor-pointer"
+        className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -116,38 +108,28 @@ export default function OrderStatusModal({ initialRange = "Today", onClose }) {
           ))}
         </div>
 
-        {/* Summary tiles */}
+        {/* Summary tiles (click to filter the table) */}
         <div className="grid grid-cols-2 gap-3 px-6 py-4 sm:grid-cols-3 lg:grid-cols-5">
           {tiles.map((t) => (
-            <div key={t.label} className={`rounded-lg p-3 ${t.cls}`}>
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              className={`rounded-lg p-3 text-left cursor-pointer transition hover:shadow-md ${t.cls} ${
+                tab === t.key ? "ring-2 ring-teal-600 ring-offset-1" : ""
+              }`}
+            >
               <p className="text-xs opacity-80">{t.label}</p>
               <p className="text-xl font-bold">
                 {t.value}
                 {t.sub && <span className="ml-1.5 text-xs font-normal opacity-70">({t.sub})</span>}
               </p>
-            </div>
-          ))}
-        </div>
-
-        {/* Status tabs */}
-        <div className="flex gap-5 border-b border-gray-100 px-6">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`-mb-px border-b-2 pb-2 text-sm font-medium ${
-                tab === t.key
-                  ? "border-teal-600 text-teal-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              {t.label} ({t.n})
             </button>
           ))}
         </div>
 
         {/* Orders table */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto border-t border-gray-100">
           {loading ? (
             <p className="py-10 text-center text-xs text-gray-400">Loading…</p>
           ) : visible.length === 0 ? (

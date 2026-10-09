@@ -20,7 +20,7 @@ export default function HomeCollectionHeader() {
       <div className="flex flex-col sm:flex-row gap-3">
         <button
           onClick={() => setRouteModalOpen(true)}
-          className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
         >
           <span className="text-base">🤖</span>
           Optimize Today's Route

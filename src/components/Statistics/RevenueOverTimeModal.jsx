@@ -20,6 +20,7 @@ const inr = (n) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 export default function RevenueOverTimeModal({ initialRange = "Today", onClose }) {
   const navigate = useNavigate();
   const [range, setRange] = useState(initialRange);
+  const [filter, setFilter] = useState("all"); // "all" | "completed" | "pending"
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -42,16 +43,25 @@ export default function RevenueOverTimeModal({ initialRange = "Today", onClose }
   );
 
   const sum = (list) => list.reduce((t, o) => t + Number(o.bill_total || 0), 0);
+
+  const completedOrders = orders.filter((o) => o.status === "completed");
+  // "Pending" revenue = everything not yet completed (pending + sample collected)
+  const pendingOrders = orders.filter((o) => o.status !== "completed");
+
   const totalRevenue = sum(orders);
-  const completedRevenue = sum(orders.filter((o) => o.status === "completed"));
-  const pendingRevenue = totalRevenue - completedRevenue;
+  const completedRevenue = sum(completedOrders);
+  const pendingRevenue = sum(pendingOrders);
   const avgOrder = orders.length ? totalRevenue / orders.length : 0;
 
+  // Rows shown in the table after applying the selected tile
+  const visible =
+    filter === "completed" ? completedOrders : filter === "pending" ? pendingOrders : orders;
+  const visibleTotal = sum(visible);
+
   const tiles = [
-    { label: "Total Revenue", value: inr(totalRevenue), cls: "bg-gray-50 text-gray-900" },
-    { label: "Completed", value: inr(completedRevenue), cls: "bg-green-50 text-green-700" },
-    { label: "Pending", value: inr(pendingRevenue), cls: "bg-amber-50 text-amber-700" },
-    { label: "Avg per Order", value: inr(avgOrder), cls: "bg-purple-50 text-purple-700" },
+    { key: "all", label: "Total Revenue", value: inr(totalRevenue), cls: "bg-gray-50 text-gray-900" },
+    { key: "completed", label: "Completed", value: inr(completedRevenue), cls: "bg-green-50 text-green-700" },
+    { key: "pending", label: "Pending", value: inr(pendingRevenue), cls: "bg-amber-50 text-amber-700" },
   ];
 
   return (
@@ -85,21 +95,34 @@ export default function RevenueOverTimeModal({ initialRange = "Today", onClose }
           ))}
         </div>
 
-        {/* Summary tiles */}
+        {/* Summary tiles (click to filter, click again to clear) */}
         <div className="grid grid-cols-2 gap-3 px-6 py-4 sm:grid-cols-4">
           {tiles.map((t) => (
-            <div key={t.label} className={`rounded-lg p-3 ${t.cls}`}>
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setFilter(filter === t.key ? "all" : t.key)}
+              className={`rounded-lg p-3 text-left cursor-pointer transition hover:shadow-md ${t.cls} ${
+                filter === t.key ? "ring-2 ring-teal-600 ring-offset-1" : ""
+              }`}
+            >
               <p className="text-xs opacity-80">{t.label}</p>
               <p className="text-xl font-bold">{t.value}</p>
-            </div>
+            </button>
           ))}
+
+          {/* Average isn't a status, so this tile is display-only */}
+          <div className="rounded-lg bg-purple-50 p-3 text-purple-700">
+            <p className="text-xs opacity-80">Avg per Order</p>
+            <p className="text-xl font-bold">{inr(avgOrder)}</p>
+          </div>
         </div>
 
         {/* Orders table */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <p className="py-10 text-center text-xs text-gray-400">Loading…</p>
-          ) : orders.length === 0 ? (
+          ) : visible.length === 0 ? (
             <p className="py-10 text-center text-xs text-gray-400">No revenue in this range.</p>
           ) : (
             <table className="w-full text-sm">
@@ -113,7 +136,7 @@ export default function RevenueOverTimeModal({ initialRange = "Today", onClose }
                 </tr>
               </thead>
               <tbody>
-                {orders.map((o) => (
+                {visible.map((o) => (
                   <tr
                     key={o.order_no}
                     onClick={() => navigate(`/lab-orders/${o.order_no}`)}
@@ -151,7 +174,7 @@ export default function RevenueOverTimeModal({ initialRange = "Today", onClose }
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-gray-100 bg-gray-50 px-6 py-4 rounded-b-2xl">
           <p className="text-sm text-gray-500">
-            {orders.length} orders · Total: <span className="font-semibold text-gray-900">{inr(totalRevenue)}</span>
+            {visible.length} orders · Total: <span className="font-semibold text-gray-900">{inr(visibleTotal)}</span>
           </p>
           <button onClick={onClose} className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
             Close

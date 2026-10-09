@@ -27,12 +27,11 @@ const formatDate = (value) => {
 const formatMoney = (n) =>
   `₹${Number(n ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
-export default function CollectionReportModal({ open, range, onRangeChange, onClose })  {
+export default function CollectionReportModal({ open, range, onRangeChange, onClose }) {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState("all");
   const rangeOptions = ["Today", "Yesterday", "1 Week", "1 Month", "1 Year"];
-  
 
   useEffect(() => {
     if (!open) return;
@@ -58,13 +57,11 @@ export default function CollectionReportModal({ open, range, onRangeChange, onCl
 
   const allRows = report?.rows ?? [];
   const rows = tab === "all" ? allRows : allRows.filter((r) => r.type === tab);
-  const totalBill = report?.totalBill ?? allRows.reduce((s, r) => s + Number(r.bill_total || 0), 0);
-
-  const tabs = [
-    { key: "all", label: `All (${report?.total ?? 0})`, active: "text-teal-600 border-teal-500" },
-    { key: "lab", label: `Lab Orders (${report?.lab ?? 0})`, active: "text-teal-600 border-teal-500" },
-    { key: "home", label: `Home Collection (${report?.home ?? 0})`, active: "text-purple-600 border-purple-500" },
-  ];
+  // Use the server total for "All", otherwise sum the filtered rows
+  const totalBill =
+    tab === "all" && report?.totalBill != null
+      ? report.totalBill
+      : rows.reduce((s, r) => s + Number(r.bill_total || 0), 0);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -86,7 +83,7 @@ export default function CollectionReportModal({ open, range, onRangeChange, onCl
           </button>
         </div>
 
-                {/* Range filter */}
+        {/* Range filter */}
         {onRangeChange && (
           <div className="flex gap-2 flex-wrap px-6 pt-4">
             {rangeOptions.map((r) => (
@@ -106,46 +103,50 @@ export default function CollectionReportModal({ open, range, onRangeChange, onCl
           </div>
         )}
 
-        {/* Summary tiles */}
+        {/* Summary tiles (click to filter the table) */}
         <div className="grid grid-cols-3 gap-3 px-6 py-4">
-          <div className="rounded-xl bg-gray-50 px-4 py-3">
+          <button
+            type="button"
+            onClick={() => setTab("all")}
+            className={`rounded-xl bg-gray-50 px-4 py-3 text-left cursor-pointer transition hover:shadow-md ${
+              tab === "all" ? "ring-2 ring-teal-600 ring-offset-1" : ""
+            }`}
+          >
             <p className="text-xs text-gray-500">Total Orders</p>
             <p className="text-xl font-bold text-gray-900 mt-1">{loading ? "…" : report?.total ?? 0}</p>
-          </div>
-          <div className="rounded-xl bg-teal-50 px-4 py-3">
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTab("lab")}
+            className={`rounded-xl bg-teal-50 px-4 py-3 text-left cursor-pointer transition hover:shadow-md ${
+              tab === "lab" ? "ring-2 ring-teal-600 ring-offset-1" : ""
+            }`}
+          >
             <p className="text-xs text-teal-700">Lab Orders</p>
             <p className="text-xl font-bold text-gray-900 mt-1">
               {loading ? "…" : report?.lab ?? 0}
               <span className="text-xs font-normal text-gray-400 ml-1.5">({report?.labPercentage ?? 0}%)</span>
             </p>
-          </div>
-          <div className="rounded-xl bg-purple-50 px-4 py-3">
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTab("home")}
+            className={`rounded-xl bg-purple-50 px-4 py-3 text-left cursor-pointer transition hover:shadow-md ${
+              tab === "home" ? "ring-2 ring-purple-600 ring-offset-1" : ""
+            }`}
+          >
             <p className="text-xs text-purple-700">Home Collection</p>
             <p className="text-xl font-bold text-gray-900 mt-1">
               {loading ? "…" : report?.home ?? 0}
               <span className="text-xs font-normal text-gray-400 ml-1.5">({report?.homePercentage ?? 0}%)</span>
             </p>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-1 px-5 border-b border-gray-100">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key)}
-              className={`px-3 py-2 text-sm font-medium border-b-2 transition ${
-                tab === t.key ? t.active : "text-gray-400 border-transparent hover:text-gray-600"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+          </button>
         </div>
 
         {/* Table */}
-        <div className="max-h-[360px] overflow-auto">
+        <div className="max-h-[360px] overflow-auto border-t border-gray-100">
           {loading ? (
             <div className="py-12 text-center">
               <div className="inline-block w-5 h-5 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />

@@ -1,12 +1,17 @@
 // src/components/LabOrders/Report/Report.jsx
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
+import {
+  Download, Printer, MessageCircle, Receipt, X,
+  User, Phone, Stethoscope, CalendarDays, FileCheck2,
+} from "lucide-react";
 import Toast from "../../common/Toast/Toast";
 import { useToast } from "../../common/Toast/useToast";
-import ReportHeader from "./ReportHeader";
+import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
 import FollowUpSuggestions from "./FollowUpSuggestions";
 import BillModal from "./BillModal";
 import WhatsAppSentModal from "./WhatsAppSentModal";
+import TestDetailView from "./TestDetailView";
 import { findOrderById } from "../../../data/labOrders";
 import { calculateFlag } from "../../../utils/calculateFlag";
 import { getOrderReportUrlApi, getSettingsApi, getGstSettingsApi } from "../../../api/api";
@@ -20,6 +25,8 @@ export default function Report() {
   const [letterheadOn, setLetterheadOn] = useState(true);
   const [isBillOpen, setBillOpen] = useState(false);
   const [isWhatsAppOpen, setWhatsAppOpen] = useState(false);
+  const [isPreviewOpen, setPreviewOpen] = useState(false);
+  const [viewTest, setViewTest] = useState(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadError, setDownloadError] = useState("");
   const [labInfo, setLabInfo] = useState(null);
@@ -47,6 +54,19 @@ export default function Report() {
   const patient = order?.patient || { name: "Aaa ff", age: "11", gender: "Male", regNo: "200128355" };
   const tests = order?.tests || [];
 
+  const ageText =
+    patient.age !== undefined && patient.age !== null && patient.age !== "-" && patient.age !== ""
+      ? `${patient.age} Years`
+      : "Not recorded";
+
+  const initials = (patient.name || "?")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+
   const DISPLAY_TZ = "Asia/Kolkata";
 
   // Accepts "2026-09-16T10:30:00Z", "2026-09-16 10:30:00Z", "2026-09-16 10:30:00"
@@ -69,22 +89,19 @@ export default function Report() {
     });
   }
 
-  // The API/mock data has been seen using both camelCase and snake_case for
-  // these timestamps, so accept either rather than silently showing "—".
   const rawOrderedAt = order?.orderedAt ?? order?.ordered_at;
   const rawCompletedAt = order?.completedAt ?? order?.completed_at;
 
   const registered = formatDateTime(rawOrderedAt) || "—";
   const reportDate = formatDateTime(rawCompletedAt) || "—";
 
-  
-    useEffect(() => {
-      if (location.state?.justCompleted) {
-        const { orderId: completedId, patientName } = location.state.justCompleted;
-        showToast(`Order #${completedId} completed — report ready for ${patientName || "patient"}`);
-        navigate(location.pathname, { replace: true, state: { ...location.state, justCompleted: undefined } });
-      }
-    }, [location.state, location.pathname, navigate, showToast]);
+  useEffect(() => {
+    if (location.state?.justCompleted) {
+      const { orderId: completedId, patientName } = location.state.justCompleted;
+      showToast(`Order ${completedId} completed — report ready for ${patientName || "patient"}`);
+      navigate(location.pathname, { replace: true, state: { ...location.state, justCompleted: undefined } });
+    }
+  }, [location.state, location.pathname, navigate, showToast]);
 
   const results = state?.results || Object.fromEntries(tests.map((t) => [t.id, t.result || ""]));
 
@@ -94,6 +111,9 @@ export default function Report() {
   );
 
   const testsWithResults = tests.map((t) => ({ ...t, result: results[t.id] }));
+  const abnormalCount = testsWithResults.filter((t) =>
+    ["low", "high", "abnormal"].includes(flags[t.id])
+  ).length;
   const testsByCategory = testsWithResults.reduce((acc, t) => {
     acc[t.category] = acc[t.category] || [];
     acc[t.category].push(t);
@@ -289,7 +309,7 @@ export default function Report() {
         <div class="col">
             <div class="patient-name">${patient.name}</div>
             <div class="patient-meta">
-                Age: ${patient.age} Years<br>
+                Age: ${ageText}<br>
                 Sex: ${patient.gender}<br>
                 PID: ${patient.regNo}
                  ${patient.phone ? `<br>Phone: ${patient.phone}` : ""}
@@ -332,216 +352,372 @@ export default function Report() {
     setTimeout(() => iframe.contentWindow.print(), 250);
   }
 
+  const actionBtn =
+    "flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer";
+
   return (
     <div className="space-y-6">
-      {/* Top Action Bar - Kept as is but not part of the printed visual */}
-      <div className="no-print">
-        <ReportHeader
+      {viewTest ? (
+        /* ── Single-test detail view (replaces the old popup) ───────── */
+        <TestDetailView
+          patient={patient}
           orderId={orderId}
+          test={viewTest}
+          flag={flags[viewTest.id]}
+          ageText={ageText}
+          registered={registered}
+          reportDate={reportDate}
+          referredBy={order?.referredBy || "Self"}
           letterheadOn={letterheadOn}
-          onLetterheadToggle={setLetterheadOn}
+          onLetterheadChange={setLetterheadOn}
+          onBack={() => setViewTest(null)}
+          onBill={() => setBillOpen(true)}
+          onWhatsApp={() => setWhatsAppOpen(true)}
           onPrint={handlePrint}
-          onBillClick={() => setBillOpen(true)}
-          onWhatsAppClick={() => setWhatsAppOpen(true)}
-          onDownloadClick={handleDownloadPdf}
-          downloadingPdf={downloadingPdf}
         />
-      </div>
+      ) : (
+        <>
+          {/* ── Top action bar ───────────────────────────────────────── */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => navigate("/lab-orders")}
+              className="text-sm font-medium text-teal-600 hover:underline cursor-pointer"
+            >
+              ← Back to orders
+            </button>
 
-      {downloadError && <p className="text-sm text-red-600 no-print">{downloadError}</p>}
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => setBillOpen(true)} className={actionBtn}>
+                <Receipt size={16} /> Bill
+              </button>
+              <button type="button" onClick={() => setWhatsAppOpen(true)} className={actionBtn}>
+                <MessageCircle size={16} /> WhatsApp
+              </button>
+              <button type="button" onClick={handlePrint} className={actionBtn}>
+                <Printer size={16} /> Print
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDownloadError("");
+                  setPreviewOpen(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer"
+              >
+                <Download size={16} /> Download PDF
+              </button>
+            </div>
+          </div>
 
-      <div className="no-print">
-        <h1 className="text-2xl font-bold text-gray-900">Report — {patient.name}</h1>
-        <p className="text-sm text-gray-500 mt-1">Order #{orderId} · {reportDate}</p>
-      </div>
-
-      {/* Main Report Container — pure Tailwind, matches the reference image */}
-      <div className="bg-white max-w-[210mm] mx-auto border border-gray-200 shadow-sm font-sans text-[#1f2937]">
-
-        {/* ── Header Section ─────────────────────────────────────── */}
-        {letterheadOn && (
-          <>
-            <div className="flex items-center justify-between px-6 pt-4 pb-3">
-              <div className="flex items-center">
-                {labInfo?.logo_path ? (
-                  <img
-                    src={labInfo.logo_path}
-                    alt="Logo"
-                    className="w-12 h-12 object-contain mr-3"
-                  />
-                ) : (
-                  <div className="w-12 h-12 bg-teal-500 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-white text-[10px] font-bold">SMC</span>
+          {/* ── Patient summary card ─────────────────────────────────── */}
+          <div className="rounded-2xl bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
+            <div className="h-1.5 bg-gradient-to-r from-teal-500 via-teal-500 to-gray-900" />
+            <div className="p-6 flex flex-col lg:flex-row lg:items-center gap-6">
+              <div className="flex items-center gap-4 lg:w-[34%]">
+                <span className="h-16 w-16 shrink-0 rounded-full bg-teal-600 text-white text-xl font-bold flex items-center justify-center ring-4 ring-teal-100">
+                  {initials}
+                </span>
+                <div className="min-w-0">
+                  <h1 className="text-xl font-bold text-gray-900 uppercase truncate">{patient.name}</h1>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    <span className="rounded-full bg-teal-50 text-teal-700 text-xs font-semibold px-2.5 py-0.5">
+                      Order #{orderId}
+                    </span>
+                    <span className="rounded-full border border-gray-200 text-gray-600 text-xs px-2.5 py-0.5">
+                      Reg. {patient.regNo}
+                    </span>
                   </div>
-                )}
-                <div>
-                  <h1 className="text-xl font-extrabold text-gray-900 tracking-tight leading-tight">
-                    {labInfo?.lab_name || "SOUHRUDA MEDICAL CENTRE"}
-                  </h1>
-                  <p className="text-[9px] text-gray-500 uppercase tracking-[0.08em] mt-0.5">
-                    Accurate · Caring · Instant
-                  </p>
                 </div>
               </div>
-              <div className="text-right text-[10px] text-gray-700 leading-relaxed">
-                {labInfo?.phone && (
-                  <p className="whitespace-nowrap">
-                    <span className="text-teal-600 font-bold mr-1">☎</span>
-                    {labInfo.phone}
-                  </p>
-                )}
-                {labInfo?.email && (
-                  <p className="whitespace-nowrap">
-                    <span className="text-teal-600 font-bold mr-1">✉</span>
-                    {labInfo.email}
-                  </p>
-                )}
+
+              <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 lg:border-l lg:border-gray-100 lg:pl-6">
+                {[
+                  { icon: User, label: "Age / Gender", value: `${ageText} · ${patient.gender || "—"}` },
+                  { icon: Phone, label: "Contact", value: patient.phone || "Not recorded" },
+                  { icon: Stethoscope, label: "Referred by", value: order?.referredBy || "Self" },
+                  { icon: CalendarDays, label: "Registered", value: registered },
+                  { icon: FileCheck2, label: "Reported", value: reportDate },
+                ].map(({ icon: Icon, label, value }) => (
+                  <div key={label} className="flex items-start gap-2.5">
+                    <span className="mt-0.5 h-7 w-7 shrink-0 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center">
+                      <Icon size={14} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[11px] uppercase tracking-wide text-gray-400">{label}</p>
+                      <p className="text-sm font-medium text-gray-900 capitalize truncate">{value}</p>
+                    </div>
+                  </div>
+                ))}
+
               </div>
             </div>
-
-            {/* Address strip */}
-            <div className="bg-[#111827] text-gray-200 text-center text-[10px] tracking-wide py-1 px-3">
-              {labInfo
-                ? [labInfo.address, labInfo.city, labInfo.state, labInfo.pincode].filter(Boolean).join(", ")
-                : "New City Hospital, Maner Road, Kozhikode, Kerala, 673004"}
-            </div>
-
-            {/* Accent bar (teal → dark split) */}
-            <div
-              className="h-[5px] w-full"
-              style={{ background: "linear-gradient(90deg, #0d9488 0%, #0d9488 60%, #111827 60%, #111827 100%)" }}
-            />
-
-            {/* GST / license strip */}
-            {(gstInfo?.is_gst_registered || labInfo?.license_no) && (
-              <div className="text-center text-[9px] text-gray-500 pt-1 px-6">
-                {gstInfo?.is_gst_registered && (
-                  <>
-                    GSTIN: <strong className="text-gray-900">{gstInfo.gstin}</strong>
-                    {gstInfo.legal_business_name && <> · {gstInfo.legal_business_name}</>}
-                  </>
-                )}
-                {gstInfo?.is_gst_registered && labInfo?.license_no && <> &nbsp;|&nbsp; </>}
-                {labInfo?.license_no && <>Lic. No: {labInfo.license_no}</>}
-              </div>
-            )}
-          </>
-        )}
-
-        {/* ── Patient / sample info block ────────────────────────── */}
-        <div className="flex justify-between items-start px-6 py-3 border-b border-gray-200">
-          <div className="flex-1">
-            <p className="text-[13px] font-bold text-gray-900 mb-0.5">{patient.name}</p>
-            <div className="text-[10px] text-gray-600 leading-snug">
-              <p>Age: {patient.age} Years</p>
-              <p>Sex: {patient.gender}</p>
-              <p>PID: {patient.regNo}</p>
-               {patient.phone && <p>Phone: {patient.phone}</p>}
-            </div>
           </div>
 
-          <div className="w-[62px] h-[62px] border-[1.5px] border-dashed border-gray-300 rounded-md flex items-center justify-center text-[8px] text-gray-400 mx-[18px] shrink-0">
-            QR
-          </div>
+          {downloadError && !isPreviewOpen && <p className="text-sm text-red-600">{downloadError}</p>}
 
-          <div className="flex-1 text-right text-[10px] text-gray-600 leading-snug">
-            <p><strong className="text-gray-900 font-semibold">Order No:</strong> {orderId}</p>
-            <p><strong className="text-gray-900 font-semibold">Ref. By:</strong> {order?.referredBy || "Self"}</p>
-            <p>Registered: {registered}</p>
-            <p>Reported: {reportDate}</p>
-          </div>
-        </div>
-
-        {/* ── Tests by category ──────────────────────────────────── */}
-        {Object.entries(testsByCategory).map(([category, categoryTests]) => (
-          <div key={category}>
-            <div className="text-center text-[11.5px] font-extrabold uppercase tracking-[0.04em] text-gray-900 mx-6 mt-2.5 mb-1.5">
-              {category.toUpperCase()}
+          {/* ── Tests table ──────────────────────────────────────────── */}
+          <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h3 className="font-semibold text-sm text-gray-900">Tests ({testsWithResults.length})</h3>
+              <p className="text-xs text-gray-400">Click View for the normal range and details</p>
             </div>
-
-            <div className="px-6">
-              <table className="w-full border-collapse mb-2">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px]">
                 <thead>
-                  <tr>
-                    <th className="text-left text-[9px] font-bold uppercase tracking-[0.03em] text-gray-700 px-1 py-1 border-b-2 border-gray-900 w-[34%]">
-                      Investigation
-                    </th>
-                    <th className="text-left text-[9px] font-bold uppercase tracking-[0.03em] text-gray-700 px-1 py-1 border-b-2 border-gray-900 w-[22%]">
-                      Result
-                    </th>
-                    <th className="text-left text-[9px] font-bold uppercase tracking-[0.03em] text-gray-700 px-1 py-1 border-b-2 border-gray-900 w-[28%]">
-                      Reference Value
-                    </th>
-                    <th className="text-left text-[9px] font-bold uppercase tracking-[0.03em] text-gray-700 px-1 py-1 border-b-2 border-gray-900 w-[16%]">
-                      Unit
-                    </th>
+                  <tr className="bg-gray-50 text-left">
+                    <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide">#</th>
+                    <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">TEST</th>
+                    <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">RESULT</th>
+                    <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">FLAG</th>
+                    <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">BILL AMOUNT</th>
+                    <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide text-right">ACTION</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {categoryTests.map((t) => {
-                    const flag = flags[t.id];
-                    const isAbnormal = ["low", "high", "abnormal"].includes(flag);
-                    return (
-                      <tr key={t.id} className="break-inside-avoid">
-                        <td className="px-1 py-1 text-[10.5px] text-gray-800 border-b border-gray-100">
-                          {t.name}
-                        </td>
-                        <td
-                          className={`px-1 py-1 text-[10.5px] font-bold border-b border-gray-100 ${
-                            isAbnormal ? "text-amber-600" : "text-gray-900"
-                          }`}
+                  {testsWithResults.map((t, i) => (
+                    <tr key={t.id} className="border-t border-gray-100 hover:bg-teal-50/30 transition-colors">
+                      <td className="px-6 py-3.5 text-sm text-gray-400">{i + 1}</td>
+                      <td className="py-3.5">
+                        <p className="text-sm font-medium text-gray-900">{t.name}</p>
+                        <p className="text-xs text-gray-400">{t.category}</p>
+                      </td>
+                      <td className="py-3.5 text-sm font-semibold text-gray-900">
+                        {t.result || "—"}
+                        {t.result && t.unit ? <span className="ml-1 text-xs font-normal text-gray-400">{t.unit}</span> : null}
+                      </td>
+                      <td className="py-3.5"><StatusBadge status={flags[t.id]} /></td>
+                      <td className="py-3.5 text-sm text-gray-900">
+                        {t.packageId != null ? (
+                          <span className="text-teal-600 text-xs font-medium">In package</span>
+                        ) : (
+                          `₹${Number(t.price || 0).toFixed(2)}`
+                        )}
+                      </td>
+                      <td className="px-6 py-3.5 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setViewTest(t)}
+                          className="px-4 py-1.5 rounded-lg border border-teal-200 bg-teal-50 text-xs font-semibold text-teal-700 hover:bg-teal-100 cursor-pointer"
                         >
-                          {results[t.id] || "—"}
-                          {flag === "high" && (
-                            <span className="text-[8px] font-bold ml-1">High</span>
-                          )}
-                          {flag === "low" && (
-                            <span className="text-[8px] font-bold ml-1">Low</span>
-                          )}
-                        </td>
-                        <td className="px-1 py-1 text-[10.5px] text-gray-500 border-b border-gray-100">
-                          {t.range || "—"}
-                        </td>
-                        <td className="px-1 py-1 text-[10.5px] text-gray-500 border-b border-gray-100">
-                          {t.unit || ""}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           </div>
-        ))}
 
-        {/* ── End of report / disclaimer ─────────────────────────── */}
-        <div className="text-center text-[9px] text-gray-400 tracking-[0.05em] mx-6 mt-0.5 mb-1">
-          **** End of Report ****
+          <FollowUpSuggestions
+            tests={testsWithResults}
+            flags={flags}
+            reportDate={reportDate}
+            onSchedule={handleScheduleReminder}
+          />
+        </>
+      )}
+
+      {/* ── Download PDF modal: letterhead preview ───────────────── */}
+      {isPreviewOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => setPreviewOpen(false)}
+        >
+          <div
+            className="w-full max-w-4xl max-h-[92vh] flex flex-col rounded-2xl bg-white shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-bold text-gray-900">Report — {patient.name}</h2>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={letterheadOn}
+                    onChange={(e) => setLetterheadOn(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                  />
+                  Letterhead
+                </label>
+                <button
+                  type="button"
+                  onClick={handleDownloadPdf}
+                  disabled={downloadingPdf}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Download size={16} />
+                  {downloadingPdf ? "Preparing…" : "Download PDF"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewOpen(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {downloadError && <p className="px-6 pt-3 text-sm text-red-600">{downloadError}</p>}
+
+            {/* Scrollable preview */}
+            <div className="flex-1 overflow-y-auto bg-gray-50 p-6">
+              <div className="bg-white max-w-[210mm] mx-auto border border-gray-200 shadow-sm font-sans text-[#1f2937]">
+
+                {letterheadOn && (
+                  <>
+                    <div className="flex items-center justify-between px-6 pt-4 pb-3">
+                      <div className="flex items-center">
+                        {labInfo?.logo_path ? (
+                          <img src={labInfo.logo_path} alt="Logo" className="w-12 h-12 object-contain mr-3" />
+                        ) : (
+                          <div className="w-12 h-12 bg-teal-500 rounded-full flex items-center justify-center mr-3">
+                            <span className="text-white text-[10px] font-bold">SMC</span>
+                          </div>
+                        )}
+                        <div>
+                          <h1 className="text-xl font-extrabold text-gray-900 tracking-tight leading-tight">
+                            {labInfo?.lab_name || "SOUHRUDA MEDICAL CENTRE"}
+                          </h1>
+                          <p className="text-[9px] text-gray-500 uppercase tracking-[0.08em] mt-0.5">
+                            Accurate · Caring · Instant
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right text-[10px] text-gray-700 leading-relaxed">
+                        {labInfo?.phone && (
+                          <p className="whitespace-nowrap">
+                            <span className="text-teal-600 font-bold mr-1">☎</span>
+                            {labInfo.phone}
+                          </p>
+                        )}
+                        {labInfo?.email && (
+                          <p className="whitespace-nowrap">
+                            <span className="text-teal-600 font-bold mr-1">✉</span>
+                            {labInfo.email}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="bg-[#111827] text-gray-200 text-center text-[10px] tracking-wide py-1 px-3">
+                      {labInfo
+                        ? [labInfo.address, labInfo.city, labInfo.state, labInfo.pincode].filter(Boolean).join(", ")
+                        : "New City Hospital, Maner Road, Kozhikode, Kerala, 673004"}
+                    </div>
+
+                    <div
+                      className="h-[5px] w-full"
+                      style={{ background: "linear-gradient(90deg, #0d9488 0%, #0d9488 60%, #111827 60%, #111827 100%)" }}
+                    />
+
+                    {(gstInfo?.is_gst_registered || labInfo?.license_no) && (
+                      <div className="text-center text-[9px] text-gray-500 pt-1 px-6">
+                        {gstInfo?.is_gst_registered && (
+                          <>
+                            GSTIN: <strong className="text-gray-900">{gstInfo.gstin}</strong>
+                            {gstInfo.legal_business_name && <> · {gstInfo.legal_business_name}</>}
+                          </>
+                        )}
+                        {gstInfo?.is_gst_registered && labInfo?.license_no && <> &nbsp;|&nbsp; </>}
+                        {labInfo?.license_no && <>Lic. No: {labInfo.license_no}</>}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Patient / sample info block */}
+                <div className="flex justify-between items-start px-6 py-3 border-b border-gray-200">
+                  <div className="flex-1">
+                    <p className="text-[13px] font-bold text-gray-900 mb-0.5">{patient.name}</p>
+                    <div className="text-[10px] text-gray-600 leading-snug">
+                      <p>Age: {ageText}</p>
+                      <p>Sex: {patient.gender}</p>
+                      <p>PID: {patient.regNo}</p>
+                      {patient.phone && <p>Phone: {patient.phone}</p>}
+                    </div>
+                  </div>
+
+                  <div className="w-[62px] h-[62px] border-[1.5px] border-dashed border-gray-300 rounded-md flex items-center justify-center text-[8px] text-gray-400 mx-[18px] shrink-0">
+                    QR
+                  </div>
+
+                  <div className="flex-1 text-right text-[10px] text-gray-600 leading-snug">
+                    <p><strong className="text-gray-900 font-semibold">Order No:</strong> {orderId}</p>
+                    <p><strong className="text-gray-900 font-semibold">Ref. By:</strong> {order?.referredBy || "Self"}</p>
+                    <p>Registered: {registered}</p>
+                    <p>Reported: {reportDate}</p>
+                  </div>
+                </div>
+
+                {/* Tests by category */}
+                {Object.entries(testsByCategory).map(([category, categoryTests]) => (
+                  <div key={category}>
+                    <div className="text-center text-[11.5px] font-extrabold uppercase tracking-[0.04em] text-gray-900 mx-6 mt-2.5 mb-1.5">
+                      {category.toUpperCase()}
+                    </div>
+
+                    <div className="px-6">
+                      <table className="w-full border-collapse mb-2">
+                        <thead>
+                          <tr>
+                            <th className="text-left text-[9px] font-bold uppercase tracking-[0.03em] text-gray-700 px-1 py-1 border-b-2 border-gray-900 w-[34%]">Investigation</th>
+                            <th className="text-left text-[9px] font-bold uppercase tracking-[0.03em] text-gray-700 px-1 py-1 border-b-2 border-gray-900 w-[22%]">Result</th>
+                            <th className="text-left text-[9px] font-bold uppercase tracking-[0.03em] text-gray-700 px-1 py-1 border-b-2 border-gray-900 w-[28%]">Reference Value</th>
+                            <th className="text-left text-[9px] font-bold uppercase tracking-[0.03em] text-gray-700 px-1 py-1 border-b-2 border-gray-900 w-[16%]">Unit</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {categoryTests.map((t) => {
+                            const flag = flags[t.id];
+                            const isAbnormal = ["low", "high", "abnormal"].includes(flag);
+                            return (
+                              <tr key={t.id} className="break-inside-avoid">
+                                <td className="px-1 py-1 text-[10.5px] text-gray-800 border-b border-gray-100">{t.name}</td>
+                                <td
+                                  className={`px-1 py-1 text-[10.5px] font-bold border-b border-gray-100 ${
+                                    isAbnormal ? "text-amber-600" : "text-gray-900"
+                                  }`}
+                                >
+                                  {results[t.id] || "—"}
+                                  {flag === "high" && <span className="text-[8px] font-bold ml-1">High</span>}
+                                  {flag === "low" && <span className="text-[8px] font-bold ml-1">Low</span>}
+                                </td>
+                                <td className="px-1 py-1 text-[10.5px] text-gray-500 border-b border-gray-100">{t.range || "—"}</td>
+                                <td className="px-1 py-1 text-[10.5px] text-gray-500 border-b border-gray-100">{t.unit || ""}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="text-center text-[9px] text-gray-400 tracking-[0.05em] mx-6 mt-0.5 mb-1">
+                  **** End of Report ****
+                </div>
+
+                <div className="text-center text-[9px] text-gray-500 italic px-6 pb-1.5">
+                  {labInfo?.footer_note || "Reports are not valid for medico-legal purposes."}
+                </div>
+
+                <div className="flex justify-between text-[8.5px] text-gray-400 border-t border-gray-200 px-6 py-1 mt-auto">
+                  <span>Generated on: {formatDateTime(new Date())}</span>
+                  <span>Page 1 of 1</span>
+                </div>
+
+                <div className="bg-teal-600 text-white text-center text-[10px] font-bold tracking-[0.03em] py-1.5">
+                  {labInfo?.lab_name || "SOUHRUDA MEDICAL CENTRE"}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div className="text-center text-[9px] text-gray-500 italic px-6 pb-1.5">
-          {labInfo?.footer_note || "Reports are not valid for medico-legal purposes."}
-        </div>
-
-        {/* ── Footer meta + band ─────────────────────────────────── */}
-        <div className="flex justify-between text-[8.5px] text-gray-400 border-t border-gray-200 px-6 py-1 mt-auto">
-          <span>Generated on: {formatDateTime(new Date())}</span>
-          <span>Page 1 of 1</span>
-        </div>
-
-        <div className="bg-teal-600 text-white text-center text-[10px] font-bold tracking-[0.03em] py-1.5">
-          {labInfo?.lab_name || "SOUHRUDA MEDICAL CENTRE"}
-        </div>
-      </div>
-
-      <div className="no-print">
-        <FollowUpSuggestions
-          tests={testsWithResults}
-          flags={flags}
-          reportDate={reportDate}
-          onSchedule={handleScheduleReminder}
-        />
-      </div>
+      )}
 
       {isBillOpen && (
         <BillModal
@@ -560,7 +736,7 @@ export default function Report() {
       )}
 
       <iframe ref={iframeRef} title="report-print" style={{ display: "none" }} />
-            {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   );
 }

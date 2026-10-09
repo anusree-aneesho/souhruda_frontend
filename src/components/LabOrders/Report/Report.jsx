@@ -27,6 +27,7 @@ export default function Report() {
   const [isBillOpen, setBillOpen] = useState(false);
   const [isEditBillOpen, setEditBillOpen] = useState(false);
   const [discountPercent, setDiscountPercent] = useState(0);
+  const [orderDates, setOrderDates] = useState({ collected: null, reported: null });
   const [isWhatsAppOpen, setWhatsAppOpen] = useState(false);
   const [isPreviewOpen, setPreviewOpen] = useState(false);
   const [viewTest, setViewTest] = useState(null);
@@ -45,14 +46,21 @@ export default function Report() {
     setPaymentDone(Boolean(order?.paymentDone));
   }, [orderId]);
 
+  // Loads the discount and the collection / report dates from the order.
   useEffect(() => {
     let cancelled = false;
     setDiscountPercent(0);
+    setOrderDates({ collected: null, reported: null });
     getOrderApi(orderId)
       .then((res) => {
-        if (!cancelled) setDiscountPercent(Number(res.data?.discount_percent) || 0);
+        if (cancelled) return;
+        setDiscountPercent(Number(res.data?.discount_percent) || 0);
+        setOrderDates({
+          collected: res.data?.sample_collected_at ?? null,
+          reported: res.data?.report_generated_at ?? res.data?.completed_at ?? null,
+        });
       })
-      .catch((err) => console.error("Failed to load order discount:", err.message));
+      .catch((err) => console.error("Failed to load order details:", err.message));
     return () => { cancelled = true; };
   }, [orderId]);
 
@@ -83,12 +91,14 @@ export default function Report() {
 
   const DISPLAY_TZ = "Asia/Kolkata";
 
-  // Accepts "2026-09-16T10:30:00Z", "2026-09-16 10:30:00Z", "2026-09-16 10:30:00"
-  // (assumed UTC, matching the API), or any value the Date constructor already understands.
+  // Accepts "2026-09-16T10:30:00Z", "2026-09-16 10:30:00Z", "2026-09-16 10:30:00+00"
+  // (Postgres short offset), "2026-09-16 10:30:00" (assumed UTC, matching the API),
+  // or any value the Date constructor already understands.
   function toDate(raw) {
     if (!raw) return null;
-    const normalized = String(raw).replace(" ", "T");
-    const hasZone = /(Z|[+-]\d{2}:?\d{2})$/i.test(normalized);
+    let normalized = String(raw).replace(" ", "T");
+    normalized = normalized.replace(/([+-]\d{2})$/, "$1:00"); // "+00" -> "+00:00"
+    const hasZone = /(Z|[+-]\d{2}:\d{2})$/i.test(normalized);
     const d = new Date(hasZone ? normalized : normalized + "Z");
     return Number.isNaN(d.getTime()) ? null : d;
   }
@@ -107,7 +117,9 @@ export default function Report() {
   const rawCompletedAt = order?.completedAt ?? order?.completed_at;
 
   const registered = formatDateTime(rawOrderedAt) || "—";
-  const reportDate = formatDateTime(rawCompletedAt) || "—";
+  const reportDate = formatDateTime(rawCompletedAt ?? orderDates.reported) || "—";
+  const collectionDate =
+    formatDateTime(order?.sampleCollectedAt ?? order?.sample_collected_at ?? orderDates.collected) || "—";
 
   useEffect(() => {
     if (location.state?.justCompleted) {
@@ -745,6 +757,9 @@ export default function Report() {
           homeVisitFee={order?.homeVisitFee || 0}
           discountPercent={discountPercent}
           paymentDone={paymentDone}
+          referredBy={order?.referredBy || "Self"}
+          collectionDate={collectionDate}
+          reportDate={reportDate}
           onClose={() => setBillOpen(false)}
         />
       )}

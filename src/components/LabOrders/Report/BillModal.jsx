@@ -5,7 +5,19 @@ import ModalShell from "../../common/Modal/ModalShell";
 import { getOrderBillUrlApi, getSettingsApi, getGstSettingsApi } from "../../../api/api";
 import { groupTestsByPackage, calcBillTotals } from "../../../utils/orderPricing";
 
-export default function BillModal({ orderId, patient, tests, billTotal, homeVisitFee = 0, discountPercent = 0, paymentDone, onClose }) {
+export default function BillModal({
+  orderId,
+  patient,
+  tests,
+  billTotal,
+  homeVisitFee = 0,
+  discountPercent = 0,
+  paymentDone,
+  referredBy,
+  collectionDate,
+  reportDate,
+  onClose,
+}) {
   // Group by the package each test was actually billed under — same
   // grouping used on the Confirm Order step and the order-detail Bill
   // section — instead of listing every test flat at its own price.
@@ -72,6 +84,16 @@ export default function BillModal({ orderId, patient, tests, billTotal, homeVisi
     gstEnabled && gstInfo?.invoice_prefix
       ? `${gstInfo.invoice_prefix}-${orderId}`
       : `#${orderId}`;
+
+  // Patient / order detail values shared by the on-screen modal and the
+  // printed bill, so both show the same fields as the downloaded PDF.
+  const ageDisplay =
+    patient.age !== undefined && patient.age !== null && patient.age !== "" && patient.age !== "-"
+      ? `${patient.age} Years`
+      : "—";
+  const genderDisplay = patient.gender
+    ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)
+    : "—";
 
   async function handleDownloadBill() {
     setDownloadingBill(true);
@@ -171,11 +193,12 @@ export default function BillModal({ orderId, patient, tests, billTotal, homeVisi
   .letterhead .doc-label { text-align: right; flex-shrink: 0; }
   .letterhead .doc-title { font-size: 15px; font-weight: 700; color: #111827; text-transform: uppercase; letter-spacing: 0.04em; }
   .letterhead .doc-number { font-size: 11px; color: #0d9488; font-weight: 600; margin-top: 4px; }
-  .meta-bar { display: flex; justify-content: space-between; background: #f9fafb; border-radius: 10px; padding: 14px 18px; margin-bottom: 24px; }
-  .meta-bar .block .label { font-size: 9.5px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
-  .meta-bar .block .value { font-size: 13px; font-weight: 600; color: #111827; }
-  .meta-bar .block .sub { font-size: 11px; color: #6b7280; margin-top: 2px; }
-  .meta-bar .right { text-align: right; }
+  .details { background: #f9fafb; border-radius: 10px; padding: 14px 18px; margin-bottom: 24px; }
+  .details table { width: 100%; border-collapse: collapse; }
+  .details td { padding: 3px 0; font-size: 12px; vertical-align: top; }
+  .details td.k { width: 105px; color: #9ca3af; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding-top: 4px; }
+  .details td.v { color: #111827; font-weight: 600; padding-right: 18px; }
+  .details .paid-badge { margin-top: 0; margin-left: 8px; }
   table.items { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
   table.items thead th {
     background: #f0fdfa; text-align: left; padding: 10px 12px; font-size: 10px;
@@ -232,19 +255,25 @@ export default function BillModal({ orderId, patient, tests, billTotal, homeVisi
     </div>
   </div>
 
-  <div class="meta-bar">
-    <div class="block">
-      <div class="label">Billed To</div>
-      <div class="value">${patient.name}</div>
-      <div class="sub">Reg No: ${patient.regNo || "-"}</div>
-      ${patient.phone ? `<div class="sub">Phone: ${patient.phone}</div>` : ""}
-
-    </div>
-    <div class="block right">
-      <div class="label">Billed On</div>
-      <div class="value">${new Date().toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</div>
-      ${paymentDone ? `<div class="paid-badge">Paid</div>` : ""}
-    </div>
+  <div class="details">
+    <table>
+      <tr>
+        <td class="k">Name</td><td class="v">${patient.name}${paymentDone ? ` <span class="paid-badge">Paid</span>` : ""}</td>
+        <td class="k">Age</td><td class="v">${ageDisplay}</td>
+      </tr>
+      <tr>
+        <td class="k">Gender</td><td class="v">${genderDisplay}</td>
+        <td class="k">Contact No.</td><td class="v">${patient.phone || "—"}</td>
+      </tr>
+      <tr>
+        <td class="k">Reg / Order No.</td><td class="v">${patient.regNo || "-"} / ${orderId}</td>
+        <td class="k">Collection Date</td><td class="v">${collectionDate || "—"}</td>
+      </tr>
+      <tr>
+        <td class="k">Referred By</td><td class="v">${referredBy || "Self"}</td>
+        <td class="k">Report Date</td><td class="v">${reportDate || "—"}</td>
+      </tr>
+    </table>
   </div>
 
   <table class="items">
@@ -350,23 +379,40 @@ export default function BillModal({ orderId, patient, tests, billTotal, homeVisi
         )}
 
         {/* ── Billed To block ────────────────────────────────── */}
-        <div className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3 mb-4">
-          <div>
-            <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
-              Billed To
-            </p>
-            <p className="text-sm font-semibold text-gray-900">{patient.name}</p>
-            <p className="text-xs text-gray-500">Reg No: {patient.regNo || "-"}</p>
-            {patient.phone && (
-              <p className="text-xs text-gray-500">Phone: {patient.phone}</p>
+        <div className="bg-gray-50 rounded-lg px-4 py-3 mb-4">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
+                Billed To
+              </p>
+              <p className="text-sm font-semibold text-gray-900">{patient.name}</p>
+            </div>
+            {paymentDone && (
+              <span className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
+                <CheckCircle2 size={13} />
+                Paid
+              </span>
             )}
           </div>
-          {paymentDone && (
-            <span className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
-              <CheckCircle2 size={13} />
-              Paid
-            </span>
-          )}
+
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+            {[
+              ["Age", ageDisplay],
+              ["Gender", genderDisplay],
+              ["Contact No.", patient.phone || "—"],
+              ["Reg / Order No.", `${patient.regNo || "-"} / ${orderId}`],
+              ["Referred By", referredBy || "Self"],
+              ["Collection Date", collectionDate || "—"],
+              ["Report Date", reportDate || "—"],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
+                  {label}
+                </p>
+                <p className="text-xs font-medium text-gray-900">{value}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* ── Items list — grouped by applied package, same as Confirm

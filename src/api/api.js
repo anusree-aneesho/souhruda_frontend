@@ -187,12 +187,19 @@ export async function deleteBranchApi(id) {
   });
 }
 
-export async function getGstSettingsApi() {
-  return request("/settings/gst");
+export async function getGstSettingsApi(branchId) {
+  const qs = branchId ? `?branch_id=${branchId}` : "";
+  return request(`/settings/gst${qs}`);
 }
 
-export async function updateGstSettingsApi(gstData) {
-  return request("/settings/gst", {
+// Super admin only: GST details of every branch.
+export async function getAllBranchesGstApi() {
+  return request("/settings/gst/branches");
+}
+
+export async function updateGstSettingsApi(gstData, branchId) {
+  const qs = branchId ? `?branch_id=${branchId}` : "";
+  return request(`/settings/gst${qs}`, {
     method: "PUT",
     body: JSON.stringify(gstData),
   });

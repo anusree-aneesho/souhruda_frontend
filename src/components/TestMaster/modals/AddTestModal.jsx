@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { X, Plus } from "lucide-react";
 import ModalShell from "../../common/Modal/ModalShell";
+import ConfirmModal from "../../Patients/modals/ConfirmModal";
 import { DEMOGRAPHIC_GROUPS } from "../../../data/demographicGroups";
 
 const emptyDemographicRanges = DEMOGRAPHIC_GROUPS.reduce((acc, group) => {
@@ -18,7 +19,7 @@ const emptyForm = {
   criticalHigh: "",
   followupWeeks: "",
   criteria: "",
-  isActive: true,   
+  isActive: true,
   demographicRanges: { ...emptyDemographicRanges },
 };
 
@@ -138,6 +139,7 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
   const [errors, setErrors] = useState({});
   const [demographicErrors, setDemographicErrors] = useState({});
   const [customRowErrors, setCustomRowErrors] = useState({});
+  const [confirmingRow, setConfirmingRow] = useState(null); // custom row | null
   const isEditMode = Boolean(editingTest);
 
   useEffect(() => {
@@ -166,6 +168,7 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
     setErrors({});
     setDemographicErrors({});
     setCustomRowErrors({});
+    setConfirmingRow(null);
   }, [editingTest, defaultCategory]);
 
   function handleChange(field, value) {
@@ -192,11 +195,15 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
     setCustomRowErrors((prev) => ({ ...prev, [id]: undefined }));
   }
 
+  // Clicking the X only opens the styled confirm popup.
   function handleRemoveCustomRow(id, label) {
-    const displayName = label?.trim() || "this custom group";
-    if (!window.confirm(`Delete "${displayName}"? This range will be permanently removed when you save.`)) {
-      return;
-    }
+    setConfirmingRow({ id, label });
+  }
+
+  // Runs when the user clicks "Delete" in the popup.
+  function confirmRemoveCustomRow() {
+    const { id } = confirmingRow;
+    setConfirmingRow(null);
     setCustomRows((prev) => prev.filter((row) => row.id !== id));
     setCustomRowErrors((prev) => ({ ...prev, [id]: undefined }));
   }
@@ -246,201 +253,215 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
     }`;
 
   return (
-    <ModalShell title={isEditMode ? "Edit Test" : "Add Test"} onClose={onClose} maxWidth="max-w-md">
-      <form onSubmit={handleSubmit} noValidate>
-        <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Category</label>
-            <select
-              value={form.category}
-              onChange={(e) => handleChange("category", e.target.value)}
-              className={inputClass(errors.category)}
-            >
-              <option value="">Select Category</option>
-              {categories.map((cat) => (
-                <option key={cat.name} value={cat.name}>{cat.name}</option>
-              ))}
-            </select>
-            {errors.category && <p className="text-xs text-red-500 mt-1">{errors.category}</p>}
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Test Name</label>
-            <input
-              autoFocus={!isEditMode}
-              value={form.name}
-              onChange={(e) => handleChange("name", e.target.value)}
-              placeholder="e.g. Vitamin D3"
-              className={inputClass(errors.name)}
-            />
-            {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+    <>
+      <ModalShell title={isEditMode ? "Edit Test" : "Add Test"} onClose={onClose} maxWidth="max-w-md">
+        <form onSubmit={handleSubmit} noValidate>
+          <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Unit</label>
-              <input
-                value={form.unit}
-                onChange={(e) => handleChange("unit", e.target.value)}
-                placeholder="mg/dl, ng/ml..."
-                className={inputClass(errors.unit)}
-              />
-              {errors.unit && <p className="text-xs text-red-500 mt-1">{errors.unit}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Price (₹)</label>
-              <input
-                type="number"
-                step="any"
-                value={form.price}
-                onChange={(e) => handleChange("price", e.target.value)}
-                placeholder="0"
-                className={inputClass(errors.price)}
-              />
-              {errors.price && <p className="text-xs text-red-500 mt-1">{errors.price}</p>}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Critical Low</label>
-              <input
-                type="number"
-                step="any"
-                value={form.criticalLow}
-                onChange={(e) => handleChange("criticalLow", e.target.value)}
-                placeholder="Optional"
-                className={inputClass(errors.criticalLow)}
-              />
-              {errors.criticalLow && <p className="text-xs text-red-500 mt-1">{errors.criticalLow}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Critical High</label>
-              <input
-                type="number"
-                step="any"
-                value={form.criticalHigh}
-                onChange={(e) => handleChange("criticalHigh", e.target.value)}
-                placeholder="Optional"
-                className={inputClass(errors.criticalHigh)}
-              />
-              {errors.criticalHigh && <p className="text-xs text-red-500 mt-1">{errors.criticalHigh}</p>}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Follow-up (weeks)</label>
-              <input
-                type="number"
-                min="0"
-                value={form.followupWeeks}
-                onChange={(e) => handleChange("followupWeeks", e.target.value)}
-                placeholder="Optional"
-                className={inputClass(errors.followupWeeks)}
-              />
-              {errors.followupWeeks && <p className="text-xs text-red-500 mt-1">{errors.followupWeeks}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Status</label>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Category</label>
               <select
-                value={form.isActive ? "active" : "inactive"}
-                onChange={(e) => handleChange("isActive", e.target.value === "active")}
-                className={inputClass(false)}
+                value={form.category}
+                onChange={(e) => handleChange("category", e.target.value)}
+                className={inputClass(errors.category)}
               >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
+                <option value="">Select Category</option>
+                {categories.map((cat) => (
+                  <option key={cat.name} value={cat.name}>{cat.name}</option>
+                ))}
               </select>
+              {errors.category && <p className="text-xs text-red-500 mt-1">{errors.category}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Test Name</label>
+              <input
+                autoFocus={!isEditMode}
+                value={form.name}
+                onChange={(e) => handleChange("name", e.target.value)}
+                placeholder="e.g. Vitamin D3"
+                className={inputClass(errors.name)}
+              />
+              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-1.5">Unit</label>
+                <input
+                  value={form.unit}
+                  onChange={(e) => handleChange("unit", e.target.value)}
+                  placeholder="mg/dl, ng/ml..."
+                  className={inputClass(errors.unit)}
+                />
+                {errors.unit && <p className="text-xs text-red-500 mt-1">{errors.unit}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-1.5">Price (₹)</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={form.price}
+                  onChange={(e) => handleChange("price", e.target.value)}
+                  placeholder="0"
+                  className={inputClass(errors.price)}
+                />
+                {errors.price && <p className="text-xs text-red-500 mt-1">{errors.price}</p>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-1.5">Critical Low</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={form.criticalLow}
+                  onChange={(e) => handleChange("criticalLow", e.target.value)}
+                  placeholder="Optional"
+                  className={inputClass(errors.criticalLow)}
+                />
+                {errors.criticalLow && <p className="text-xs text-red-500 mt-1">{errors.criticalLow}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-1.5">Critical High</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={form.criticalHigh}
+                  onChange={(e) => handleChange("criticalHigh", e.target.value)}
+                  placeholder="Optional"
+                  className={inputClass(errors.criticalHigh)}
+                />
+                {errors.criticalHigh && <p className="text-xs text-red-500 mt-1">{errors.criticalHigh}</p>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-1.5">Follow-up (weeks)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={form.followupWeeks}
+                  onChange={(e) => handleChange("followupWeeks", e.target.value)}
+                  placeholder="Optional"
+                  className={inputClass(errors.followupWeeks)}
+                />
+                {errors.followupWeeks && <p className="text-xs text-red-500 mt-1">{errors.followupWeeks}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-1.5">Status</label>
+                <select
+                  value={form.isActive ? "active" : "inactive"}
+                  onChange={(e) => handleChange("isActive", e.target.value === "active")}
+                  className={inputClass(false)}
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Test Criteria</label>
+              <textarea
+                value={form.criteria}
+                onChange={(e) => handleChange("criteria", e.target.value)}
+                rows={3}
+                placeholder="Describe what this test checks for, prep instructions, or other notes..."
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 resize-none"
+              />
+            </div>
+
+            <div className="space-y-3 pt-1">
+              <label className="block text-sm font-semibold text-gray-900">
+                Range by Category / Demographic Group
+              </label>
+              {errors.demographicRanges && <p className="text-xs text-red-500">{errors.demographicRanges}</p>}
+              {DEMOGRAPHIC_GROUPS.map((group) => (
+                <div key={group}>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{group}</label>
+                  <input
+                    value={form.demographicRanges[group] || ""}
+                    onChange={(e) => handleDemographicRangeChange(group, e.target.value)}
+                    placeholder="e.g. 70-100, <200, or Negative"
+                    className={inputClass(demographicErrors[group])}
+                  />
+                  {demographicErrors[group] && <p className="text-xs text-red-500 mt-1">{demographicErrors[group]}</p>}
+                </div>
+              ))}
+
+              {/* Custom, user-defined groups beyond the fixed list above.
+                  Stored in the same demographicRanges object as everything
+                  else — the backend doesn't need to distinguish them. */}
+              {customRows.map((row) => (
+                <div key={row.id} className="border border-gray-100 rounded-lg p-3 space-y-2 bg-gray-50/50">
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={row.label}
+                      onChange={(e) => handleCustomRowChange(row.id, "label", e.target.value)}
+                      placeholder="Group name, e.g. Pregnant Women"
+                      className={`${inputClass(customRowErrors[row.id])} text-xs font-medium`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCustomRow(row.id, row.label)}
+                      className="shrink-0 text-gray-400 hover:text-red-500 p-1"
+                      aria-label="Remove this custom group"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <input
+                    value={row.value}
+                    onChange={(e) => handleCustomRowChange(row.id, "value", e.target.value)}
+                    placeholder="e.g. 70-100, <200, or Negative"
+                    className={inputClass(customRowErrors[row.id])}
+                  />
+                  {customRowErrors[row.id] && <p className="text-xs text-red-500">{customRowErrors[row.id]}</p>}
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={handleAddCustomRow}
+                className="flex items-center gap-1.5 text-sm font-medium text-teal-600 hover:text-teal-700 cursor-pointer"
+              >
+                <Plus size={16} /> Add custom group
+              </button>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Test Criteria</label>
-            <textarea
-              value={form.criteria}
-              onChange={(e) => handleChange("criteria", e.target.value)}
-              rows={3}
-              placeholder="Describe what this test checks for, prep instructions, or other notes..."
-              className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 resize-none"
-            />
-          </div>
-
-          <div className="space-y-3 pt-1">
-            <label className="block text-sm font-semibold text-gray-900">
-              Range by Category / Demographic Group
-            </label>
-            {errors.demographicRanges && <p className="text-xs text-red-500">{errors.demographicRanges}</p>}
-            {DEMOGRAPHIC_GROUPS.map((group) => (
-              <div key={group}>
-                <label className="block text-xs font-medium text-gray-600 mb-1">{group}</label>
-                <input
-                  value={form.demographicRanges[group] || ""}
-                  onChange={(e) => handleDemographicRangeChange(group, e.target.value)}
-                  placeholder="e.g. 70-100, <200, or Negative"
-                  className={inputClass(demographicErrors[group])}
-                />
-                {demographicErrors[group] && <p className="text-xs text-red-500 mt-1">{demographicErrors[group]}</p>}
-              </div>
-            ))}
-
-            {/* Custom, user-defined groups beyond the fixed list above.
-                Stored in the same demographicRanges object as everything
-                else — the backend doesn't need to distinguish them. */}
-            {customRows.map((row) => (
-              <div key={row.id} className="border border-gray-100 rounded-lg p-3 space-y-2 bg-gray-50/50">
-                <div className="flex items-center gap-2">
-                  <input
-                    value={row.label}
-                    onChange={(e) => handleCustomRowChange(row.id, "label", e.target.value)}
-                    placeholder="Group name, e.g. Pregnant Women"
-                    className={`${inputClass(customRowErrors[row.id])} text-xs font-medium`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveCustomRow(row.id, row.label)}
-                    className="shrink-0 text-gray-400 hover:text-red-500 p-1"
-                    aria-label="Remove this custom group"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-                <input
-                  value={row.value}
-                  onChange={(e) => handleCustomRowChange(row.id, "value", e.target.value)}
-                  placeholder="e.g. 70-100, <200, or Negative"
-                  className={inputClass(customRowErrors[row.id])}
-                />
-                {customRowErrors[row.id] && <p className="text-xs text-red-500">{customRowErrors[row.id]}</p>}
-              </div>
-            ))}
-
+          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
             <button
               type="button"
-              onClick={handleAddCustomRow}
-              className="flex items-center gap-1.5 text-sm font-medium text-teal-600 hover:text-teal-700 cursor-pointer"
+              onClick={onClose}
+              className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
             >
-              <Plus size={16} /> Add custom group
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer"
+            >
+              {isEditMode ? "Save Changes" : "Add Test"}
             </button>
           </div>
-        </div>
+        </form>
+      </ModalShell>
 
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer"
-          >
-            {isEditMode ? "Save Changes" : "Add Test"}
-          </button>
-        </div>
-      </form>
-    </ModalShell>
+      {confirmingRow && (
+        <ConfirmModal
+          title="Delete Custom Group"
+          message={`Delete "${confirmingRow.label?.trim() || "this custom group"}"? This range will be permanently removed when you save.`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          danger
+          onConfirm={confirmRemoveCustomRow}
+          onClose={() => setConfirmingRow(null)}
+        />
+      )}
+    </>
   );
 }

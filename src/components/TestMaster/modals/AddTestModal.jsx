@@ -18,7 +18,8 @@ const emptyForm = {
   criticalHigh: "",
   followupWeeks: "",
   criteria: "",
-  isActive: true,   
+  note: "",
+  isActive: true,
   demographicRanges: { ...emptyDemographicRanges },
 };
 
@@ -155,6 +156,7 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
         criticalHigh: editingTest.criticalHigh ?? "",
         followupWeeks: editingTest.followupWeeks ?? "",
         criteria: editingTest.criteria || "",
+        note: editingTest.note || "",
         isActive: editingTest.isActive ?? true,
         demographicRanges: { ...emptyDemographicRanges, ...fixedRanges },
       });
@@ -236,6 +238,7 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
       criticalLow: form.criticalLow === "" ? null : parseFloat(form.criticalLow),
       criticalHigh: form.criticalHigh === "" ? null : parseFloat(form.criticalHigh),
       followupWeeks: form.followupWeeks === "" ? null : parseInt(form.followupWeeks, 10),
+      note: form.note.trim() === "" ? null : form.note.trim(),
       id: editingTest?.id || form.name.trim().toLowerCase().replace(/\s+/g, "-"),
     });
   }
@@ -422,6 +425,18 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
             >
               <Plus size={16} /> Add custom group
             </button>
+
+            {/* Free-text note for any extra details about the ranges above. */}
+            <div className="pt-2">
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Note</label>
+              <textarea
+                value={form.note}
+                onChange={(e) => handleChange("note", e.target.value)}
+                rows={3}
+                placeholder="Add any details related to the ranges."
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 resize-none"
+              />
+            </div>
           </div>
         </div>
 

@@ -48,6 +48,7 @@ function mapOrder(o) {
     bill: Number(o.bill_total || 0).toFixed(2),
     rawStatus: o.status,
     items: o.items || [],
+    isHomeCollection: Boolean(o.home_collection_id),
   };
 }
 
@@ -249,6 +250,11 @@ function handleOpenOrder(order) {
           order={modalOrder}
           onClose={() => setModalOrder(null)}
           onConfirmed={(orderId) => handleSampleCollected(orderId, modalOrder.patient)}
+          onCancelled={(orderId) => {
+            showToast(`Order #${orderId} cancelled for ${modalOrder.patient || "patient"}`);
+            setModalOrder(null);
+            setRefreshKey((k) => k + 1);
+          }}
         />
       )}
 

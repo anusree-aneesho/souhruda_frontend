@@ -53,6 +53,7 @@ function mapOrder(o) {
     billTotal: o.bill_total != null ? Number(o.bill_total) : null,
     homeVisitFee: Number(o.home_visit_fee) || 0,
     isHomeCollection: Boolean(o.home_collection_id),
+    status: o.status,
   };
 }
 
@@ -242,6 +243,8 @@ export default function OrderDetail() {
         orderedAt={formattedOrderedAt}
         onDelete={() => setConfirmingDelete(true)}
         isHomeCollection={Boolean(order?.isHomeCollection)}
+        // Once the sample is collected the order can no longer be cancelled from here.
+        canCancel={order?.status === "pending"}
       />
       <ResultsTable
       tests={tests}

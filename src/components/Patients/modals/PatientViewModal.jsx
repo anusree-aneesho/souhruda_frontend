@@ -17,7 +17,10 @@ export default function PatientViewModal({ patient, onClose }) {
   return (
     <ModalShell title="Patient Details" onClose={onClose} maxWidth="max-w-md">
       <div className="px-6 py-5 space-y-4">
-        <ReadOnlyField label="Full Name" value={patient.name} />
+        <div className="grid grid-cols-[110px_1fr] gap-4">
+          <ReadOnlyField label="Title" value={patient.title} />
+          <ReadOnlyField label="Full Name" value={patient.name} />
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <ReadOnlyField label="Date of Birth" value={patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : "—"} />

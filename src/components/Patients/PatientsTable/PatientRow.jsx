@@ -17,7 +17,7 @@ function IconButton({ label, onClick, className, children }) {
   );
 }
 
-export default function PatientRow({ id, regNo, name, age, gender, contact, orders, onView, onEdit, onDelete }) {
+export default function PatientRow({ id, regNo, title, name, age, gender, contact, orders, onView, onEdit, onDelete }) {
   const { open } = useOrderModal();
   const { user } = useAuth();
   const canBookTests = user?.role !== "front_office";
@@ -25,6 +25,7 @@ export default function PatientRow({ id, regNo, name, age, gender, contact, orde
   return (
     <tr className="border-b border-gray-100 last:border-0">
       <td className="py-3 text-sm text-gray-500">{regNo}</td>
+      <td className="py-3 text-sm text-gray-500">{title || "—"}</td>
       <td className="py-3 text-sm font-medium text-gray-900">{name}</td>
       <td className="py-3 text-sm text-gray-500">{age} Yrs, {gender}</td>
       <td className="py-3 text-sm text-gray-500">{contact}</td>

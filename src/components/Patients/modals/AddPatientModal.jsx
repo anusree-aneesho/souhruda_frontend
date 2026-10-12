@@ -1,7 +1,8 @@
 import { useState } from "react";
 import ModalShell from "../../common/Modal/ModalShell";
+import { PATIENT_TITLES, TITLE_GENDER } from "../patientTitles";
 
-const emptyForm = { name: "", date_of_birth: "", gender: "", contact: "", email: "", address: "", isPregnant: false };
+const emptyForm = { title: "", name: "", date_of_birth: "", gender: "", contact: "", email: "", address: "", isPregnant: false };
 
 export default function AddPatientModal({ onClose, onAdd }) {
   const [form, setForm] = useState(emptyForm);
@@ -12,6 +13,16 @@ export default function AddPatientModal({ onClose, onAdd }) {
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: null }));
     }
+  }
+
+  // Picking Mr/Mrs/etc. pre-fills gender (still editable afterwards).
+  function handleTitleChange(title) {
+    setForm((prev) => ({
+      ...prev,
+      title,
+      gender: TITLE_GENDER[title] || prev.gender,
+      isPregnant: (TITLE_GENDER[title] || prev.gender) === "Female" ? prev.isPregnant : false,
+    }));
   }
 
   function validate() {
@@ -38,20 +49,35 @@ export default function AddPatientModal({ onClose, onAdd }) {
     <ModalShell title="Add Patient" onClose={onClose} maxWidth="max-w-md">
       <form onSubmit={handleSubmit}>
         <div className="px-6 py-5 space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Full Name</label>
-            <input
-              autoFocus
-              value={form.name}
-              onChange={(e) => handleChange("name", e.target.value)}
-              placeholder="Patient name"
-              className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
-                errors.name
-                  ? "border-red-400 focus:border-red-500 focus:ring-red-500"
-                  : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
-              }`}
-            />
-            {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+          <div className="grid grid-cols-[110px_1fr] gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Title</label>
+              <select
+                value={form.title}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              >
+                <option value="">Select</option>
+                {PATIENT_TITLES.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Full Name</label>
+              <input
+                autoFocus
+                value={form.name}
+                onChange={(e) => handleChange("name", e.target.value)}
+                placeholder="Patient name"
+                className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
+                  errors.name
+                    ? "border-red-400 focus:border-red-500 focus:ring-red-500"
+                    : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+                }`}
+              />
+              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+            </div>
           </div>
 
          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

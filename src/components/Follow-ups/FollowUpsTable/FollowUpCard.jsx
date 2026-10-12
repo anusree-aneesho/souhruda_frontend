@@ -1,7 +1,7 @@
 // src/components/FollowUps/FollowUpsTable/FollowUpCard.jsx
 import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
 
-export default function FollowUpCard({ patient, test, due, status, onView, onViewPatient }) {
+export default function FollowUpCard({ title, patient, test, due, status, onView, onViewPatient }) {
   return (
     <div className="border border-gray-100 rounded-lg p-4 space-y-2">
       <div className="flex items-center justify-between">
@@ -9,7 +9,7 @@ export default function FollowUpCard({ patient, test, due, status, onView, onVie
           onClick={onViewPatient}
           className="text-sm font-semibold text-gray-900 hover:text-teal-600 cursor-pointer"
         >
-          {patient}
+          {title ? `${title}. ${patient}` : patient}
         </button>
         <StatusBadge status={status} />
       </div>

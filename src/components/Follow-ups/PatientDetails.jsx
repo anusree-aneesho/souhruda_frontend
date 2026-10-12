@@ -145,7 +145,7 @@ export default function PatientDetails() {
                 </div>
                 <div className="min-w-0">
                   <h1 className="text-lg font-bold text-gray-900 uppercase truncate">
-                    {patient.name}
+                    {patient.title ? `${patient.title}. ` : ""}{patient.name}
                   </h1>
                   <div className="flex flex-wrap gap-2 mt-1.5">
                     <span className="px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 text-xs font-medium">
@@ -228,16 +228,11 @@ export default function PatientDetails() {
                           <td className="px-6 py-4 text-gray-400">{pageStart + i + 1}</td>
                           <td className="px-4 py-4 text-gray-800">{formatDate(order.date)}</td>
                           <td className="px-4 py-4">
-                            <p className="font-semibold text-gray-900">
-                              <span
-                                className="inline-flex items-center gap-2"
-                                title={order.tests.map((t) => t.name).join(", ")}
-                                >
-                                <span className="h-5 min-w-5 px-1.5 rounded-full bg-teal-600 text-white text-[10px] font-semibold flex items-center justify-center">
-                                    {order.tests.length}
-                                </span>
-                                {order.tests.length === 1 ? "Test" : "Tests"}
-                                </span>
+                            <p className="flex items-center gap-2 font-semibold text-gray-900">
+                              <span className="h-5 min-w-5 px-1.5 rounded-full bg-teal-600 text-white text-[10px] font-semibold flex items-center justify-center">
+                                {order.tests.length}
+                              </span>
+                              {order.tests.length === 1 ? "Test" : "Tests"}
                             </p>
                             <p
                               className="text-xs text-gray-400 mt-0.5 max-w-[360px] truncate"

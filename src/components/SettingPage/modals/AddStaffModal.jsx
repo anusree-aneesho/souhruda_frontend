@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import ModalShell from "../../common/Modal/ModalShell";
 import { getBranchesApi } from "../../../api/api";
 import { useAuth } from "../../../Context/AuthContext";
+import { STAFF_TITLES } from "../../Patients/patientTitles";
 
 
 const ALL_ROLES = ["Front Office", "Technician", "Lab Assistant", "Admin"];
@@ -12,6 +13,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^\d{10}$/;
 
 const emptyForm = {
+  title: "",
   name: "",
   email: "",
   phone: "",
@@ -100,6 +102,7 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
   useEffect(() => {
     if (editingStaff) {
       setForm({
+        title: editingStaff.title ?? "",
         name: editingStaff.name,
         email: editingStaff.email,
         phone: editingStaff.phone,
@@ -158,18 +161,33 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
     <ModalShell title={isEditMode ? "Edit Staff" : "Add Staff"} onClose={onClose} maxWidth="max-w-md">
       <form onSubmit={handleSubmit} noValidate>
         <div className="px-6 py-5 space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Full Name</label>
-            <input
-              autoFocus={!isEditMode}
-              value={form.name}
-              onChange={(e) => handleChange("name", e.target.value)}
-              placeholder="Staff name"
-              className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
-                errors.name ? "border-red-300 focus:border-red-400 focus:ring-red-400" : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
-              }`}
-            />
-            {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+          <div className="grid grid-cols-[110px_1fr] gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Title</label>
+              <select
+                value={form.title}
+                onChange={(e) => handleChange("title", e.target.value)}
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              >
+                <option value="">Select</option>
+                {STAFF_TITLES.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Full Name</label>
+              <input
+                autoFocus={!isEditMode}
+                value={form.name}
+                onChange={(e) => handleChange("name", e.target.value)}
+                placeholder="Staff name"
+                className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
+                  errors.name ? "border-red-300 focus:border-red-400 focus:ring-red-400" : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+                }`}
+              />
+              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+            </div>
           </div>
 
           <div>

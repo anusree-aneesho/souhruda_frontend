@@ -53,7 +53,7 @@ export default function ActivityItem({ date, text, type, targetId, isLatest, hid
         const o = res.data;
 
         if (o.status === "pending") {
-          const patientName = [o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" ");
+          const patientName = [o.patient?.title, o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" ");
           setModalOrder({
             orderId: o.order_no,
             patient: patientName,

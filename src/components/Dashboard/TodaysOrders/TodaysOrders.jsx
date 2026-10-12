@@ -18,7 +18,7 @@ function statusLabel(status) {
 function mapOrder(o) {
   return {
     order: o.order_no,
-    patient: [o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" "),
+    patient: [o.patient?.title, o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" "),
     regNo: o.patient?.patient_number || "",
     tests: o.items_count ?? o.items?.length ?? 0,
     testNames: (o.items || []).map((item) => item.lab_test?.name).filter(Boolean),

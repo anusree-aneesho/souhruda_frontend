@@ -85,11 +85,19 @@ export default function ActivityItem({ date, text, type, targetId, isLatest, hid
     });
   }
 
+  function handleOrderCancelled() {
+    setModalOrder(null);
+  }
+
   const isClickable = type === "order" || type === "homeCollection" || type === "patient";
   const { Icon, bg, color } = getIconMeta(text);
 
   return (
-    <div className="flex items-start gap-3 py-2.5 px-2 rounded-lg hover:bg-gray-50 transition-colors">
+    <div
+  className={`flex items-start gap-3 py-2.5 px-2 rounded-lg transition-colors ${
+    isClickable ? "hover:bg-gray-50" : ""
+  }`}
+>
       <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 relative ${bg}`}>
         <Icon size={14} className={color} />
         {isLatest && (
@@ -116,11 +124,12 @@ export default function ActivityItem({ date, text, type, targetId, isLatest, hid
       )}
 
       {modalOrder && (
-        <SampleCollectionModal
-          order={modalOrder}
-          onClose={() => setModalOrder(null)}
-          onConfirmed={handleSampleCollected}
-        />
+      <SampleCollectionModal
+        order={modalOrder}
+        onClose={() => setModalOrder(null)}
+        onConfirmed={handleSampleCollected}
+        onCancelled={handleOrderCancelled}
+      />
       )}
     </div>
   );

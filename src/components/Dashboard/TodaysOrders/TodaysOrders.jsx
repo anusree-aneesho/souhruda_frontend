@@ -19,7 +19,7 @@ function mapOrder(o) {
   return {
     order: o.order_no,
     patient: [o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" "),
-     regNo: o.patient?.patient_number || "",   
+    regNo: o.patient?.patient_number || "",
     tests: o.items_count ?? o.items?.length ?? 0,
     testNames: (o.items || []).map((item) => item.lab_test?.name).filter(Boolean),
     status: statusLabel(o.status),
@@ -38,6 +38,15 @@ export default function TodaysOrders() {
   const [isLoading, setIsLoading] = useState(true);
   const [modalOrder, setModalOrder] = useState(null);
   const [cancelledOrder, setCancelledOrder] = useState(null);
+
+  async function loadOrders() {
+    try {
+      const res = await getTodaysOrdersApi();
+      setOrders((res.data || []).map(mapOrder));
+    } catch {
+      setOrders([]);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -80,6 +89,13 @@ export default function TodaysOrders() {
     });
   }
 
+  // Called by the popup after the order was cancelled successfully.
+  // Close the popup and reload the list so the order's status updates.
+  function handleOrderCancelled() {
+    setModalOrder(null);
+    loadOrders();
+  }
+
   if (isLoading || orders.length === 0) {
     return null;
   }
@@ -111,26 +127,27 @@ export default function TodaysOrders() {
         </tbody>
       </table>
 
-{modalOrder && (
-  <SampleCollectionModal
-    order={{
-      orderId: modalOrder.order,
-      patient: modalOrder.patient,
-      regNo: modalOrder.regNo,
-      tests: modalOrder.tests,
-      testNames: modalOrder.testNames,
-    }}
-    onClose={() => setModalOrder(null)}
-    onConfirmed={handleSampleCollected}
-  />
-)}
+      {modalOrder && (
+        <SampleCollectionModal
+          order={{
+            orderId: modalOrder.order,
+            patient: modalOrder.patient,
+            regNo: modalOrder.regNo,
+            tests: modalOrder.tests,
+            testNames: modalOrder.testNames,
+          }}
+          onClose={() => setModalOrder(null)}
+          onConfirmed={handleSampleCollected}
+          onCancelled={handleOrderCancelled}
+        />
+      )}
 
-{cancelledOrder && (
-  <CancelledOrderModal
-    order={cancelledOrder}
-    onClose={() => setCancelledOrder(null)}
-  />
-)}
+      {cancelledOrder && (
+        <CancelledOrderModal
+          order={cancelledOrder}
+          onClose={() => setCancelledOrder(null)}
+        />
+      )}
     </div>
   );
 }

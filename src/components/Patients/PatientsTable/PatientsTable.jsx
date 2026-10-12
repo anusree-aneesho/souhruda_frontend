@@ -7,6 +7,7 @@ export default function PatientsTable({ patients, onView, onEdit, onDelete }) {
         <thead>
           <tr className="text-left border-b border-gray-100">
             <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">REG. NO</th>
+            <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">TITLE</th>
             <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">NAME</th>
             <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">AGE / GENDER</th>
             <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">CONTACT</th>

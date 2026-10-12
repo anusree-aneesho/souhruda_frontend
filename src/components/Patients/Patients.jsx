@@ -23,6 +23,7 @@ const PAGE_SIZE = 9;
 function mapPatient(p) {
   return {
     id: p.id,
+    title: p.title,
     regNo: p.patient_number,
     name: p.full_name,
     age: p.age,
@@ -83,6 +84,7 @@ export default function Patients() {
 
     try {
       await createPatientApi({
+        title: newPatientData.title || null,
         first_name,
         last_name,
         date_of_birth: newPatientData.date_of_birth,
@@ -129,6 +131,7 @@ export default function Patients() {
 
     try {
       await updatePatientApi(id, {
+        title: formData.title || null,
         first_name,
         last_name,
         date_of_birth: formData.date_of_birth,

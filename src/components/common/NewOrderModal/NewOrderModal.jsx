@@ -211,6 +211,7 @@ export default function NewOrderModal() {
 
     try {
       await updatePatientApi(id, {
+        title: formData.title || null,
         first_name,
         last_name,
         date_of_birth: formData.date_of_birth,

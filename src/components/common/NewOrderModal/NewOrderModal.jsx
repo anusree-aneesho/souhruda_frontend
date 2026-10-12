@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import ModalShell from "../../common/Modal/ModalShell";
 import StepProgressBar from "./StepProgressBar";
-import PatientStep, { ReferredByField } from "./steps/PatientStep";
+import PatientStep, { ReferredByField, withTitle } from "./steps/PatientStep";
 import SelectTestsStep from "./steps/SelectTestsStep";
 import ConfirmStep from "./steps/ConfirmStep";
 import AddressSlotStep from "./steps/AddressSlotStep";
@@ -31,7 +31,7 @@ function mapPatient(p) {
   return {
     id: p.id,
     regNo: p.patient_number,
-    name: p.full_name,
+    name: withTitle(p.title, p.full_name),
     age: p.age,
     gender: p.gender,
     contact: p.phone,

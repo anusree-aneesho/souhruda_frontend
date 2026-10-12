@@ -5,7 +5,7 @@ import { getPatientsApi } from "../../../../api/api";
 import { PATIENT_TITLES, TITLE_GENDER } from "../../../Patients/patientTitles";
 
 // "Miss" + "Xyz A" -> "Miss. Xyz A" (same look as the Lab Orders list).
-function withTitle(title, name) {
+export function withTitle(title, name) {
   return title ? `${String(title).replace(/\.$/, "")}. ${name}` : name;
 }
 

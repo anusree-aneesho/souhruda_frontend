@@ -51,17 +51,25 @@ export default function ActivityLogPage() {
       try {
         const result = await getActivityLogsApi(20, page);
 
-        const mapped = result.data.map((log) => ({
-          id: log.id,
-          date: formatDate(log.created_at),
-          text: log.description,
-          userName: log.user_name,
-          type: mapSubjectType(log.subject_type),
-          // subject_reference is the human-facing key (order_no, hc_code)
-          // that routes actually use — subject_id is just the internal
-          // database id and doesn't match any route parameter.
-          targetId: log.subject_reference ?? log.subject_id,
-        }));
+        const mapped = result.data.map((log) => {
+          // A row is only clickable if the record it points to still exists.
+          // "deleted" entries describe something that's gone, so never link them.
+          const isDeletedEntry = /deleted/i.test(log.description || "");
+          const subjectGone = log.subject_exists === false;
+          const clickable = !isDeletedEntry && !subjectGone;
+
+          return {
+            id: log.id,
+            date: formatDate(log.created_at),
+            text: log.description,
+            userName: log.user_name,
+            type: clickable ? mapSubjectType(log.subject_type) : null,
+            // subject_reference is the human-facing key (order_no, hc_code)
+            // that routes actually use — subject_id is just the internal
+            // database id and doesn't match any route parameter.
+            targetId: log.subject_reference ?? log.subject_id,
+          };
+        });
 
         setLogs(mapped);
         setMeta(result.meta);

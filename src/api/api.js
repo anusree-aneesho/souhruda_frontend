@@ -567,6 +567,13 @@ export async function updateTestPriceApi(testId, price) {
   });
 }
 
+export async function updateTestRangeApi(testId, payload) {
+  return request(`/lab-tests/${testId}/ranges`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
 // ── Doctors ──────────────────────────────────────────────
 
 export async function getDoctorsApi(page = 1) {

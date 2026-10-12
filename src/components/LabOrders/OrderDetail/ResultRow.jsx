@@ -1,15 +1,31 @@
 // src/components/LabOrders/OrderDetail/ResultRow.jsx
+import { Pencil } from "lucide-react";
 import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
 
-export default function ResultRow({ test, result, flag, onResultChange }) {
+export default function ResultRow({ test, result, flag, onResultChange, onEditRange }) {
   return (
-    <tr className="border-b border-gray-100 last:border-0">
+    <tr className="group border-b border-gray-100 last:border-0">
       <td className="py-3">
         <p className="text-sm font-medium text-gray-900">{test.name}</p>
         <p className="text-xs text-gray-400">{test.category}</p>
       </td>
       <td className="py-3 text-sm text-gray-500">{test.unit || "-"}</td>
-      <td className="py-3 text-sm text-teal-600">{test.range}</td>
+      <td className="py-3 text-sm text-teal-600">
+        <div className="flex items-center gap-2">
+          <span>{test.range}</span>
+          {onEditRange && (
+            <button
+              type="button"
+              onClick={() => onEditRange(test)}
+              title="Edit normal range"
+              aria-label={`Edit normal range for ${test.name}`}
+              className="opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity text-gray-400 hover:text-teal-600 cursor-pointer"
+            >
+              <Pencil size={14} />
+            </button>
+          )}
+        </div>
+      </td>
       <td className="py-3">
         <input
           value={result}

@@ -11,6 +11,7 @@ import AlertModal from "../../common/Modal/AlertModal";
 import { getOrderApi, saveOrderResultsApi, completeOrderApi, deleteOrderApi } from "../../../api/api";
 import { calculateFlag } from "../../../utils/calculateFlag";
 import ConfirmCompleteOrderModal from "./ConfirmCompleteOrderModal";
+import EditRangeModal from "./EditRangeModal";
 
 function mapOrder(o) {
   return {
@@ -19,7 +20,7 @@ function mapOrder(o) {
       age: o.patient?.age ?? "-",
       gender: o.patient?.gender ?? "-",
       regNo: o.patient?.patient_number ?? "-",
-       phone: o.patient?.phone ?? "",
+      phone: o.patient?.phone ?? "",
     },
     tests: (o.items || []).map((item) => {
       const lt = item.lab_test;
@@ -29,20 +30,23 @@ function mapOrder(o) {
           ? `${item.resolved_range_low} - ${item.resolved_range_high}`
           : "-");
 
-    return {
-  id: item.id,
-  name: lt?.name ?? "-",
-  unit: lt?.unit ?? "",
-  category: lt?.category?.name ?? "General",
-  range,
-  rangeLow: item.resolved_range_low != null ? Number(item.resolved_range_low) : null,
-  rangeHigh: item.resolved_range_high != null ? Number(item.resolved_range_high) : null,
-  price: Number(item.price_at_order),
-  result: item.result_value ?? "",
-  packageId: item.test_package_id ?? null,
-  packageName: item.test_package?.name ?? null,
-  packagePrice: item.test_package ? Number(item.test_package.price) : null,
-};
+      return {
+        id: item.id,
+        name: lt?.name ?? "-",
+        unit: lt?.unit ?? "",
+        category: lt?.category?.name ?? "General",
+        range,
+        rangeLow: item.resolved_range_low != null ? Number(item.resolved_range_low) : null,
+        rangeHigh: item.resolved_range_high != null ? Number(item.resolved_range_high) : null,
+        price: Number(item.price_at_order),
+        result: item.result_value ?? "",
+        packageId: item.test_package_id ?? null,
+        packageName: item.test_package?.name ?? null,
+        packagePrice: item.test_package ? Number(item.test_package.price) : null,
+        labTestId: item.lab_test_id,
+        demographicGroup: item.demographic_group ?? null,
+        rangeRaw: range === "-" ? "" : range,
+      };
     }),
     orderedAt: o.ordered_at,
     // The PDF/Blade report already falls back to orderedAt when there's no
@@ -67,12 +71,16 @@ export default function OrderDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [results, setResults] = useState({});
-  const [savingAction, setSavingAction] = useState(null); 
+  const [savingAction, setSavingAction] = useState(null);
   const [saveError, setSaveError] = useState(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
 
   const [confirmingComplete, setConfirmingComplete] = useState(false);
+
+  // The test whose normal range is being edited (set by the pencil in the
+  // NORMAL RANGE column). The Edit Range modal reads this; null = closed.
+  const [editingRange, setEditingRange] = useState(null);
 
   useEffect(() => {
     if (location.state?.justCreated) {
@@ -165,6 +173,14 @@ export default function OrderDetail() {
     setResults((prev) => ({ ...prev, [id]: value }));
   }
 
+  // Re-fetches the order so a changed normal range shows up straight away.
+  // Only `order` is refreshed — `results` is left alone so values the lab has
+  // typed but not saved yet are not lost. Flags recompute via the useMemo above.
+  async function reloadRanges() {
+    const res = await getOrderApi(orderId);
+    setOrder(mapOrder(res.data));
+  }
+
   async function handleMarkCompleted() {
     setSavingAction("complete");
     setSaveError(null);
@@ -247,15 +263,16 @@ export default function OrderDetail() {
         canCancel={order?.status === "pending"}
       />
       <ResultsTable
-      tests={tests}
-      billTotal={billTotal}
-      homeVisitFee={homeVisitFee}
-      results={results}
-      flags={flags}
-      onResultChange={handleResultChange}
-      onSaveClose={handleSaveClose}
-      onMarkCompleted={() => setConfirmingComplete(true)}
-      savingAction={savingAction}
+        tests={tests}
+        billTotal={billTotal}
+        homeVisitFee={homeVisitFee}
+        results={results}
+        flags={flags}
+        onResultChange={handleResultChange}
+        onSaveClose={handleSaveClose}
+        onMarkCompleted={() => setConfirmingComplete(true)}
+        savingAction={savingAction}
+        onEditRange={setEditingRange}
       />
       <ResultInsights tests={tests} flags={flags} />
 
@@ -267,10 +284,10 @@ export default function OrderDetail() {
           onResultChange={handleResultChange}
           isSaving={savingAction === "complete"}
           onConfirm={async () => {
-          await handleMarkCompleted();
-          setConfirmingComplete(false);
+            await handleMarkCompleted();
+            setConfirmingComplete(false);
           }}
-         onClose={() => setConfirmingComplete(false)}
+          onClose={() => setConfirmingComplete(false)}
         />
       )}
 
@@ -292,6 +309,19 @@ export default function OrderDetail() {
 
       {saveError && (
         <AlertModal title="Couldn't Save" message={saveError} onClose={() => setSaveError(null)} />
+      )}
+
+      {editingRange && (
+        <EditRangeModal
+          test={editingRange}
+          onClose={() => setEditingRange(null)}
+          onSaved={async () => {
+            const name = editingRange.name;
+            await reloadRanges();
+            setEditingRange(null);
+            showToast(`Normal range updated for ${name}`);
+          }}
+        />
       )}
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}

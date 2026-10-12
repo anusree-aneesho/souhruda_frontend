@@ -1,4 +1,5 @@
 import { useOrderModal } from "../../../Context/OrderModalContext";
+import { formatNameWithTitle } from "../patientTitles";
 
 // src/components/Patients/PatientsTable/PatientCard.jsx
 export default function PatientCard({ regNo, title, name, age, gender, contact, orders }) {
@@ -6,7 +7,7 @@ export default function PatientCard({ regNo, title, name, age, gender, contact, 
   return (
     <div className="border border-gray-100 rounded-lg p-4 space-y-2">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-gray-900">{title ? `${title}. ` : ""}{name}</p>
+        <p className="text-sm font-semibold text-gray-900">{formatNameWithTitle(title, name)}</p>
         <span className="text-xs text-teal-600 font-medium">{orders} orders</span>
       </div>
       <p className="text-xs text-gray-400">{regNo}</p>

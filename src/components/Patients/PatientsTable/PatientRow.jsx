@@ -1,4 +1,5 @@
 // src/components/Patients/PatientsTable/PatientRow.jsx
+import { formatNameWithTitle } from "../patientTitles";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import { useOrderModal } from "../../../Context/OrderModalContext";
 import { useAuth } from "../../../Context/AuthContext";
@@ -25,8 +26,7 @@ export default function PatientRow({ id, regNo, title, name, age, gender, contac
   return (
     <tr className="border-b border-gray-100 last:border-0">
       <td className="py-3 text-sm text-gray-500">{regNo}</td>
-      <td className="py-3 text-sm text-gray-500">{title || "—"}</td>
-      <td className="py-3 text-sm font-medium text-gray-900">{name}</td>
+      <td className="py-3 text-sm font-medium text-gray-900">{formatNameWithTitle(title, name)}</td>
       <td className="py-3 text-sm text-gray-500">{age} Yrs, {gender}</td>
       <td className="py-3 text-sm text-gray-500">{contact}</td>
       <td className="py-3 text-sm text-teal-600 font-medium">{orders}</td>

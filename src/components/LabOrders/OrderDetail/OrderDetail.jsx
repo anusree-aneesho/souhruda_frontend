@@ -16,7 +16,7 @@ import EditRangeModal from "./EditRangeModal";
 function mapOrder(o) {
   return {
     patient: {
-      name: [o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" ") || "Unknown",
+      name: o.patient?.display_name || [o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" ") || "Unknown",
       age: o.patient?.age ?? "-",
       gender: o.patient?.gender ?? "-",
       regNo: o.patient?.patient_number ?? "-",

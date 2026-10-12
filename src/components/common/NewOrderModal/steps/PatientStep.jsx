@@ -2,6 +2,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Search, ChevronDown, Loader2 } from "lucide-react";
 import { getPatientsApi } from "../../../../api/api";
+import { PATIENT_TITLES, TITLE_GENDER } from "../../../Patients/patientTitles";
+
+// "Miss" + "Xyz A" -> "Miss. Xyz A" (same look as the Lab Orders list).
+function withTitle(title, name) {
+  return title ? `${String(title).replace(/\.$/, "")}. ${name}` : name;
+}
 
 // Maps the /patients API shape to the shape this combobox (and the rest of
 // the order flow) works with.
@@ -9,7 +15,7 @@ function mapPatient(p) {
   return {
     id: p.id,
     regNo: p.patient_number,
-    name: p.full_name,
+    name: withTitle(p.title, p.full_name),
     age: p.age,
     gender: p.gender,
     contact: p.phone,
@@ -260,14 +266,34 @@ export default function PatientStep({
 
       {patientType === "new" && (
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Full Name</label>
-            <input
-              value={newPatientData.name}
-              onChange={(e) => onNewPatientChange("name", e.target.value)}
-              placeholder="Patient name"
-              className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
-            />
+          <div className="grid grid-cols-[110px_1fr] gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Title</label>
+              <select
+                value={newPatientData.title}
+                onChange={(e) => {
+                  const title = e.target.value;
+                  onNewPatientChange("title", title);
+                  // Mr / Mrs / Miss etc. pre-fill the gender (still editable).
+                  if (TITLE_GENDER[title]) onNewPatientChange("gender", TITLE_GENDER[title]);
+                }}
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              >
+                <option value="">Select</option>
+                {PATIENT_TITLES.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Full Name</label>
+              <input
+                value={newPatientData.name}
+                onChange={(e) => onNewPatientChange("name", e.target.value)}
+                placeholder="Patient name"
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

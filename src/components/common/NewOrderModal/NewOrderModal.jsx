@@ -42,6 +42,7 @@ function mapPatientForEdit(p) {
   return {
     id: p.id,
     regNo: p.patient_number,
+    title: p.title,
     name: p.full_name,
     date_of_birth: p.date_of_birth,
     gender: p.gender,
@@ -82,6 +83,7 @@ function ageFromDOB(dob) {
 }
 
 const emptyNewPatient = {
+  title: "",
   name: "",
   dateOfBirth: "",
   gender: "Male",
@@ -96,6 +98,7 @@ function buildNewPatientPayload(newPatientData) {
   const lastName = rest.join(" ") || null;
 
   return {
+    title: newPatientData.title || null,
     first_name: firstName,
     last_name: lastName,
     date_of_birth: newPatientData.dateOfBirth,

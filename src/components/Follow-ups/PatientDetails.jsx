@@ -14,6 +14,7 @@ import {
 import { getPatientTestHistoryApi } from "../../api/api";
 import { useOrderModal } from "../../Context/OrderModalContext";
 import { daysAgoIso } from "../Reports/shared/format";
+import { nameWithTitle } from "../Patients/patientTitles";
 
 const PAGE_SIZE = 10;
 
@@ -145,7 +146,7 @@ export default function PatientDetails() {
                 </div>
                 <div className="min-w-0">
                   <h1 className="text-lg font-bold text-gray-900 uppercase truncate">
-                    {patient.title ? `${patient.title}. ` : ""}{patient.name}
+                    {nameWithTitle(patient.title, patient.name)}
                   </h1>
                   <div className="flex flex-wrap gap-2 mt-1.5">
                     <span className="px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 text-xs font-medium">

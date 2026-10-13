@@ -1,5 +1,5 @@
 // Shared list of patient titles + the gender each one implies (if any).
-export const PATIENT_TITLES = ["Mr", "Mrs", "Ms", "Miss", "Master", "Baby", "Dr"];
+export const PATIENT_TITLES = ["Mr", "Mrs", "Ms", "Miss", "Master"];
 
 // Titles for staff / users (no Master / Baby).
 export const STAFF_TITLES = ["Mr", "Mrs", "Ms", "Miss", "Dr"];

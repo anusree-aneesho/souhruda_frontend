@@ -144,7 +144,7 @@ export default function RevenueOverTimeModal({ initialRange = "Today", onClose }
                   >
                     <td className="px-6 py-3 text-gray-500">{o.order_no}</td>
                     <td className="py-3 font-medium text-gray-900">
-                      {[o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" ")}
+                      {o.patient?.display_name || [o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" ")}
                       {o.patient?.patient_number && (
                         <span className="ml-1 font-normal text-gray-400">
                           · {o.patient.patient_number}

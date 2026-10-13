@@ -6,6 +6,7 @@ import ConfirmModal from "../../Patients/modals/ConfirmModal";
 import AlertModal from "../../common/Modal/AlertModal";
 import Toast from "../../common/Toast/Toast";
 import { useToast } from "../../common/Toast/useToast";
+import { formatNameWithTitle } from "../../Patients/patientTitles";
 import StatusStepper from "./StatusStepper";
 import RequestInfoBar from "./RequestInfoBar";
 import TestsList from "./TestsList";
@@ -37,7 +38,9 @@ function formatPaymentStatus(status) {
 function mapDetail(r) {
   return {
     id: r.hc_code,
-    patient: r.patient || { name: "—" },
+    patient: r.patient
+      ? { ...r.patient, name: formatNameWithTitle(r.patient.title, r.patient.name) }
+      : { name: "—" },
     status: formatStatus(r.status),
     referredBy: r.referred_by || "—",
     slot: [r.slot_date, r.slot_label].filter(Boolean).join(" · "),
@@ -46,7 +49,9 @@ function mapDetail(r) {
     payment: `${formatPaymentMode(r.payment_mode)} · ${formatPaymentStatus(r.payment_status)}`,
     collectionCharge: r.collection_charge || 0,
     sampleBarcode: r.barcode,
-    technician: r.technician ? { ...r.technician, location: r.technician.zone, otp: r.debug_otp } : null,
+    technician: r.technician
+      ? { ...r.technician, name: formatNameWithTitle(r.technician.title, r.technician.name), location: r.technician.zone, otp: r.debug_otp }
+      : null,
     otpReady: r.otp_ready ?? false,
     otpLocked: r.otp_locked ?? false,
     assignable: r.assignable ?? true,

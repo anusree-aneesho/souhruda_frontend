@@ -2,12 +2,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Search, ChevronDown, Loader2 } from "lucide-react";
 import { getPatientsApi } from "../../../../api/api";
-import { PATIENT_TITLES, TITLE_GENDER } from "../../../Patients/patientTitles";
+import { PATIENT_TITLES, TITLE_GENDER, nameWithTitle } from "../../../Patients/patientTitles";
 
 // "Miss" + "Xyz A" -> "Miss. Xyz A" (same look as the Lab Orders list).
-export function withTitle(title, name) {
-  return title ? `${String(title).replace(/\.$/, "")}. ${name}` : name;
-}
+export const withTitle = nameWithTitle;
 
 // Maps the /patients API shape to the shape this combobox (and the rest of
 // the order flow) works with.

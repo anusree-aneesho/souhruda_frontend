@@ -11,6 +11,8 @@ const ROW_HEIGHT = 45;
 const HEADER_HEIGHT = 30;
 const TABLE_MIN_HEIGHT = HEADER_HEIGHT + PAGE_SIZE * ROW_HEIGHT;
 
+const thClass = "pb-2 text-xs font-semibold text-gray-500 tracking-wider uppercase";
+
 export default function TestsTable({ categoryName, tests, onAddTest, onEditTest, onRemoveTest }) {
   const [viewingTest, setViewingTest] = useState(null);
   const [page, setPage] = useState(1);
@@ -38,15 +40,19 @@ export default function TestsTable({ categoryName, tests, onAddTest, onEditTest,
 
   return (
     <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] flex flex-col">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-sm text-gray-900">{categoryName} Tests</h3>
+      <div className="flex items-center justify-between mb-5 pb-4 border-b border-gray-100">
+        <div>
+          <h3 className="text-base font-semibold text-gray-900">{categoryName} Tests</h3>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {tests.length} {tests.length === 1 ? "test" : "tests"} in this category
+          </p>
+        </div>
         {canManage && (
           <button
             onClick={onAddTest}
-            className="flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-700 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-teal-600 text-sm font-medium text-white shadow-sm hover:bg-teal-700 transition-colors cursor-pointer"
           >
-            <Plus size={14} />
-            Add Test
+            <Plus size={16} /> Add Test
           </button>
         )}
       </div>
@@ -79,11 +85,11 @@ export default function TestsTable({ categoryName, tests, onAddTest, onEditTest,
               <table className="w-full min-w-[500px]">
                 <thead>
                   <tr className="text-left border-b border-gray-100">
-                    <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">TEST NAME</th>
-                    <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">UNIT</th>
-                    <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">RANGE</th>
-                    <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">PRICE</th>
-                    <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">FOLLOW-UP</th>
+                    <th className={thClass}>Test Name</th>
+                    <th className={thClass}>Unit</th>
+                    <th className={thClass}>Range</th>
+                    <th className={thClass}>Price</th>
+                    <th className={thClass}>Follow-up</th>
                     <th></th>
                   </tr>
                 </thead>

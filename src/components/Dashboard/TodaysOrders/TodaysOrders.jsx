@@ -15,10 +15,23 @@ function statusLabel(status) {
   return capitalize(status);
 }
 
+const ABBREVIATED_TITLES = ["mr", "mrs", "ms", "dr", "prof"];
+
+function formatTitle(title) {
+  if (!title) return "";
+  const t = title.trim();
+  if (ABBREVIATED_TITLES.includes(t.toLowerCase().replace(/\.$/, ""))) {
+    return t.replace(/\.$/, "") + ".";
+  }
+  return t;
+}
+
 function mapOrder(o) {
   return {
     order: o.order_no,
-    patient: [o.patient?.title, o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" "),
+    patient: [formatTitle(o.patient?.title), o.patient?.first_name, o.patient?.last_name]
+      .filter(Boolean)
+      .join(" "),
     regNo: o.patient?.patient_number || "",
     tests: o.items_count ?? o.items?.length ?? 0,
     testNames: (o.items || []).map((item) => item.lab_test?.name).filter(Boolean),

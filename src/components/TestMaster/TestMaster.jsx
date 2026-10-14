@@ -162,6 +162,7 @@ export default function TestMaster() {
     const payload = {
       category_id: category.id,
       name: testData.name.trim(),
+      
       unit: testData.unit || null,
       price: testData.price,
       critical_low: testData.criticalLow,

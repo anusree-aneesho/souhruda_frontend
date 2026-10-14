@@ -26,7 +26,8 @@ export default function Report() {
   const [letterheadOn, setLetterheadOn] = useState(true);
   const [isBillOpen, setBillOpen] = useState(false);
   const [isEditBillOpen, setEditBillOpen] = useState(false);
-  const [discountPercent, setDiscountPercent] = useState(0);
+  const [discountType, setDiscountType] = useState("percentage");
+  const [discountValue, setDiscountValue] = useState(0);
   const [orderDates, setOrderDates] = useState({ collected: null, reported: null });
   const [isWhatsAppOpen, setWhatsAppOpen] = useState(false);
   const [isPreviewOpen, setPreviewOpen] = useState(false);
@@ -49,12 +50,14 @@ export default function Report() {
   // Loads the discount and the collection / report dates from the order.
   useEffect(() => {
     let cancelled = false;
-    setDiscountPercent(0);
+    setDiscountType("percentage");
+    setDiscountValue(0);
     setOrderDates({ collected: null, reported: null });
     getOrderApi(orderId)
       .then((res) => {
         if (cancelled) return;
-        setDiscountPercent(Number(res.data?.discount_percent) || 0);
+        setDiscountType(res.data?.discount_type || "percentage");
+        setDiscountValue(Number(res.data?.discount_value) || 0);
         setOrderDates({
           collected: res.data?.sample_collected_at ?? null,
           reported: res.data?.report_generated_at ?? res.data?.completed_at ?? null,
@@ -755,7 +758,8 @@ export default function Report() {
           tests={testsWithResults}
           billTotal={order?.billTotal}
           homeVisitFee={order?.homeVisitFee || 0}
-          discountPercent={discountPercent}
+          discountType={discountType}
+          discountValue={discountValue}
           paymentDone={paymentDone}
           referredBy={order?.referredBy || "Self"}
           collectionDate={collectionDate}
@@ -770,10 +774,12 @@ export default function Report() {
           tests={testsWithResults}
           billTotal={order?.billTotal != null ? Number(order.billTotal) : null}
           homeVisitFee={order?.homeVisitFee || 0}
-          initialDiscount={discountPercent}
+          initialDiscount={discountValue}
+          initialDiscountType={discountType}
           onClose={() => setEditBillOpen(false)}
           onSaved={(updated) => {
-            setDiscountPercent(Number(updated.discount_percent) || 0);
+            setDiscountType(updated.discount_type || "percentage");
+            setDiscountValue(Number(updated.discount_value) || 0);
             setEditBillOpen(false);
             showToast("Discount updated");
           }}

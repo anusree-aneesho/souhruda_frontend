@@ -11,7 +11,8 @@ export default function BillModal({
   tests,
   billTotal,
   homeVisitFee = 0,
-  discountPercent = 0,
+  discountType = "percentage",
+  discountValue = 0,
   paymentDone,
   referredBy,
   collectionDate,
@@ -41,7 +42,8 @@ export default function BillModal({
   const testsSubtotal = billTotal != null ? Number(billTotal) : fallbackSubtotal;
 
   // discount_percent comes back from the API as a string like "10.00"
-  const discountPct = Number(discountPercent) || 0;
+  const isPercentage = discountType === "percentage";
+  const discountNum = Number(discountValue) || 0;
 
   const [labInfo, setLabInfo] = useState(null);
   const [gstInfo, setGstInfo] = useState(null);
@@ -75,7 +77,8 @@ export default function BillModal({
   // price afterwards, then GST is calculated on the result.
   const { discountAmount, subtotal, gstAmount, grandTotal } = calcBillTotals({
     testsTotal: testsSubtotal,
-    discountPercent: discountPct,
+    discountType,
+    discountValue: discountNum,
     homeVisitFee,
     gstRate,
   });
@@ -285,13 +288,13 @@ export default function BillModal({
 
   <table class="totals">
     ${
-      homeVisitFee > 0 || discountPct > 0
+      homeVisitFee > 0 || discountNum > 0
         ? `<tr><td class="label" style="width:auto;">Tests total</td><td class="value">Rs. ${testsSubtotal.toFixed(2)}</td></tr>`
         : ""
     }
     ${
-      discountPct > 0
-        ? `<tr class="discount-row"><td class="label" style="width:auto;">Discount (${discountPct}%)</td><td class="value">- Rs. ${discountAmount.toFixed(2)}</td></tr>`
+      discountNum > 0
+        ? `<tr class="discount-row"><td class="label" style="width:auto;">Discount${isPercentage ? ` (${discountNum}%)` : ""}</td><td class="value">- Rs. ${discountAmount.toFixed(2)}</td></tr>`
         : ""
     }
     ${
@@ -474,15 +477,15 @@ export default function BillModal({
               </div>
             )}
 
-            {(homeVisitFee > 0 || discountPct > 0) && (
+            {(homeVisitFee > 0 || discountNum > 0) && (
               <div className="mt-3 space-y-1">
                 <div className="flex items-center justify-between text-sm text-gray-600">
                   <span>Tests total</span>
                   <span>Rs. {testsSubtotal.toFixed(2)}</span>
                 </div>
-                {discountPct > 0 && (
+                {discountNum > 0 && (
                   <div className="flex items-center justify-between text-sm text-green-700">
-                    <span>Discount ({discountPct}%)</span>
+                    <span>Discount{isPercentage ? ` (${discountNum}%)` : ""}</span>
                     <span>− Rs. {discountAmount.toFixed(2)}</span>
                   </div>
                 )}

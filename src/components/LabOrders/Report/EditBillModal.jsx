@@ -4,8 +4,10 @@ import { updateOrderDiscountApi, getGstSettingsApi } from "../../../api/api";
 import { groupTestsByPackage, calcBillTotals } from "../../../utils/orderPricing";
 
 export default function EditBillModal({
-  orderId, tests, billTotal, homeVisitFee = 0, initialDiscount = 0, onClose, onSaved,
+  orderId, tests, billTotal, homeVisitFee = 0,
+  initialDiscount = 0, initialDiscountType = "percentage", onClose, onSaved,
 }) {
+  const [discountType, setDiscountType] = useState(initialDiscountType || "percentage");
   const [discount, setDiscount] = useState(String(initialDiscount || 0));
   const [gstRate, setGstRate] = useState(0);
   const [error, setError] = useState("");
@@ -23,21 +25,41 @@ export default function EditBillModal({
       .catch(() => {});
   }, []);
 
-  const pct = Number(discount);
-  const invalid = discount === "" || Number.isNaN(pct) || pct < 0 || pct > 100;
+  const isPercentage = discountType === "percentage";
+  const value = Number(discount);
+  const maxValue = isPercentage ? 100 : testsTotal;
+  const invalid = discount === "" || Number.isNaN(value) || value < 0 || value > maxValue;
+
   const totals = calcBillTotals({
-    testsTotal, discountPercent: invalid ? 0 : pct, homeVisitFee, gstRate,
+    testsTotal,
+    discountType,
+    discountValue: invalid ? 0 : value,
+    homeVisitFee,
+    gstRate,
   });
+
+  function handleTypeChange(e) {
+    setDiscountType(e.target.value);
+    setDiscount("0");
+    setError("");
+  }
 
   async function handleSave() {
     if (invalid) {
-      setError("Enter a discount between 0 and 100.");
+      setError(
+        isPercentage
+          ? "Enter a discount between 0 and 100."
+          : `Enter an amount between 0 and ${testsTotal.toFixed(2)}.`
+      );
       return;
     }
     setSaving(true);
     setError("");
     try {
-      const res = await updateOrderDiscountApi(orderId, pct);
+      const res = await updateOrderDiscountApi(orderId, {
+        discount_type: discountType,
+        discount_value: value,
+      });
       onSaved(res.data);
     } catch (err) {
       setError(err.message);
@@ -65,20 +87,30 @@ export default function EditBillModal({
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-900 mb-1.5">Discount (%)</label>
-          <input
-            type="number" min="0" max="100" step="any"
-            value={discount}
-            onChange={(e) => { setDiscount(e.target.value); setError(""); }}
-            className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
-          />
+          <label className="block text-sm font-semibold text-gray-900 mb-1.5">Discount</label>
+          <div className="flex gap-2">
+            <select
+              value={discountType}
+              onChange={handleTypeChange}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 cursor-pointer"
+            >
+              <option value="percentage">Percentage (%)</option>
+              <option value="fixed">Fixed amount (Rs.)</option>
+            </select>
+            <input
+              type="number" min="0" max={maxValue} step="any"
+              value={discount}
+              onChange={(e) => { setDiscount(e.target.value); setError(""); }}
+              className="flex-1 min-w-0 rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+            />
+          </div>
           {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
         </div>
 
         <div className="bg-teal-50 rounded-lg px-4 py-3 space-y-1 text-sm text-teal-800">
           <div className="flex justify-between"><span>Tests total</span><span>Rs. {testsTotal.toFixed(2)}</span></div>
           <div className="flex justify-between">
-            <span>Discount ({invalid ? 0 : pct}%)</span>
+            <span>Discount ({isPercentage ? `${invalid ? 0 : value}%` : "fixed"})</span>
             <span>− Rs. {totals.discountAmount.toFixed(2)}</span>
           </div>
           {homeVisitFee > 0 && (

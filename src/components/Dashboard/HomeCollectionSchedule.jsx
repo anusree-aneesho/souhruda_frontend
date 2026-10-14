@@ -20,6 +20,12 @@ function formatDate(dateStr) {
   });
 }
 
+// Name with the title in front, e.g. "Mrs Amala". Falls back to "—" if there's no name.
+function withTitle(person) {
+  const label = [person?.title, person?.name].filter(Boolean).join(" ");
+  return label || null;
+}
+
 // Local (browser) calendar date as YYYY-MM-DD — NOT toISOString(), which
 // gives UTC's date and can be a day off from IST near midnight.
 function todayLocalDate() {
@@ -43,10 +49,10 @@ export default function HomeCollectionSchedule() {
           .filter((r) => r.slot_date === todayIso)
           .sort((a, b) => (a.slot_label || "").localeCompare(b.slot_label || ""))
           .map((r) => ({
-            patient: r.patient?.name || "—",
+            patient: withTitle(r.patient) || "—",
             date: formatDate(r.slot_date),
             slot: r.slot_label,
-            person: r.technician?.name || "Unassigned",
+            person: withTitle(r.technician) || "Unassigned",
             status: formatStatus(r.status),
           }));
 

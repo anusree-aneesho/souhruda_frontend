@@ -1,4 +1,4 @@
-// src/components/Dashboard/LatestActivities/ActivityItem.jsx
+// src/components/Dashboard/ActivityItem.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -9,10 +9,10 @@ import {
   FileText,
   MapPin,
   MessageCircle,
-  UserPlus,
 } from "lucide-react";
 import { useHomeCollectionModal } from "../../Context/HomeCollectionModalContext";
 import SampleCollectionModal from "../LabOrders/SampleCollectionModal";
+import CancelledOrderModal from "../LabOrders/CancelledOrderModal";
 import { getOrderApi } from "../../api/api";
 
 function getIconMeta(text = "") {
@@ -43,6 +43,7 @@ export default function ActivityItem({ date, text, type, targetId, isLatest, hid
   const navigate = useNavigate();
   const { open } = useHomeCollectionModal();
   const [modalOrder, setModalOrder] = useState(null);
+  const [cancelledOrder, setCancelledOrder] = useState(null);
   const [checkingOrder, setCheckingOrder] = useState(false);
 
   async function handleClick() {
@@ -51,9 +52,19 @@ export default function ActivityItem({ date, text, type, targetId, isLatest, hid
       try {
         const res = await getOrderApi(targetId);
         const o = res.data;
+        const patientName = [o.patient?.title, o.patient?.first_name, o.patient?.last_name]
+          .filter(Boolean)
+          .join(" ");
 
-        if (o.status === "pending") {
-          const patientName = [o.patient?.title, o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" ");
+        // Deleted orders are soft-deleted, so check both the status and deleted_at.
+        if (o.status === "cancelled" || o.deleted_at) {
+          setCancelledOrder({
+            orderId: o.order_no,
+            patient: patientName,
+            regNo: o.patient?.patient_number || "",
+            tests: o.items?.length || 0,
+          });
+        } else if (o.status === "pending") {
           setModalOrder({
             orderId: o.order_no,
             patient: patientName,
@@ -94,10 +105,10 @@ export default function ActivityItem({ date, text, type, targetId, isLatest, hid
 
   return (
     <div
-  className={`flex items-start gap-3 py-2.5 px-2 rounded-lg transition-colors ${
-    isClickable ? "hover:bg-gray-50" : ""
-  }`}
->
+      className={`flex items-start gap-3 py-2.5 px-2 rounded-lg transition-colors ${
+        isClickable ? "hover:bg-gray-50" : ""
+      }`}
+    >
       <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 relative ${bg}`}>
         <Icon size={14} className={color} />
         {isLatest && (
@@ -124,12 +135,19 @@ export default function ActivityItem({ date, text, type, targetId, isLatest, hid
       )}
 
       {modalOrder && (
-      <SampleCollectionModal
-        order={modalOrder}
-        onClose={() => setModalOrder(null)}
-        onConfirmed={handleSampleCollected}
-        onCancelled={handleOrderCancelled}
-      />
+        <SampleCollectionModal
+          order={modalOrder}
+          onClose={() => setModalOrder(null)}
+          onConfirmed={handleSampleCollected}
+          onCancelled={handleOrderCancelled}
+        />
+      )}
+
+      {cancelledOrder && (
+        <CancelledOrderModal
+          order={cancelledOrder}
+          onClose={() => setCancelledOrder(null)}
+        />
       )}
     </div>
   );

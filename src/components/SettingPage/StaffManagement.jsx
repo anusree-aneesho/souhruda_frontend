@@ -22,6 +22,7 @@ const ROLE_VALUE_MAP = {
   "Front Office": "front_office",
   "Technician": "technician",
   "Lab Assistant": "lab_assistant",
+  "Lab Incharge": "lab_incharge",
   "Admin": "admin",
 };
 
@@ -301,50 +302,54 @@ export default function StaffManagement() {
     showToast(`Rating updated for ${technician.name}.`);
   }
 
-  async function handleSaveStaff(formData) {
-    const isEdit = Boolean(formData.id);
+async function handleSaveStaff(formData) {
+  const isEdit = Boolean(formData.id);
 
-    try {
-      if (isEdit) {
-        const payload = {
-          title: formData.title || null,
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          branch_id: formData.branch_id,
-          status: formData.status,
-          latitude: formData.latitude || null,
-          longitude: formData.longitude || null,
-        };
+  try {
+    if (isEdit) {
+      const payload = {
+        title: formData.title || null,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        branch_id: formData.branch_id,
+        status: formData.status,
+        latitude: formData.latitude || null,
+        longitude: formData.longitude || null,
+        signature: formData.signature,
+        remove_signature: formData.remove_signature,
+      };
 
-        await updateStaffMemberApi(formData.id, payload);
-        showToast(`${formData.name} updated successfully.`);
-      } else {
-        const payload = {
-          title: formData.title || null,
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          branch_id: formData.branch_id,
-          role: ROLE_VALUE_MAP[formData.role],
-          status: formData.status,
-          latitude: formData.latitude || null,
-          longitude: formData.longitude || null,
-        };
+      await updateStaffMemberApi(formData.id, payload);
+      showToast(`${formData.name} updated successfully.`);
+    } else {
+      const payload = {
+        title: formData.title || null,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        branch_id: formData.branch_id,
+        role: ROLE_VALUE_MAP[formData.role],
+        status: formData.status,
+        latitude: formData.latitude || null,
+        longitude: formData.longitude || null,
+        signature: formData.signature,
+        remove_signature: formData.remove_signature,
+      };
 
-        await addStaffApi(payload);
-        showToast(`${formData.name} added successfully — credentials emailed.`);
-      }
-
-      setModalState(null);
-      const res = await getStaffMembersApi();
-      const refreshed = (res.data || []).map(mapStaff);
-      setStaffMembers(refreshed);
-      setViewingTechnician((prev) => (prev ? refreshed.find((s) => s.id === prev.id) ?? null : null));
-    } catch (err) {
-      showToast(err.message || "Failed to save staff member.", "error");
+      await addStaffApi(payload);
+      showToast(`${formData.name} added successfully — credentials emailed.`);
     }
+
+    setModalState(null);
+    const res = await getStaffMembersApi();
+    const refreshed = (res.data || []).map(mapStaff);
+    setStaffMembers(refreshed);
+    setViewingTechnician((prev) => (prev ? refreshed.find((s) => s.id === prev.id) ?? null : null));
+  } catch (err) {
+    showToast(err.message || "Failed to save staff member.", "error");
   }
+}
 
   function handleRemove(staff) {
     setConfirmingRemove(staff);

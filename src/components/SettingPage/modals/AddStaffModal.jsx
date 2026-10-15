@@ -197,21 +197,21 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
         <div className="px-6 py-5 space-y-4">
           <div className="grid grid-cols-[110px_1fr] gap-4">
             <div>
-  <label className="block text-sm font-semibold text-gray-900 mb-1.5">Title</label>
-  <select
-    value={form.title}
-    onChange={(e) => handleChange("title", e.target.value)}
-    className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
-      errors.title ? "border-red-300 focus:border-red-400 focus:ring-red-400" : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
-    }`}
-  >
-    <option value="">Select</option>
-    {STAFF_TITLES.map((t) => (
-      <option key={t} value={t}>{t}</option>
-    ))}
-  </select>
-  {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
-</div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Title</label>
+              <select
+                value={form.title}
+                onChange={(e) => handleChange("title", e.target.value)}
+                className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
+                  errors.title ? "border-red-300 focus:border-red-400 focus:ring-red-400" : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+                }`}
+              >
+                <option value="">Select</option>
+                {STAFF_TITLES.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+              {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
+            </div>
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1.5">Full Name</label>
               <input

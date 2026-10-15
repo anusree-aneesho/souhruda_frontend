@@ -257,36 +257,40 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
 
   return (
     <>
-      <ModalShell title={isEditMode ? "Edit Test" : "Add Test"} onClose={onClose} maxWidth="max-w-md">
+      <ModalShell title={isEditMode ? "Edit Test" : "Add Test"} onClose={onClose} maxWidth="max-w-2xl">
         <form onSubmit={handleSubmit} noValidate>
-          <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Category</label>
-              <select
-                value={form.category}
-                onChange={(e) => handleChange("category", e.target.value)}
-                className={inputClass(errors.category)}
-              >
-                <option value="">Select Category</option>
-                {categories.map((cat) => (
-                  <option key={cat.name} value={cat.name}>{cat.name}</option>
-                ))}
-              </select>
-              {errors.category && <p className="text-xs text-red-500 mt-1">{errors.category}</p>}
+          <div className="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto">
+            {/* Row 1: Category + Test Name */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-1.5">Category</label>
+                <select
+                  value={form.category}
+                  onChange={(e) => handleChange("category", e.target.value)}
+                  className={inputClass(errors.category)}
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.name} value={cat.name}>{cat.name}</option>
+                  ))}
+                </select>
+                {errors.category && <p className="text-xs text-red-500 mt-1">{errors.category}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-1.5">Test Name</label>
+                <input
+                  autoFocus={!isEditMode}
+                  value={form.name}
+                  onChange={(e) => handleChange("name", e.target.value)}
+                  placeholder="e.g. Vitamin D3"
+                  className={inputClass(errors.name)}
+                />
+                {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Test Name</label>
-              <input
-                autoFocus={!isEditMode}
-                value={form.name}
-                onChange={(e) => handleChange("name", e.target.value)}
-                placeholder="e.g. Vitamin D3"
-                className={inputClass(errors.name)}
-              />
-              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
-            </div>
-
+            {/* Row 2: Unit + Price */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-1.5">Unit</label>
@@ -312,6 +316,7 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
               </div>
             </div>
 
+            {/* Row 3: Critical Low + Critical High */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-1.5">Critical Low</label>
@@ -339,6 +344,7 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
               </div>
             </div>
 
+            {/* Row 4: Follow-up + Status */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-1.5">Follow-up (weeks)</label>
@@ -366,65 +372,83 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Test Criteria</label>
-              <textarea
-                value={form.criteria}
-                onChange={(e) => handleChange("criteria", e.target.value)}
-                rows={3}
-                placeholder="Describe what this test checks for, prep instructions, or other notes..."
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 resize-none"
-              />
+            {/* Row 5: Test Criteria + Note */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-1.5">Test Criteria</label>
+                <textarea
+                  value={form.criteria}
+                  onChange={(e) => handleChange("criteria", e.target.value)}
+                  rows={3}
+                  placeholder="Describe what this test checks for, prep instructions, or other notes..."
+                  className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-1.5">Note</label>
+                <textarea
+                  value={form.note}
+                  onChange={(e) => handleChange("note", e.target.value)}
+                  rows={3}
+                  placeholder="Add any details related to the ranges."
+                  className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 resize-none"
+                />
+              </div>
             </div>
 
+            {/* Demographic ranges: two boxes per row */}
             <div className="space-y-3 pt-1">
               <label className="block text-sm font-semibold text-gray-900">
                 Range by Category / Demographic Group
               </label>
               {errors.demographicRanges && <p className="text-xs text-red-500">{errors.demographicRanges}</p>}
-              {DEMOGRAPHIC_GROUPS.map((group) => (
-                <div key={group}>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">{group}</label>
-                  <input
-                    value={form.demographicRanges[group] || ""}
-                    onChange={(e) => handleDemographicRangeChange(group, e.target.value)}
-                    placeholder="e.g. 70-100, <200, or Negative"
-                    className={inputClass(demographicErrors[group])}
-                  />
-                  {demographicErrors[group] && <p className="text-xs text-red-500 mt-1">{demographicErrors[group]}</p>}
-                </div>
-              ))}
 
-              {/* Custom, user-defined groups beyond the fixed list above.
-                  Stored in the same demographicRanges object as everything
-                  else — the backend doesn't need to distinguish them. */}
-              {customRows.map((row) => (
-                <div key={row.id} className="border border-gray-100 rounded-lg p-3 space-y-2 bg-gray-50/50">
-                  <div className="flex items-center gap-2">
+              <div className="grid grid-cols-2 gap-4">
+                {DEMOGRAPHIC_GROUPS.map((group) => (
+                  <div key={group}>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">{group}</label>
                     <input
-                      value={row.label}
-                      onChange={(e) => handleCustomRowChange(row.id, "label", e.target.value)}
-                      placeholder="Group name, e.g. Pregnant Women"
-                      className={`${inputClass(customRowErrors[row.id])} text-xs font-medium`}
+                      value={form.demographicRanges[group] || ""}
+                      onChange={(e) => handleDemographicRangeChange(group, e.target.value)}
+                      placeholder="e.g. 70-100, <200, or Negative"
+                      className={inputClass(demographicErrors[group])}
                     />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveCustomRow(row.id, row.label)}
-                      className="shrink-0 text-gray-400 hover:text-red-500 p-1"
-                      aria-label="Remove this custom group"
-                    >
-                      <X size={16} />
-                    </button>
+                    {demographicErrors[group] && <p className="text-xs text-red-500 mt-1">{demographicErrors[group]}</p>}
                   </div>
-                  <input
-                    value={row.value}
-                    onChange={(e) => handleCustomRowChange(row.id, "value", e.target.value)}
-                    placeholder="e.g. 70-100, <200, or Negative"
-                    className={inputClass(customRowErrors[row.id])}
-                  />
-                  {customRowErrors[row.id] && <p className="text-xs text-red-500">{customRowErrors[row.id]}</p>}
-                </div>
-              ))}
+                ))}
+
+                {/* Custom, user-defined groups beyond the fixed list above.
+                    Stored in the same demographicRanges object as everything
+                    else — the backend doesn't need to distinguish them. */}
+                {customRows.map((row) => (
+                  <div key={row.id} className="border border-gray-100 rounded-lg p-3 space-y-2 bg-gray-50/50">
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={row.label}
+                        onChange={(e) => handleCustomRowChange(row.id, "label", e.target.value)}
+                        placeholder="Group name, e.g. Pregnant Women"
+                        className={`${inputClass(customRowErrors[row.id])} text-xs font-medium`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCustomRow(row.id, row.label)}
+                        className="shrink-0 text-gray-400 hover:text-red-500 p-1 cursor-pointer"
+                        aria-label="Remove this custom group"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <input
+                      value={row.value}
+                      onChange={(e) => handleCustomRowChange(row.id, "value", e.target.value)}
+                      placeholder="e.g. 70-100, <200, or Negative"
+                      className={inputClass(customRowErrors[row.id])}
+                    />
+                    {customRowErrors[row.id] && <p className="text-xs text-red-500">{customRowErrors[row.id]}</p>}
+                  </div>
+                ))}
+              </div>
 
               <button
                 type="button"
@@ -433,18 +457,6 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
               >
                 <Plus size={16} /> Add custom group
               </button>
-            </div>
-
-            {/* Free-text note for any extra details about the ranges above. */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Note</label>
-              <textarea
-                value={form.note}
-                onChange={(e) => handleChange("note", e.target.value)}
-                rows={3}
-                placeholder="Add any details related to the ranges."
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 resize-none"
-              />
             </div>
           </div>
 

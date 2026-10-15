@@ -8,6 +8,7 @@ import { addStaffApi, getStaffMembersApi, updateStaffMemberApi, deleteStaffMembe
 import Toast from "../common/Toast/Toast";
 import { useToast } from "../common/Toast/useToast";
 import { useAuth } from "../../Context/AuthContext";
+import { formatNameWithTitle } from "../Patients/patientTitles";
 
 const TECHNICIAN_ROLE = "Technician";
 
@@ -28,6 +29,7 @@ function mapStaff(s) {
   return {
     id: s.id,
     staffId: s.staff_id,
+    title: s.title,
     name: s.name,
     email: s.email,
     phone: s.phone,
@@ -118,7 +120,7 @@ function RoleFilter({ value, onChange, roles }) {
 // Name is a clickable link only for technicians (opens the details drawer).
 function StaffName({ staff, onView }) {
   if (staff.role !== TECHNICIAN_ROLE) {
-    return <span className="font-medium text-gray-900">{staff.name}</span>;
+    return <span className="font-medium text-gray-900">{formatNameWithTitle(staff.title, staff.name)}</span>;
   }
   return (
     <button
@@ -126,7 +128,7 @@ function StaffName({ staff, onView }) {
       className="font-medium text-gray-900 hover:text-teal-600 text-left cursor-pointer"
       title="View technician details"
     >
-      {staff.name}
+      {formatNameWithTitle(staff.title, staff.name)}
     </button>
   );
 }
@@ -305,6 +307,7 @@ export default function StaffManagement() {
     try {
       if (isEdit) {
         const payload = {
+          title: formData.title || null,
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
@@ -318,6 +321,7 @@ export default function StaffManagement() {
         showToast(`${formData.name} updated successfully.`);
       } else {
         const payload = {
+          title: formData.title || null,
           name: formData.name,
           email: formData.email,
           phone: formData.phone,

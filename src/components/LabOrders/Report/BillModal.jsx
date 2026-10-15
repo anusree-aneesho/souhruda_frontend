@@ -3,9 +3,22 @@ import { useState, useEffect, useRef } from "react";
 import { CheckCircle2, Download } from "lucide-react";
 import ModalShell from "../../common/Modal/ModalShell";
 import { getOrderBillUrlApi, getSettingsApi, getGstSettingsApi } from "../../../api/api";
-import { groupTestsByPackage } from "../../../utils/orderPricing";
+import { groupTestsByPackage, calcBillTotals } from "../../../utils/orderPricing";
 
-export default function BillModal({ orderId, patient, tests, billTotal, homeVisitFee = 0, paymentDone, onClose }) {
+export default function BillModal({
+  orderId,
+  patient,
+  tests,
+  billTotal,
+  homeVisitFee = 0,
+  discountType = "percentage",
+  discountValue = 0,
+  paymentDone,
+  referredBy,
+  collectionDate,
+  reportDate,
+  onClose,
+}) {
   // Group by the package each test was actually billed under — same
   // grouping used on the Confirm Order step and the order-detail Bill
   // section — instead of listing every test flat at its own price.
@@ -22,13 +35,15 @@ export default function BillModal({ orderId, patient, tests, billTotal, homeVisi
     };
   });
 
-  // billTotal comes from the server (order.bill_total) — the amount the
-  // patient was actually charged. Fall back to summing catalog prices only
+  // billTotal comes from the server (order.bill_total) — the gross amount for
+  // the tests, before any discount. Fall back to summing catalog prices only
   // if it's ever missing (e.g. an older order), so the modal never breaks.
   const fallbackSubtotal = tests.reduce((sum, t) => sum + t.price, 0);
-  const testsSubtotal = billTotal != null ? billTotal : fallbackSubtotal;
-  // Home collection orders: the home visit fee is billed on top of the tests.
-  const subtotal = testsSubtotal + Number(homeVisitFee || 0);
+  const testsSubtotal = billTotal != null ? Number(billTotal) : fallbackSubtotal;
+
+  // discount_percent comes back from the API as a string like "10.00"
+  const isPercentage = discountType === "percentage";
+  const discountNum = Number(discountValue) || 0;
 
   const [labInfo, setLabInfo] = useState(null);
   const [gstInfo, setGstInfo] = useState(null);
@@ -57,13 +72,31 @@ export default function BillModal({ orderId, patient, tests, billTotal, homeVisi
 
   const gstEnabled = gstInfo?.is_gst_registered;
   const gstRate = gstEnabled ? Number(gstInfo.gst_rate) || 0 : 0;
-  const gstAmount = gstEnabled ? (subtotal * gstRate) / 100 : 0;
-  const grandTotal = subtotal + gstAmount;
+
+  // Discount applies to the tests only; home visit fee is added at full
+  // price afterwards, then GST is calculated on the result.
+  const { discountAmount, subtotal, gstAmount, grandTotal } = calcBillTotals({
+    testsTotal: testsSubtotal,
+    discountType,
+    discountValue: discountNum,
+    homeVisitFee,
+    gstRate,
+  });
 
   const invoiceNumber =
     gstEnabled && gstInfo?.invoice_prefix
       ? `${gstInfo.invoice_prefix}-${orderId}`
       : `#${orderId}`;
+
+  // Patient / order detail values shared by the on-screen modal and the
+  // printed bill, so both show the same fields as the downloaded PDF.
+  const ageDisplay =
+    patient.age !== undefined && patient.age !== null && patient.age !== "" && patient.age !== "-"
+      ? `${patient.age} Years`
+      : "—";
+  const genderDisplay = patient.gender
+    ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)
+    : "—";
 
   async function handleDownloadBill() {
     setDownloadingBill(true);
@@ -163,11 +196,12 @@ export default function BillModal({ orderId, patient, tests, billTotal, homeVisi
   .letterhead .doc-label { text-align: right; flex-shrink: 0; }
   .letterhead .doc-title { font-size: 15px; font-weight: 700; color: #111827; text-transform: uppercase; letter-spacing: 0.04em; }
   .letterhead .doc-number { font-size: 11px; color: #0d9488; font-weight: 600; margin-top: 4px; }
-  .meta-bar { display: flex; justify-content: space-between; background: #f9fafb; border-radius: 10px; padding: 14px 18px; margin-bottom: 24px; }
-  .meta-bar .block .label { font-size: 9.5px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
-  .meta-bar .block .value { font-size: 13px; font-weight: 600; color: #111827; }
-  .meta-bar .block .sub { font-size: 11px; color: #6b7280; margin-top: 2px; }
-  .meta-bar .right { text-align: right; }
+  .details { background: #f9fafb; border-radius: 10px; padding: 14px 18px; margin-bottom: 24px; }
+  .details table { width: 100%; border-collapse: collapse; }
+  .details td { padding: 3px 0; font-size: 12px; vertical-align: top; }
+  .details td.k { width: 105px; color: #9ca3af; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding-top: 4px; }
+  .details td.v { color: #111827; font-weight: 600; padding-right: 18px; }
+  .details .paid-badge { margin-top: 0; margin-left: 8px; }
   table.items { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
   table.items thead th {
     background: #f0fdfa; text-align: left; padding: 10px 12px; font-size: 10px;
@@ -188,6 +222,7 @@ export default function BillModal({ orderId, patient, tests, billTotal, homeVisi
   .totals td { padding: 5px 12px; font-size: 12px; }
   .totals .label { color: #6b7280; text-align: right; }
   .totals .value { color: #374151; text-align: right; width: 110px; font-weight: 500; }
+  .totals .discount-row .label, .totals .discount-row .value { color: #15803d; }
   .totals .grand-row td { border-top: 2px solid #0d9488; padding-top: 12px; font-size: 15px; font-weight: 700; }
   .totals .grand-row .label { color: #0f766e; }
   .totals .grand-row .value { color: #0f766e; }
@@ -223,19 +258,25 @@ export default function BillModal({ orderId, patient, tests, billTotal, homeVisi
     </div>
   </div>
 
-  <div class="meta-bar">
-    <div class="block">
-      <div class="label">Billed To</div>
-      <div class="value">${patient.name}</div>
-      <div class="sub">Reg No: ${patient.regNo || "-"}</div>
-      ${patient.phone ? `<div class="sub">Phone: ${patient.phone}</div>` : ""}
-
-    </div>
-    <div class="block right">
-      <div class="label">Billed On</div>
-      <div class="value">${new Date().toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</div>
-      ${paymentDone ? `<div class="paid-badge">Paid</div>` : ""}
-    </div>
+  <div class="details">
+    <table>
+      <tr>
+        <td class="k">Name</td><td class="v">${patient.name}${paymentDone ? ` <span class="paid-badge">Paid</span>` : ""}</td>
+        <td class="k">Age</td><td class="v">${ageDisplay}</td>
+      </tr>
+      <tr>
+        <td class="k">Gender</td><td class="v">${genderDisplay}</td>
+        <td class="k">Contact No.</td><td class="v">${patient.phone || "—"}</td>
+      </tr>
+      <tr>
+        <td class="k">Reg / Order No.</td><td class="v">${patient.regNo || "-"} / ${orderId}</td>
+        <td class="k">Collection Date</td><td class="v">${collectionDate || "—"}</td>
+      </tr>
+      <tr>
+        <td class="k">Referred By</td><td class="v">${referredBy || "Self"}</td>
+        <td class="k">Report Date</td><td class="v">${reportDate || "—"}</td>
+      </tr>
+    </table>
   </div>
 
   <table class="items">
@@ -247,9 +288,18 @@ export default function BillModal({ orderId, patient, tests, billTotal, homeVisi
 
   <table class="totals">
     ${
+      homeVisitFee > 0 || discountNum > 0
+        ? `<tr><td class="label" style="width:auto;">Tests total</td><td class="value">Rs. ${testsSubtotal.toFixed(2)}</td></tr>`
+        : ""
+    }
+    ${
+      discountNum > 0
+        ? `<tr class="discount-row"><td class="label" style="width:auto;">Discount${isPercentage ? ` (${discountNum}%)` : ""}</td><td class="value">- Rs. ${discountAmount.toFixed(2)}</td></tr>`
+        : ""
+    }
+    ${
       homeVisitFee > 0
-        ? `<tr><td class="label" style="width:auto;">Tests total</td><td class="value">Rs. ${testsSubtotal.toFixed(2)}</td></tr>
-           <tr><td class="label" style="width:auto;">Home visit fee</td><td class="value">Rs. ${Number(homeVisitFee).toFixed(2)}</td></tr>`
+        ? `<tr><td class="label" style="width:auto;">Home visit fee</td><td class="value">Rs. ${Number(homeVisitFee).toFixed(2)}</td></tr>`
         : ""
     }
     ${
@@ -280,178 +330,212 @@ export default function BillModal({ orderId, patient, tests, billTotal, homeVisi
     }, 250);
   }
 
+  // Values for the on-screen modal's header and "Billed To" card.
+  const headerAddress = [labInfo?.address, labInfo?.city, labInfo?.state, labInfo?.pincode]
+    .filter(Boolean)
+    .join(", ");
+  const headerContact = [labInfo?.phone, labInfo?.email].filter(Boolean).join("  ·  ");
+
+  const billFields = [
+    ["Age", ageDisplay],
+    ["Gender", genderDisplay],
+    ["Contact No.", patient.phone || "—"],
+    ["Reg / Order No.", `${patient.regNo || "-"} / ${orderId}`],
+    ["Referred By", referredBy || "Self"],
+    ["Collection Date", collectionDate || "—"],
+    ["Report Date", reportDate || "—"],
+  ];
+
   return (
     <ModalShell
       title={`Bill — Order ${invoiceNumber}`}
       onClose={onClose}
-      maxWidth="max-w-md"
+      maxWidth="max-w-4xl"
     >
-      <div className="px-6 py-5">
+      <div className="px-6 py-5 space-y-5">
         {/* ── Letterhead ─────────────────────────────────────── */}
         {!loadingSettings && labInfo && (
-          <div className="flex items-start justify-between border-b-[3px] border-teal-600 pb-4 mb-4">
-            <div className="flex items-start">
+          <div className="flex items-start justify-between gap-4 border-b-[3px] border-teal-600 pb-4">
+            <div className="flex items-start min-w-0">
               {labInfo.logo_path && (
                 <img
                   src={labInfo.logo_path}
                   alt="Logo"
-                  className="w-12 h-12 object-contain mr-3 rounded"
+                  className="w-12 h-12 object-contain mr-3 rounded shrink-0"
                 />
               )}
-              <div>
+              <div className="min-w-0">
                 <h2 className="text-lg font-bold text-gray-900">{labInfo.lab_name}</h2>
-                <p className="text-[10px] text-gray-500 mt-0.5 leading-relaxed">
-                  {[labInfo.address, labInfo.city, labInfo.state, labInfo.pincode]
-                    .filter(Boolean)
-                    .join(", ")}
-                  <br />
-                  {[labInfo.phone, labInfo.email].filter(Boolean).join("  ·  ")}
+                <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
+                  {headerAddress}
+                  {headerAddress && headerContact ? "  ·  " : ""}
+                  {headerContact}
                 </p>
-                {gstEnabled && (
-                  <p className="text-[10px] text-gray-600 mt-1">
-                    GSTIN: <span className="font-semibold text-gray-900">{gstInfo.gstin}</span>
-                    {gstInfo.legal_business_name && (
-                      <span className="text-gray-400"> · {gstInfo.legal_business_name}</span>
+                {(gstEnabled || labInfo.license_no) && (
+                  <p className="text-[11px] text-gray-600 mt-0.5">
+                    {gstEnabled && (
+                      <>
+                        GSTIN: <span className="font-semibold text-gray-900">{gstInfo.gstin}</span>
+                        {gstInfo.legal_business_name && (
+                          <span className="text-gray-400"> · {gstInfo.legal_business_name}</span>
+                        )}
+                      </>
+                    )}
+                    {gstEnabled && labInfo.license_no && (
+                      <span className="text-gray-300">{"  |  "}</span>
+                    )}
+                    {labInfo.license_no && (
+                      <span className="text-gray-400">Lic. No: {labInfo.license_no}</span>
                     )}
                   </p>
                 )}
-                {labInfo.license_no && (
-                  <p className="text-[9px] text-gray-400 mt-0.5">
-                    Lic. No: {labInfo.license_no}
-                  </p>
-                )}
               </div>
             </div>
-            <div className="text-right flex-shrink-0">
+            <div className="text-right shrink-0">
               <p className="text-xs font-bold uppercase tracking-wide text-gray-900">
                 {gstEnabled ? "Tax Invoice" : "Bill"}
               </p>
-              <p className="text-xs font-semibold text-teal-600 mt-1">{invoiceNumber}</p>
+              <p className="text-sm font-semibold text-teal-600 mt-1">{invoiceNumber}</p>
             </div>
           </div>
         )}
 
-        {/* ── Billed To block ────────────────────────────────── */}
-{/* ── Billed To block ────────────────────────────────── */}
-          <div className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3 mb-4">
-            <div>
-              <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
-                Billed To
-              </p>
-              <p className="text-sm font-semibold text-gray-900">{patient.name}</p>
-              <p className="text-xs text-gray-500">Reg No: {patient.regNo || "-"}</p>
-              {patient.phone && (
-                <p className="text-xs text-gray-500">Phone: {patient.phone}</p>
+        {/* ── Two columns: patient on the left, bill on the right ─── */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+          {/* Left: Billed To */}
+          <div className="md:col-span-2 self-start rounded-xl bg-gray-50 px-4 py-4">
+            <div className="flex items-start justify-between gap-2 pb-3 mb-3 border-b border-gray-200">
+              <div className="min-w-0">
+                <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
+                  Billed To
+                </p>
+                <p className="text-base font-bold text-gray-900 truncate">{patient.name}</p>
+              </div>
+              {paymentDone && (
+                <span className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2.5 py-1 rounded-full shrink-0">
+                  <CheckCircle2 size={13} />
+                  Paid
+                </span>
               )}
             </div>
-            {paymentDone && (
-              <span className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
-                <CheckCircle2 size={13} />
-                Paid
-              </span>
-            )}
-          </div>
 
-        {/* ── Items list — grouped by applied package, same as Confirm
-              Order, instead of every test flat ────────────────── */}
-        <div className="flex items-center justify-between border-b border-gray-100 pb-2 mb-1">
-          <span className="text-xs font-medium text-gray-400 tracking-wide">ITEM</span>
-          <span className="text-xs font-medium text-gray-400 tracking-wide">AMOUNT</span>
-        </div>
-        {packageGroups.map((pkg) => (
-          <div key={`pkg-${pkg.id}`} className="py-2 border-b border-gray-50">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-900">
-                {pkg.name} <span className="text-xs text-gray-400">(package)</span>
-              </span>
-              <span className="text-sm text-gray-700">Rs. {pkg.price.toFixed(2)}</span>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              {billFields.map(([label, value]) => (
+                <div key={label}>
+                  <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
+                    {label}
+                  </p>
+                  <p className="text-xs font-medium text-gray-900">{value}</p>
+                </div>
+              ))}
             </div>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {pkg.tests.map((t) => t.name).join(", ")}
-            </p>
           </div>
-        ))}
-        {individualTests.map((test) => (
-          <div
-            key={test.id}
-            className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
-          >
-            <span className="text-sm text-gray-900">{test.name}</span>
-            <span className="text-sm text-gray-700">Rs. {test.price.toFixed(2)}</span>
-          </div>
-        ))}
 
-        {/* ── Offers applied ─────────────────────────────────── */}
-        {offers.length > 0 && (
-          <div className="mt-3 bg-teal-50 border border-teal-100 rounded-lg px-3 py-2.5">
-            <p className="text-[9px] font-semibold uppercase tracking-wide text-teal-700 mb-1">
-              Offers Applied
-            </p>
-            {offers.map((offer) => (
-              <div key={offer.id} className="flex items-center justify-between text-xs text-teal-800">
-                <span>{offer.name}</span>
-                <span className="font-medium">
-                  {offer.savings > 0 ? `You saved ₹${offer.savings.toFixed(2)}` : "Applied"}
-                </span>
+          {/* Right: items, offers, totals */}
+          <div className="md:col-span-3">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-2 mb-1">
+              <span className="text-xs font-medium text-gray-400 tracking-wide">ITEM</span>
+              <span className="text-xs font-medium text-gray-400 tracking-wide">AMOUNT</span>
+            </div>
+
+            {packageGroups.map((pkg) => (
+              <div key={`pkg-${pkg.id}`} className="py-2 border-b border-gray-50">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-900">
+                    {pkg.name} <span className="text-xs text-gray-400">(package)</span>
+                  </span>
+                  <span className="text-sm text-gray-700">Rs. {pkg.price.toFixed(2)}</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {pkg.tests.map((t) => t.name).join(", ")}
+                </p>
               </div>
             ))}
-          </div>
-        )}
+            {individualTests.map((test) => (
+              <div
+                key={test.id}
+                className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
+              >
+                <span className="text-sm text-gray-900">{test.name}</span>
+                <span className="text-sm text-gray-700">Rs. {test.price.toFixed(2)}</span>
+              </div>
+            ))}
 
-        {/* ── Home visit fee (home collection orders) ────────── */}
-        {homeVisitFee > 0 && (
-          <div className="mt-3 space-y-1">
-            <div className="flex items-center justify-between text-sm text-gray-600">
-              <span>Tests total</span>
-              <span>Rs. {testsSubtotal.toFixed(2)}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm text-gray-600">
-              <span>Home visit fee</span>
-              <span>Rs. {Number(homeVisitFee).toFixed(2)}</span>
+            {offers.length > 0 && (
+              <div className="mt-3 bg-teal-50 border border-teal-100 rounded-lg px-3 py-2.5">
+                <p className="text-[9px] font-semibold uppercase tracking-wide text-teal-700 mb-1">
+                  Offers Applied
+                </p>
+                {offers.map((offer) => (
+                  <div key={offer.id} className="flex items-center justify-between text-xs text-teal-800">
+                    <span>{offer.name}</span>
+                    <span className="font-medium">
+                      {offer.savings > 0 ? `You saved ₹${offer.savings.toFixed(2)}` : "Applied"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {(homeVisitFee > 0 || discountNum > 0) && (
+              <div className="mt-3 space-y-1">
+                <div className="flex items-center justify-between text-sm text-gray-600">
+                  <span>Tests total</span>
+                  <span>Rs. {testsSubtotal.toFixed(2)}</span>
+                </div>
+                {discountNum > 0 && (
+                  <div className="flex items-center justify-between text-sm text-green-700">
+                    <span>Discount{isPercentage ? ` (${discountNum}%)` : ""}</span>
+                    <span>− Rs. {discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                {homeVisitFee > 0 && (
+                  <div className="flex items-center justify-between text-sm text-gray-600">
+                    <span>Home visit fee</span>
+                    <span>Rs. {Number(homeVisitFee).toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {gstEnabled && (
+              <div className="mt-3 space-y-1">
+                <div className="flex items-center justify-between text-sm text-gray-600">
+                  <span>Subtotal</span>
+                  <span>Rs. {subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm text-gray-600">
+                  <span>GST ({gstRate}%)</span>
+                  <span>Rs. {gstAmount.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+
+            <div
+              className={`flex items-center justify-between rounded-lg px-4 py-3 mt-3 ${
+                paymentDone ? "bg-green-50" : "bg-teal-50"
+              }`}
+            >
+              <span
+                className={`text-sm font-medium ${
+                  paymentDone ? "text-green-700" : "text-teal-700"
+                }`}
+              >
+                {paymentDone ? "Paid" : "Total payable"}
+              </span>
+              <span
+                className={`text-lg font-bold ${
+                  paymentDone ? "text-green-700" : "text-teal-700"
+                }`}
+              >
+                Rs. {grandTotal.toFixed(2)}
+              </span>
             </div>
           </div>
-        )}
-
-        {/* ── GST breakdown ──────────────────────────────────── */}
-        {gstEnabled && (
-          <div className="mt-3 space-y-1">
-            <div className="flex items-center justify-between text-sm text-gray-600">
-              <span>Subtotal</span>
-              <span>Rs. {subtotal.toFixed(2)}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm text-gray-600">
-              <span>GST ({gstRate}%)</span>
-              <span>Rs. {gstAmount.toFixed(2)}</span>
-            </div>
-          </div>
-        )}
-
-        {/* ── Grand total ────────────────────────────────────── */}
-        <div
-          className={`flex items-center justify-between rounded-lg px-4 py-3 mt-3 ${
-            paymentDone ? "bg-green-50" : "bg-teal-50"
-          }`}
-        >
-          <span
-            className={`text-sm font-medium ${
-              paymentDone ? "text-green-700" : "text-teal-700"
-            }`}
-          >
-            {paymentDone ? "Paid" : "Total payable"}
-          </span>
-          <span
-            className={`text-lg font-bold ${
-              paymentDone ? "text-green-700" : "text-teal-700"
-            }`}
-          >
-            Rs. {grandTotal.toFixed(2)}
-          </span>
         </div>
 
         {labInfo?.footer_note && (
-          <p className="text-[9px] italic text-gray-400 text-center mt-6">
-            {labInfo.footer_note}
-          </p>
+          <p className="text-[10px] italic text-gray-400 text-center">{labInfo.footer_note}</p>
         )}
       </div>
 

@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import ModalShell from "../../common/Modal/ModalShell";
 import StepProgressBar from "./StepProgressBar";
-import PatientStep, { ReferredByField } from "./steps/PatientStep";
+import PatientStep, { ReferredByField, withTitle } from "./steps/PatientStep";
 import SelectTestsStep from "./steps/SelectTestsStep";
 import ConfirmStep from "./steps/ConfirmStep";
 import AddressSlotStep from "./steps/AddressSlotStep";
@@ -23,6 +23,7 @@ import {
   getTestPackages,
   getDoctorsApi,
   getPatientFollowUpRemindersApi,
+  getLabTests,
 } from "../../../api/api";
 import { computeOrderPricing } from "../../../utils/orderPricing";
 
@@ -30,7 +31,7 @@ function mapPatient(p) {
   return {
     id: p.id,
     regNo: p.patient_number,
-    name: p.full_name,
+    name: withTitle(p.title, p.full_name),
     age: p.age,
     gender: p.gender,
     contact: p.phone,
@@ -41,6 +42,7 @@ function mapPatientForEdit(p) {
   return {
     id: p.id,
     regNo: p.patient_number,
+    title: p.title,
     name: p.full_name,
     date_of_birth: p.date_of_birth,
     gender: p.gender,
@@ -48,6 +50,19 @@ function mapPatientForEdit(p) {
     contact: p.phone,
     email: p.email,
     address: p.address,
+  };
+}
+
+function mapLabTestForOrder(t) {
+  return {
+    id: t.id,
+    name: t.name,
+    code: t.code || "",
+    unit: t.unit || "",
+    range: t.range_text || t.range_raw || "",
+    price: Number(t.price) || 0,
+    categoryId: t.category_id,
+    category: t.category_id,   
   };
 }
 
@@ -68,6 +83,7 @@ function ageFromDOB(dob) {
 }
 
 const emptyNewPatient = {
+  title: "",
   name: "",
   dateOfBirth: "",
   gender: "Male",
@@ -82,6 +98,7 @@ function buildNewPatientPayload(newPatientData) {
   const lastName = rest.join(" ") || null;
 
   return {
+    title: newPatientData.title || null,
     first_name: firstName,
     last_name: lastName,
     date_of_birth: newPatientData.dateOfBirth,
@@ -168,7 +185,8 @@ export default function NewOrderModal() {
   const [showAddDoctor, setShowAddDoctor] = useState(false);
 
   const [patientReminders, setPatientReminders] = useState([]);
-  const [selectedReminderId, setSelectedReminderId] = useState(null);
+  // Several follow-ups can be linked to one order
+  const [selectedReminderIds, setSelectedReminderIds] = useState([]);
 
   const closeToast = useCallback(() => setToast(null), []);
   // Success toast (e.g. "Dr. X added successfully")
@@ -193,6 +211,7 @@ export default function NewOrderModal() {
 
     try {
       await updatePatientApi(id, {
+        title: formData.title || null,
         first_name,
         last_name,
         date_of_birth: formData.date_of_birth,
@@ -214,19 +233,17 @@ export default function NewOrderModal() {
 
   // Called after the quick-add form saves a doctor. The dropdown options use
   // the value `Dr. ${name}`, so the selected value must use the same format.
-function handleDoctorCreated(doctor) {
-  if (!doctor?.name) return;
+  function handleDoctorCreated(doctor) {
+    if (!doctor?.name) return;
 
-  setDoctors((prev) =>
-    doctor.id && prev.some((d) => d.id === doctor.id) ? prev : [...prev, doctor]
-  );
-  setReferredBy(`Dr. ${doctor.name}`);
-  setReferredByTouched(false);
-  setShowAddDoctor(false);
-  setToast(`Dr. ${doctor.name} added successfully`);
-}
-
-  // Auto-dismiss the toast after 2.5s
+    setDoctors((prev) =>
+      doctor.id && prev.some((d) => d.id === doctor.id) ? prev : [...prev, doctor]
+    );
+    setReferredBy(`Dr. ${doctor.name}`);
+    setReferredByTouched(false);
+    setShowAddDoctor(false);
+    setToast(`Dr. ${doctor.name} added successfully`);
+  }
 
   useEffect(() => {
     if (isOpen && skipPatientStep) {
@@ -285,10 +302,13 @@ function handleDoctorCreated(doctor) {
   }, [isOpen]);
 
   useEffect(() => {
+    // Linked reminders belong to the previous patient, so clear them whenever
+    // the patient changes.
+    setSelectedReminderIds([]);
+
     const patientId = patientType === "new" ? createdPatient?.id : selectedPatient?.id;
     if (!patientId) {
       setPatientReminders([]);
-      setSelectedReminderId(null);
       return;
     }
     let cancelled = false;
@@ -311,13 +331,18 @@ function handleDoctorCreated(doctor) {
     };
   }, [patientType, selectedPatient?.id, createdPatient?.id]);
 
+  // If a test is unticked in the list, unlink any reminder that depended on it,
+  // so an order can never claim to complete a follow-up for a test it lacks.
   useEffect(() => {
-    if (!selectedReminderId) return;
-    const reminder = patientReminders.find((r) => r.id === selectedReminderId);
-    if (reminder && !selectedTests.some((t) => t.id === reminder.lab_test_id)) {
-      setSelectedReminderId(null);
+    if (selectedReminderIds.length === 0) return;
+    const stillValid = selectedReminderIds.filter((id) => {
+      const r = patientReminders.find((x) => x.id === id);
+      return r && selectedTests.some((t) => t.id === r.lab_test_id);
+    });
+    if (stillValid.length !== selectedReminderIds.length) {
+      setSelectedReminderIds(stillValid);
     }
-  }, [selectedTests, patientReminders, selectedReminderId]);
+  }, [selectedTests, patientReminders, selectedReminderIds]);
 
   const [address, setAddress] = useState("");
   const [pinnedLocation, setPinnedLocation] = useState(null);
@@ -354,7 +379,7 @@ function handleDoctorCreated(doctor) {
     setReferredByTouched(false);
     setShowAddDoctor(false);
     setPatientReminders([]);
-    setSelectedReminderId(null);
+    setSelectedReminderIds([]);
     setToast(null);
     close();
   }
@@ -363,6 +388,41 @@ function handleDoctorCreated(doctor) {
     setSelectedTests((prev) =>
       prev.some((t) => t.id === test.id) ? prev.filter((t) => t.id !== test.id) : [...prev, test]
     );
+  }
+
+  // Clicking a follow-up in the yellow card adds its test to the order (if it
+  // isn't already there) and links the reminder to the order.
+  async function handleSelectReminder(reminder) {
+    // Clicking an already-linked follow-up unlinks it (the test stays in the order)
+    if (selectedReminderIds.includes(reminder.id)) {
+      setSelectedReminderIds((prev) => prev.filter((id) => id !== reminder.id));
+      return;
+    }
+
+    // Test already in the order: just link
+    if (selectedTests.some((t) => t.id === reminder.lab_test_id)) {
+      setSelectedReminderIds((prev) => [...prev, reminder.id]);
+      return;
+    }
+
+    setSubmitError(null);
+    try {
+      const res = await getLabTests();
+      const labTest = (res.data || []).find((t) => t.id === reminder.lab_test_id);
+      if (!labTest) {
+        setSubmitError("That test is no longer available.");
+        return;
+      }
+
+      // Set together so the "unlink if test missing" effect never fires in between
+      setSelectedTests((prev) =>
+        prev.some((t) => t.id === labTest.id) ? prev : [...prev, mapLabTestForOrder(labTest)]
+      );
+      setActiveCategory(labTest.category_id ?? null);
+      setSelectedReminderIds((prev) => (prev.includes(reminder.id) ? prev : [...prev, reminder.id]));
+    } catch (err) {
+      setSubmitError(err.message || "Couldn't add the follow-up test.");
+    }
   }
 
   function applyPackageId(packageId) {
@@ -503,7 +563,7 @@ function handleDoctorCreated(doctor) {
         package_ids: appliedPackages.map((p) => p.id),
         referred_by: referredBy,
         payment_received: paymentDone,
-        follow_up_reminder_id: selectedReminderId || null,
+        follow_up_reminder_ids: selectedReminderIds,
       };
 
       const res = await createOrderApi(payload);
@@ -585,31 +645,34 @@ function handleDoctorCreated(doctor) {
         {step === 2 && patientReminders.length > 0 && (
           <div className="mx-6 mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
             <p className="text-xs font-medium text-amber-800 mb-2">
-              This patient has pending follow-up{patientReminders.length > 1 ? "s" : ""}:
+              Pending follow-up{patientReminders.length > 1 ? "s" : ""} — click to add the test to this order:
             </p>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               {patientReminders.map((r) => {
-                const testIncluded = selectedTests.some((t) => t.id === r.lab_test_id);
+                const linked = selectedReminderIds.includes(r.id);
                 return (
-                  <label
+                  <button
                     key={r.id}
-                    className={`flex items-center gap-2 text-sm cursor-pointer ${
-                      testIncluded ? "text-amber-900" : "text-amber-400 cursor-not-allowed"
+                    type="button"
+                    onClick={() => handleSelectReminder(r)}
+                    className={`w-full flex items-center gap-2 text-left text-sm rounded-md px-2 py-1.5 transition-colors cursor-pointer ${
+                      linked ? "bg-amber-100 text-amber-900 font-medium" : "text-amber-900 hover:bg-amber-100/60"
                     }`}
                   >
-                    <input
-                      type="radio"
-                      name="follow-up-reminder"
-                      disabled={!testIncluded}
-                      checked={selectedReminderId === r.id}
-                      onChange={() => setSelectedReminderId(r.id)}
-                    />
-                    {r.lab_test?.name} — due{" "}
-                    {new Date(r.due_date).toLocaleDateString("en-GB", {
-                      day: "2-digit", month: "short", year: "numeric",
-                    })}
-                    {!testIncluded && <span className="text-xs italic ml-1">(select this test to link)</span>}
-                  </label>
+                    <span
+                      className={`h-4 w-4 shrink-0 rounded border flex items-center justify-center text-[10px] text-white ${
+                        linked ? "border-amber-600 bg-amber-600" : "border-amber-400"
+                      }`}
+                    >
+                      {linked && "✓"}
+                    </span>
+                    <span>
+                      {r.lab_test?.name} — due{" "}
+                      {new Date(r.due_date).toLocaleDateString("en-GB", {
+                        day: "2-digit", month: "short", year: "numeric",
+                      })}
+                    </span>
+                  </button>
                 );
               })}
             </div>
@@ -766,9 +829,9 @@ function handleDoctorCreated(doctor) {
         />
       )}
 
-{toast && (
-  <Toast message={toast} type="success" duration={2500} onClose={closeToast} />
-)}
+      {toast && (
+        <Toast message={toast} type="success" duration={2500} onClose={closeToast} />
+      )}
     </>
   );
 }

@@ -26,7 +26,7 @@ export default function CancelledOrderModal({ order, onClose }) {
   }, [order.orderId]);
 
   const patientName = details
-    ? [details.patient?.first_name, details.patient?.last_name].filter(Boolean).join(" ")
+    ? [details.patient?.title, details.patient?.first_name, details.patient?.last_name].filter(Boolean).join(" ")
     : order.patient;
 
   const testNames = (details?.items || []).map((item) => item.lab_test?.name).filter(Boolean);

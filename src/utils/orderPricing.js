@@ -144,6 +144,18 @@ export function groupTestsByPackage(tests) {
   return { packageGroups, individualTests };
 }
 
+const round2 = (n) => Math.round(n * 100) / 100;
+
+export function calcBillTotals({ testsTotal, discountType = "percentage", discountValue = 0, homeVisitFee = 0, gstRate = 0 }) {
+  const raw = discountType === "fixed"
+    ? Number(discountValue)
+    : (testsTotal * Number(discountValue)) / 100;
+  const discountAmount = round2(Math.min(Math.max(raw, 0), testsTotal));
+  const taxable = round2(testsTotal - discountAmount + Number(homeVisitFee));
+  const gstAmount = round2((taxable * gstRate) / 100);
+  return { discountAmount, subtotal: taxable, gstAmount, grandTotal: round2(taxable + gstAmount) };
+}
+
 export function computeOrderPricing(selectedTests, packages = [], appliedPackageIds = []) {
   const appliedIdSet = new Set(appliedPackageIds.map(toId));
   const { fullMatches } = matchPackages(selectedTests, packages);

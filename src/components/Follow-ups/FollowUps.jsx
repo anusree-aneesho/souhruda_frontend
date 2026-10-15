@@ -14,6 +14,7 @@ function mapReminder(r) {
   return {
     id: r.id,
     patientNumber: r.patient?.patient_number ?? "-",
+    title: r.patient?.title ?? "",
     patient: [r.patient?.first_name, r.patient?.last_name].filter(Boolean).join(" "),
     test: r.lab_test?.name ?? "-",
     due: r.due_date

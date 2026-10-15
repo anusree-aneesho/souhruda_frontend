@@ -58,7 +58,7 @@ export default function AssignTechnicianModal({ hcCode, onClose, onAssign }) {
                 <span className="h-9 w-9 rounded-full bg-gray-100 flex items-center justify-center text-lg">🧑</span>
                 <div>
                   <p className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
-                    {tech.name}
+                    {[tech.title, tech.name].filter(Boolean).join(" ")}
                     {tech.aiRecommended && (
                       <span className="text-[10px] font-medium text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-full">
                         🤖 AI Recommended

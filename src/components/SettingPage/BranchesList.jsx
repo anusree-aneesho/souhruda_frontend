@@ -59,72 +59,76 @@ const BranchesList = forwardRef(function BranchesList(
     }
   }
 
+  // Highlight the branch whose settings are on screen. With nothing picked yet,
+  // that is the user's own branch, or the first active branch (same as the backend).
+  const firstActiveId = [...(branches || [])]
+    .filter((b) => b.is_active !== false)
+    .sort((a, b) => a.id - b.id)[0]?.id;
+  const activeBranchId = selectedBranchId ?? user?.branchId ?? firstActiveId ?? null;
+
   return (
-    <div className="bg-white rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)] max-w-2xl">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Branches</h2>
+    <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] flex flex-col self-start">
+      <h3 className="font-semibold text-sm text-gray-900 mb-3">Branches</h3>
 
       {loading ? (
-        <p className="text-sm text-gray-500">Loading branches...</p>
+        <p className="text-sm text-gray-500 px-3 py-2">Loading branches...</p>
       ) : error ? (
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="text-sm text-red-600 px-3 py-2">{error}</p>
       ) : !branches || branches.length === 0 ? (
-        <p className="text-sm text-gray-500">No branches added yet.</p>
+        <p className="text-sm text-gray-500 px-3 py-2">No branches added yet.</p>
       ) : (
-        <ul className="space-y-2">
+        <div className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible">
           {branches.map((b) => {
-            const isSelected = b.id === selectedBranchId;
+            const isActive = b.id === activeBranchId;
             return (
-              <li
+              <div
                 key={b.id}
-                className="flex items-center justify-between text-sm text-gray-700 border-b border-gray-100 pb-2"
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group ${
+                  isActive ? "bg-teal-50 text-teal-700" : "text-gray-700 hover:bg-gray-50"
+                }`}
               >
-                <span>
-                  {canManageBranches ? (
-                    <button
-                      type="button"
-                      onClick={() => onSelectBranch?.(b)}
-                      title="View this branch's settings"
-                      className={`font-medium underline-offset-2 hover:underline cursor-pointer ${
-                        isSelected ? "text-teal-700" : "text-gray-900 hover:text-teal-600"
-                      }`}
-                    >
-                      {b.name}
-                    </button>
-                  ) : (
-                    <span className="font-medium">{b.name}</span>
-                  )}
-                  {b.address && <span className="text-gray-400"> — {b.address}</span>}
-                  {b.is_active === false && (
-                    <span className="ml-2 text-xs text-gray-400">(inactive)</span>
-                  )}
-                  {isSelected && (
-                    <span className="ml-2 text-xs rounded-full bg-teal-50 text-teal-700 px-2 py-0.5">
-                      Viewing
-                    </span>
-                  )}
-                </span>
+                {canManageBranches ? (
+                  <button
+                    type="button"
+                    onClick={() => onSelectBranch?.(b)}
+                    title={b.address || "View this branch's settings"}
+                    className="flex items-center gap-2 flex-1 min-w-0 text-left cursor-pointer"
+                  >
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${isActive ? "bg-teal-500" : "bg-gray-300"}`} />
+                    <span className="truncate">{b.name}</span>
+                    {b.is_active === false && (
+                      <span className="text-xs font-normal text-gray-400">(inactive)</span>
+                    )}
+                  </button>
+                ) : (
+                  <span className="flex items-center gap-2 flex-1 min-w-0" title={b.address || undefined}>
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${isActive ? "bg-teal-500" : "bg-gray-300"}`} />
+                    <span className="truncate">{b.name}</span>
+                  </span>
+                )}
+
                 {canManageBranches && (
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => setEditingBranch(b)}
-                      className="text-gray-400 hover:text-teal-600 p-1 rounded-md hover:bg-gray-50 cursor-pointer"
+                      className="text-gray-400 hover:text-teal-600 p-1 rounded-md cursor-pointer"
                       title="Edit branch"
                     >
-                      <Pencil size={14} />
+                      <Pencil size={13} />
                     </button>
                     <button
                       onClick={() => setBranchToDelete(b)}
-                      className="text-gray-400 hover:text-red-600 p-1 rounded-md hover:bg-gray-50 cursor-pointer"
+                      className="text-gray-400 hover:text-red-600 p-1 rounded-md cursor-pointer"
                       title="Delete branch"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 )}
-              </li>
+              </div>
             );
           })}
-        </ul>
+        </div>
       )}
 
       {editingBranch && (

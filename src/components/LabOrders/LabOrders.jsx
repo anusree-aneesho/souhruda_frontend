@@ -35,7 +35,7 @@ function tabToStatus(tab) {
 function mapOrder(o) {
   return {
     orderId: o.order_no,
-    patient: [o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" "),
+    patient: o.patient?.display_name || [o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" "),
     regNo: o.patient?.patient_number || "",
     tests: o.items_count ?? o.items?.length ?? 0,
     testNames: (o.items || []).map((item) => item.lab_test?.name).filter(Boolean),

@@ -6,6 +6,7 @@ import ConfirmModal from "../../Patients/modals/ConfirmModal";
 import AlertModal from "../../common/Modal/AlertModal";
 import Toast from "../../common/Toast/Toast";
 import { useToast } from "../../common/Toast/useToast";
+import { formatNameWithTitle } from "../../Patients/patientTitles";
 import StatusStepper from "./StatusStepper";
 import RequestInfoBar from "./RequestInfoBar";
 import TestsList from "./TestsList";
@@ -37,7 +38,9 @@ function formatPaymentStatus(status) {
 function mapDetail(r) {
   return {
     id: r.hc_code,
-    patient: r.patient || { name: "—" },
+    patient: r.patient
+      ? { ...r.patient, name: formatNameWithTitle(r.patient.title, r.patient.name) }
+      : { name: "—" },
     status: formatStatus(r.status),
     referredBy: r.referred_by || "—",
     slot: [r.slot_date, r.slot_label].filter(Boolean).join(" · "),
@@ -46,7 +49,9 @@ function mapDetail(r) {
     payment: `${formatPaymentMode(r.payment_mode)} · ${formatPaymentStatus(r.payment_status)}`,
     collectionCharge: r.collection_charge || 0,
     sampleBarcode: r.barcode,
-    technician: r.technician ? { ...r.technician, location: r.technician.zone, otp: r.debug_otp } : null,
+    technician: r.technician
+      ? { ...r.technician, name: formatNameWithTitle(r.technician.title, r.technician.name), location: r.technician.zone, otp: r.debug_otp }
+      : null,
     otpReady: r.otp_ready ?? false,
     otpLocked: r.otp_locked ?? false,
     assignable: r.assignable ?? true,
@@ -108,11 +113,11 @@ export default function HomeCollectionDetailModal() {
   if (!activeId) return null;
 
   function handleAssign(updated) {
-  setBaseHc(mapDetail(updated));
-  setLocalHc(null);
-  setAssignOpen(false);
-  showToast(`${updated.hc_code} assigned to ${updated.technician?.name || "technician"}`);
-}
+    setBaseHc(mapDetail(updated));
+    setLocalHc(null);
+    setAssignOpen(false);
+    showToast(`${updated.hc_code} assigned to ${updated.technician?.name || "technician"}`);
+  }
 
   async function handleCancel() {
     setConfirmingCancel(false);
@@ -126,33 +131,34 @@ export default function HomeCollectionDetailModal() {
       setCancelError(err.message || "Couldn't cancel this request.");
     }
   }
+
   async function handleMarkEnRoute() {
-  try {
-    const updated = await updateHomeCollectionStatusApi(hc.id, "en_route");
-    setBaseHc(mapDetail(updated));
-    setLocalHc(null);
-    showToast(`${hc.id} marked En Route`);
-  } catch (err) {
-    alert(err.message || "Couldn't update status.");
+    try {
+      const updated = await updateHomeCollectionStatusApi(hc.id, "en_route");
+      setBaseHc(mapDetail(updated));
+      setLocalHc(null);
+      showToast(`${hc.id} marked En Route`);
+    } catch (err) {
+      alert(err.message || "Couldn't update status.");
+    }
   }
-}
 
   async function handleConfirmCollected() {
-  if (!otpInput.trim()) {
-    alert("Enter the OTP from the patient first.");
-    return;
-  }
+    if (!otpInput.trim()) {
+      alert("Enter the OTP from the patient first.");
+      return;
+    }
 
-  try {
-    const updated = await updateHomeCollectionStatusApi(hc.id, "collected", otpInput.trim());
-    setBaseHc(mapDetail(updated));
-    setLocalHc(null);
-    setOtpInput("");
-    showToast(`${hc.id} marked Collected`);
-  } catch (err) {
-    alert(err.message || "Couldn't confirm sample collection.");
+    try {
+      const updated = await updateHomeCollectionStatusApi(hc.id, "collected", otpInput.trim());
+      setBaseHc(mapDetail(updated));
+      setLocalHc(null);
+      setOtpInput("");
+      showToast(`${hc.id} marked Collected`);
+    } catch (err) {
+      alert(err.message || "Couldn't confirm sample collection.");
+    }
   }
-}
 
   async function handleMarkProcessing() {
     try {
@@ -165,7 +171,7 @@ export default function HomeCollectionDetailModal() {
     }
   }
 
-    async function handleEnterResults() {
+  async function handleEnterResults() {
     try {
       // The linked order is auto-created server-side as soon as the sample is
       // marked collected, so hc.linkedOrderId is normally already set here.
@@ -205,18 +211,18 @@ export default function HomeCollectionDetailModal() {
         {!isLoading && !error && hc && (
           <>
             {hc.status === "Cancelled" ? (
-  <div className="mx-6 mt-4 flex items-start gap-3 rounded-lg border border-red-100 bg-red-50 px-4 py-3">
-    <span className="text-lg leading-none">⛔</span>
-    <div>
-      <p className="text-sm font-semibold text-red-700">This request was cancelled</p>
-      <p className="text-xs text-red-600/80 mt-0.5">
-        Cancelled before a technician was assigned. No collection will take place.
-      </p>
-    </div>
-  </div>
-) : (
-  <StatusStepper currentStatus={hc.status} />
-)}
+              <div className="mx-6 mt-4 flex items-start gap-3 rounded-lg border border-red-100 bg-red-50 px-4 py-3">
+                <span className="text-lg leading-none">⛔</span>
+                <div>
+                  <p className="text-sm font-semibold text-red-700">This request was cancelled</p>
+                  <p className="text-xs text-red-600/80 mt-0.5">
+                    Cancelled before a technician was assigned. No collection will take place.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <StatusStepper currentStatus={hc.status} />
+            )}
 
             <div className="px-6 py-4 space-y-5 max-h-[60vh] overflow-y-auto">
               <RequestInfoBar hc={hc} />
@@ -348,35 +354,35 @@ export default function HomeCollectionDetailModal() {
         )}
       </ModalShell>
 
-{isAssignOpen && (
-  <AssignTechnicianModal
-    hcCode={activeId}
-    onClose={() => setAssignOpen(false)}
-    onAssign={handleAssign}
-  />
-)}
+      {isAssignOpen && (
+        <AssignTechnicianModal
+          hcCode={activeId}
+          onClose={() => setAssignOpen(false)}
+          onAssign={handleAssign}
+        />
+      )}
 
-{isLabelOpen && hc && (
-  <PrintLabelModal hc={hc} onClose={() => setLabelOpen(false)} />
-)}
+      {isLabelOpen && hc && (
+        <PrintLabelModal hc={hc} onClose={() => setLabelOpen(false)} />
+      )}
 
-{confirmingCancel && (
-  <ConfirmModal
-    title="Cancel Request"
-    message={`Cancel request ${hc?.id}? This can't be undone.`}
-    confirmLabel="Cancel Request"
-    cancelLabel="Keep Request"
-    danger
-    onConfirm={handleCancel}
-    onClose={() => setConfirmingCancel(false)}
-  />
-)}
+      {confirmingCancel && (
+        <ConfirmModal
+          title="Cancel Request"
+          message={`Cancel request ${hc?.id}? This can't be undone.`}
+          confirmLabel="Cancel Request"
+          cancelLabel="Keep Request"
+          danger
+          onConfirm={handleCancel}
+          onClose={() => setConfirmingCancel(false)}
+        />
+      )}
 
-{cancelError && (
-  <AlertModal title="Couldn't Cancel" message={cancelError} onClose={() => setCancelError(null)} />
-)}
+      {cancelError && (
+        <AlertModal title="Couldn't Cancel" message={cancelError} onClose={() => setCancelError(null)} />
+      )}
 
-{toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </>
   );
 }

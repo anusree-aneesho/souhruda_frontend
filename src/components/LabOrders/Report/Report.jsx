@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import {
-  Download, Printer, MessageCircle, Receipt, X,
+  Download, Printer, MessageCircle, Receipt, X, Pencil,  
   User, Phone, Stethoscope, CalendarDays, FileCheck2,
 } from "lucide-react";
 import Toast from "../../common/Toast/Toast";
@@ -10,11 +10,12 @@ import { useToast } from "../../common/Toast/useToast";
 import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
 import FollowUpSuggestions from "./FollowUpSuggestions";
 import BillModal from "./BillModal";
+import EditBillModal from "./EditBillModal";  
 import WhatsAppSentModal from "./WhatsAppSentModal";
 import TestDetailView from "./TestDetailView";
 import { findOrderById } from "../../../data/labOrders";
 import { calculateFlag } from "../../../utils/calculateFlag";
-import { getOrderReportUrlApi, getSettingsApi, getGstSettingsApi } from "../../../api/api";
+import { getOrderReportUrlApi, getOrderApi, getSettingsApi, getGstSettingsApi } from "../../../api/api";
 
 export default function Report() {
   const { orderId } = useParams();
@@ -24,6 +25,10 @@ export default function Report() {
   const { toast, showToast, hideToast } = useToast();
   const [letterheadOn, setLetterheadOn] = useState(true);
   const [isBillOpen, setBillOpen] = useState(false);
+  const [isEditBillOpen, setEditBillOpen] = useState(false);
+  const [discountType, setDiscountType] = useState("percentage");
+  const [discountValue, setDiscountValue] = useState(0);
+  const [orderDates, setOrderDates] = useState({ collected: null, reported: null });
   const [isWhatsAppOpen, setWhatsAppOpen] = useState(false);
   const [isPreviewOpen, setPreviewOpen] = useState(false);
   const [viewTest, setViewTest] = useState(null);
@@ -40,6 +45,26 @@ export default function Report() {
 
   useEffect(() => {
     setPaymentDone(Boolean(order?.paymentDone));
+  }, [orderId]);
+
+  // Loads the discount and the collection / report dates from the order.
+  useEffect(() => {
+    let cancelled = false;
+    setDiscountType("percentage");
+    setDiscountValue(0);
+    setOrderDates({ collected: null, reported: null });
+    getOrderApi(orderId)
+      .then((res) => {
+        if (cancelled) return;
+        setDiscountType(res.data?.discount_type || "percentage");
+        setDiscountValue(Number(res.data?.discount_value) || 0);
+        setOrderDates({
+          collected: res.data?.sample_collected_at ?? null,
+          reported: res.data?.report_generated_at ?? res.data?.completed_at ?? null,
+        });
+      })
+      .catch((err) => console.error("Failed to load order details:", err.message));
+    return () => { cancelled = true; };
   }, [orderId]);
 
   useEffect(() => {
@@ -69,12 +94,14 @@ export default function Report() {
 
   const DISPLAY_TZ = "Asia/Kolkata";
 
-  // Accepts "2026-09-16T10:30:00Z", "2026-09-16 10:30:00Z", "2026-09-16 10:30:00"
-  // (assumed UTC, matching the API), or any value the Date constructor already understands.
+  // Accepts "2026-09-16T10:30:00Z", "2026-09-16 10:30:00Z", "2026-09-16 10:30:00+00"
+  // (Postgres short offset), "2026-09-16 10:30:00" (assumed UTC, matching the API),
+  // or any value the Date constructor already understands.
   function toDate(raw) {
     if (!raw) return null;
-    const normalized = String(raw).replace(" ", "T");
-    const hasZone = /(Z|[+-]\d{2}:?\d{2})$/i.test(normalized);
+    let normalized = String(raw).replace(" ", "T");
+    normalized = normalized.replace(/([+-]\d{2})$/, "$1:00"); // "+00" -> "+00:00"
+    const hasZone = /(Z|[+-]\d{2}:\d{2})$/i.test(normalized);
     const d = new Date(hasZone ? normalized : normalized + "Z");
     return Number.isNaN(d.getTime()) ? null : d;
   }
@@ -93,7 +120,9 @@ export default function Report() {
   const rawCompletedAt = order?.completedAt ?? order?.completed_at;
 
   const registered = formatDateTime(rawOrderedAt) || "—";
-  const reportDate = formatDateTime(rawCompletedAt) || "—";
+  const reportDate = formatDateTime(rawCompletedAt ?? orderDates.reported) || "—";
+  const collectionDate =
+    formatDateTime(order?.sampleCollectedAt ?? order?.sample_collected_at ?? orderDates.collected) || "—";
 
   useEffect(() => {
     if (location.state?.justCompleted) {
@@ -391,6 +420,9 @@ export default function Report() {
               <button type="button" onClick={() => setBillOpen(true)} className={actionBtn}>
                 <Receipt size={16} /> Bill
               </button>
+              <button type="button" onClick={() => setEditBillOpen(true)} className={actionBtn}>
+                <Pencil size={16} /> Edit
+              </button>
               <button type="button" onClick={() => setWhatsAppOpen(true)} className={actionBtn}>
                 <MessageCircle size={16} /> WhatsApp
               </button>
@@ -412,7 +444,7 @@ export default function Report() {
 
           {/* ── Patient summary card ─────────────────────────────────── */}
           <div className="rounded-2xl bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
-            <div className="h-1.5 bg-gradient-to-r from-teal-500 via-teal-500 to-gray-900" />
+            <div className="h-1 bg-gradient-to-r from-teal-500 via-teal-500 to-gray-900" />
             <div className="p-6 flex flex-col lg:flex-row lg:items-center gap-6">
               <div className="flex items-center gap-4 lg:w-[34%]">
                 <span className="h-16 w-16 shrink-0 rounded-full bg-teal-600 text-white text-xl font-bold flex items-center justify-center ring-4 ring-teal-100">
@@ -422,7 +454,7 @@ export default function Report() {
                   <h1 className="text-xl font-bold text-gray-900 uppercase truncate">{patient.name}</h1>
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     <span className="rounded-full bg-teal-50 text-teal-700 text-xs font-semibold px-2.5 py-0.5">
-                      Order #{orderId}
+                      Order {orderId}
                     </span>
                     <span className="rounded-full border border-gray-200 text-gray-600 text-xs px-2.5 py-0.5">
                       Reg. {patient.regNo}
@@ -466,7 +498,7 @@ export default function Report() {
               <table className="w-full min-w-[720px]">
                 <thead>
                   <tr className="bg-gray-50 text-left">
-                    <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide">#</th>
+                    <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide">No.</th>
                     <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">TEST</th>
                     <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">RESULT</th>
                     <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">FLAG</th>
@@ -726,8 +758,31 @@ export default function Report() {
           tests={testsWithResults}
           billTotal={order?.billTotal}
           homeVisitFee={order?.homeVisitFee || 0}
+          discountType={discountType}
+          discountValue={discountValue}
           paymentDone={paymentDone}
+          referredBy={order?.referredBy || "Self"}
+          collectionDate={collectionDate}
+          reportDate={reportDate}
           onClose={() => setBillOpen(false)}
+        />
+      )}
+
+      {isEditBillOpen && (
+        <EditBillModal
+          orderId={orderId}
+          tests={testsWithResults}
+          billTotal={order?.billTotal != null ? Number(order.billTotal) : null}
+          homeVisitFee={order?.homeVisitFee || 0}
+          initialDiscount={discountValue}
+          initialDiscountType={discountType}
+          onClose={() => setEditBillOpen(false)}
+          onSaved={(updated) => {
+            setDiscountType(updated.discount_type || "percentage");
+            setDiscountValue(Number(updated.discount_value) || 0);
+            setEditBillOpen(false);
+            showToast("Discount updated");
+          }}
         />
       )}
 

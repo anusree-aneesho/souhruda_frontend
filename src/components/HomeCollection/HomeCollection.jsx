@@ -10,6 +10,7 @@ import Pagination from "../common/Pagination";
 import Toast from "../common/Toast/Toast";
 import { useToast } from "../common/Toast/useToast";
 import { getHomeCollectionRequestsApi } from "../../api/api";
+import { formatNameWithTitle } from "../Patients/patientTitles";
 import { useHomeCollectionModal } from "../../Context/HomeCollectionModalContext";
 
 // Backend enum -> display label, e.g. "en_route" -> "En Route"
@@ -50,14 +51,14 @@ const PAGE_SIZE = 8;
 function mapRequest(r) {
   return {
     requestId: r.hc_code,
-    patient: r.patient?.name || "—",
+    patient: r.patient?.name ? formatNameWithTitle(r.patient.title, r.patient.name) : "—",
     tests: r.tests?.length || 0,
     distance: r.distance_km != null ? `${r.distance_km} km` : "—",
     date: formatDate(r.slot_date),
     slotDateRaw: r.slot_date,
     slot: r.slot_label,
     payment: formatPayment(r.payment_mode),
-    technician: r.technician?.name || "Unassigned",
+    technician: r.technician?.name ? formatNameWithTitle(r.technician.title, r.technician.name) : "Unassigned",
     status: formatStatus(r.status),
     // Which stat card this row belongs to, so clicking a card can filter
     // the table by the same grouping the counts already use — null for

@@ -2,7 +2,7 @@
 import ResultRow from "./ResultRow";
 import { groupTestsByPackage } from "../../../utils/orderPricing";
 
-export default function ResultsTable({ tests, billTotal, homeVisitFee = 0, results, flags, onResultChange, onSaveClose, onMarkCompleted, savingAction }) {
+export default function ResultsTable({ tests, billTotal, homeVisitFee = 0, results, flags, onResultChange, onSaveClose, onMarkCompleted, savingAction, onEditRange }) {
   const { packageGroups, individualTests } = groupTestsByPackage(tests);
 
   // billTotal comes from the server (order.bill_total) — the amount the
@@ -44,6 +44,7 @@ export default function ResultsTable({ tests, billTotal, homeVisitFee = 0, resul
                 result={results[test.id] || ""}
                 flag={flags[test.id]}
                 onResultChange={onResultChange}
+                onEditRange={onEditRange}
               />
             ))}
           </tbody>

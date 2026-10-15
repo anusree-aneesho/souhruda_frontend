@@ -3,7 +3,11 @@ import { useState, useEffect } from "react";
 import ModalShell from "../../common/Modal/ModalShell";
 import { getBranchesApi } from "../../../api/api";
 
+<<<<<<< Updated upstream
 const emptyForm = { name: "", email: "", phone: "", branch_id: "", status: "Active", rating: "5.0", latitude: "", longitude: "" };
+=======
+const emptyForm = { name: "", email: "", phone: "", branch_id: "", status: "Active", latitude: "", longitude: "" };
+>>>>>>> Stashed changes
 
 export default function CreateTechnicianModal({ editingTechnician, onClose, onSave }) {
   const [form, setForm] = useState(emptyForm);
@@ -34,7 +38,10 @@ export default function CreateTechnicianModal({ editingTechnician, onClose, onSa
         phone: editingTechnician.phone,
         branch_id: editingTechnician.branch_id ?? "",
         status: editingTechnician.status,
+<<<<<<< Updated upstream
         rating: String(editingTechnician.rating ?? "5.0"),
+=======
+>>>>>>> Stashed changes
         latitude: editingTechnician.latitude ?? "",
         longitude: editingTechnician.longitude ?? "",
       });
@@ -196,7 +203,69 @@ export default function CreateTechnicianModal({ editingTechnician, onClose, onSa
               />
               <p className="text-xs text-gray-400 mt-1">New technicians start at 5.0 — adjust here only to correct or override.</p>
             </div>
+<<<<<<< Updated upstream
           )}
+=======
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Branch</label>
+              <select
+                value={form.branch_id}
+                onChange={(e) => handleChange("branch_id", e.target.value)}
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              >
+                <option value="">Select branch</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-sm font-semibold text-gray-900">Base Location</label>
+              <button
+                type="button"
+                onClick={handleUseCurrentLocation}
+                disabled={isLocating}
+                className="text-xs font-medium text-teal-600 hover:underline disabled:opacity-60"
+              >
+                {isLocating ? "Locating…" : "📍 Use current location"}
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="number"
+                step="any"
+                value={form.latitude}
+                onChange={(e) => handleChange("latitude", e.target.value)}
+                placeholder="Latitude"
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              />
+              <input
+                type="number"
+                step="any"
+                value={form.longitude}
+                onChange={(e) => handleChange("longitude", e.target.value)}
+                placeholder="Longitude"
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              />
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Used to match this technician to nearby home collection requests.</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Status</label>
+            <select
+              value={form.status}
+              onChange={(e) => handleChange("status", e.target.value)}
+              className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+            >
+              <option>Active</option>
+              <option>Inactive</option>
+            </select>
+          </div>
+>>>>>>> Stashed changes
         </div>
 
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">

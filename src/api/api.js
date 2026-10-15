@@ -251,6 +251,7 @@ export async function createHomeCollectionRequestApi(payload) {
     body: JSON.stringify(payload),
   });
 }
+<<<<<<< Updated upstream
 
 // Fee preview for a pinned location — same distance/fee code the backend
 // uses when booking, so the modal never shows a different price than the one stored.
@@ -265,6 +266,11 @@ export async function getHomeCollectionRequestApi(hcCode) {
   return request(`/home-collection-requests/${hcCode}`);
 }
 
+=======
+export async function getHomeCollectionRequestApi(hcCode) {
+  return request(`/home-collection-requests/${hcCode}`);
+}
+>>>>>>> Stashed changes
 export async function getNearbyTechniciansApi(hcCode) {
   return request(`/home-collection-requests/${hcCode}/nearby-technicians`);
 }
@@ -282,12 +288,15 @@ export async function updateHomeCollectionStatusApi(hcCode, status, otp = null) 
     body: JSON.stringify(otp ? { status, otp } : { status }),
   });
 }
+<<<<<<< Updated upstream
 export async function resolveHomeCollectionOrderApi(hcCode) {
   return request(`/home-collection-requests/${hcCode}/order`, {
     method: "POST",
   });
 }
 
+=======
+>>>>>>> Stashed changes
 // ── Lab Test ───────────────────────────────────────────────
 
 export function getLabTests(categoryId = null) {

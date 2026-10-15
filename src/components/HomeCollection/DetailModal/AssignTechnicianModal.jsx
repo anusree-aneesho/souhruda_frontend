@@ -76,7 +76,11 @@ export default function AssignTechnicianModal({ hcCode, onClose, onAssign }) {
               <button
                 onClick={() => handleAssign(tech)}
                 disabled={assigningId !== null}
+<<<<<<< Updated upstream
                 className="px-4 py-1.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 shrink-0 disabled:opacity-60 cursor-pointer"
+=======
+                className="px-4 py-1.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 shrink-0 disabled:opacity-60"
+>>>>>>> Stashed changes
               >
                 {assigningId === tech.id ? "Assigning…" : "Assign"}
               </button>

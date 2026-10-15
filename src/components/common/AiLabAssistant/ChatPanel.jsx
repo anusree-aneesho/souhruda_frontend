@@ -1,4 +1,4 @@
-// src/components/common/LabAssistant/ChatPanel.jsx
+// src/components/common/AiLabAssistant/ChatPanel.jsx
 import { useState, useRef, useEffect } from "react";
 import {
   X,
@@ -7,11 +7,12 @@ import {
   Minimize2,
   PanelLeft,
   SquarePen,
+  Eraser,
   Paperclip,
   FileText,
   Loader2,
-  Bot,
 } from "lucide-react";
+import LabBotIcon from "./Labboticon";
 import ChatMessage from "./ChatMessage";
 import SuggestedPrompts from "./SuggestedPrompts";
 import ChatHistorySidebar from "./ChatHistorySidebar";
@@ -29,6 +30,13 @@ import {
 } from "../../../api/assistantApi";
 
 const MAX_ATTACHMENTS = 5;
+const PLACEHOLDERS = [
+  "Search for doctors",
+  "Search for patients",
+  "Search for today's orders",
+  "Search for reports",
+  "Search for revenue",
+];
 
 export default function ChatPanel({ onClose }) {
   const [messages, setMessages] = useState([]);
@@ -41,11 +49,49 @@ export default function ChatPanel({ onClose }) {
   const [isWide, setIsWide] = useState(false);
   const [files, setFiles] = useState([]);
   const [fileError, setFileError] = useState("");
+  const [typedPlaceholder, setTypedPlaceholder] = useState("");
   const scrollRef = useRef(null);
   const fileInputRef = useRef(null);
   // Bumped whenever the visible conversation changes, so in-flight streams
   // stop writing into a conversation the user has navigated away from.
   const epochRef = useRef(0);
+
+  // Typewriter placeholder (like Yatra): types "Search for doctors", pauses,
+  // deletes it, then types the next suggestion, and so on.
+  useEffect(() => {
+    let wordIndex = 0;
+    let charCount = 0;
+    let deleting = false;
+    let timer;
+
+    const tick = () => {
+      const word = PLACEHOLDERS[wordIndex];
+      let delay;
+
+      if (!deleting) {
+        charCount += 1;
+        delay = 70; // typing speed
+        if (charCount === word.length) {
+          deleting = true;
+          delay = 1400; // pause once fully typed
+        }
+      } else {
+        charCount -= 1;
+        delay = 35; // deleting speed
+        if (charCount === 0) {
+          deleting = false;
+          wordIndex = (wordIndex + 1) % PLACEHOLDERS.length;
+          delay = 400; // short pause before the next word
+        }
+      }
+
+      setTypedPlaceholder(word.slice(0, charCount));
+      timer = setTimeout(tick, delay);
+    };
+
+    timer = setTimeout(tick, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -114,6 +160,21 @@ export default function ChatPanel({ onClose }) {
     setInput("");
     setFiles([]);
     setFileError("");
+  }
+
+  // Clear the current chat: removes the saved conversation (if any) and starts fresh.
+  async function clearChat() {
+    if (isLoading || (messages.length === 0 && !activeId)) return;
+    if (!window.confirm("Clear this chat? This will delete the conversation.")) return;
+    const id = activeId;
+    newChat();
+    if (!id) return;
+    try {
+      await assistantDeleteConversation(id);
+      setConversations((prev) => prev.filter((conversation) => conversation.id !== id));
+    } catch {
+      refreshConversations();
+    }
   }
 
   async function sendMessage(textToSend) {
@@ -329,7 +390,7 @@ export default function ChatPanel({ onClose }) {
   }
 
   const activeTitle =
-    conversations.find((conversation) => conversation.id === activeId)?.title || "Lab Assistant";
+    conversations.find((conversation) => conversation.id === activeId)?.title || "LabAgent";
   const sizeClass = isWide
     ? "w-[92vw] sm:w-[680px]"
     : isHistoryOpen
@@ -353,9 +414,16 @@ export default function ChatPanel({ onClose }) {
 
         <div className="flex-1 min-w-0 px-1">
           <p className="text-sm font-bold text-white truncate">{activeTitle}</p>
-          <p className="text-xs text-teal-100 truncate">Ask about orders, revenue, results...</p>
         </div>
 
+        <button
+          onClick={clearChat}
+          title="Clear chat"
+          disabled={isLoading || (messages.length === 0 && !activeId)}
+          className="text-white/80 hover:text-white p-1.5 rounded-md hover:bg-white/10 disabled:opacity-40 disabled:hover:bg-transparent"
+        >
+          <Eraser size={16} />
+        </button>
         <button
           onClick={newChat}
           title="New chat"
@@ -395,13 +463,15 @@ export default function ChatPanel({ onClose }) {
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
             {messages.length === 0 && !isLoading ? (
               <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-50">
-                  <Bot size={24} className="text-teal-600" />
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-teal-700 text-white shadow-md">
+                  <LabBotIcon size={28} />
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">How can I help?</p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Ask about doctors, patients, orders, reports, or revenue.
+                <div className="px-2">
+                  <p className="text-sm font-semibold text-gray-800">Hello Guest!</p>
+                  <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                    I'm your LabAgent, here to help you with your lab details. Just share
+                    your preferences and I'll suggest the best options, including doctors,
+                    patients, orders, reports or revenue.
                   </p>
                 </div>
               </div>
@@ -493,7 +563,7 @@ export default function ChatPanel({ onClose }) {
             <input
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="Type a question..."
+              placeholder={typedPlaceholder}
               className="flex-1 rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
             />
             <button

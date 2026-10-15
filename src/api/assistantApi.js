@@ -16,20 +16,43 @@ function authHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-function getSessionId() {
-  let sessionId = sessionStorage.getItem("souhruda_assistant_session_id");
-  if (!sessionId) {
-    sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    sessionStorage.setItem("souhruda_assistant_session_id", sessionId);
+const ASSISTANT_SESSION_KEY = "souhruda_assistant_session_id";
+
+// The assistant session id is minted and owned by the backend; the SPA only
+// stores and echoes it back so the same tab keeps its conversation context.
+// Ownership is verified server-side, so a stale/foreign id is never trusted.
+export function getSessionId() {
+  try {
+    return sessionStorage.getItem(ASSISTANT_SESSION_KEY);
+  } catch {
+    return null;
   }
-  return sessionId;
+}
+
+export function setSessionId(sessionId) {
+  if (!sessionId || typeof sessionId !== "string") return;
+  try {
+    sessionStorage.setItem(ASSISTANT_SESSION_KEY, sessionId);
+  } catch {
+    // storage unavailable (private mode) — session context just won't persist
+  }
+}
+
+export function clearAssistantSession() {
+  try {
+    sessionStorage.removeItem(ASSISTANT_SESSION_KEY);
+  } catch {
+    // ignore
+  }
 }
 
 function metaHeaders() {
-  return {
-    "X-Session-ID": getSessionId(),
+  const headers = {
     "X-Request-ID": `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
   };
+  const sessionId = getSessionId();
+  if (sessionId) headers["X-Session-ID"] = sessionId;
+  return headers;
 }
 
 function errorMessage(payload, status) {
@@ -77,12 +100,15 @@ function askPayload(message, options = {}) {
 
 // Non-streaming JSON response:
 // { request_id, intent, message, data, sources, conversation_id,
-//   user_message_id, assistant_message_id }
+//   user_message_id, assistant_message_id, session_id }
 export async function assistantAsk(message, options = {}) {
-  return request("/api/v1/assistant/ask", {
+  const data = await request("/api/v1/assistant/ask", {
     method: "POST",
     body: askPayload(message, options),
   });
+  // Adopt the authoritative session id returned by the backend.
+  setSessionId(data?.session_id);
+  return data;
 }
 
 // Server-Sent Events streaming: emits `meta`, `token` deltas, then `done`.
@@ -129,8 +155,11 @@ export async function assistantAskStream(message, options = {}, { onMeta, onToke
         if (!trimmed.startsWith("data: ")) continue;
         try {
           const data = JSON.parse(trimmed.slice(6));
-          if (data.type === "meta") onMeta?.(data);
-          else if (data.type === "token") onToken?.(data.content);
+          if (data.type === "meta") {
+            // Adopt the authoritative session id from the meta frame.
+            setSessionId(data.session_id);
+            onMeta?.(data);
+          } else if (data.type === "token") onToken?.(data.content);
           else if (data.type === "done") emitDone(data);
         } catch {
           // Ignore malformed SSE frames.

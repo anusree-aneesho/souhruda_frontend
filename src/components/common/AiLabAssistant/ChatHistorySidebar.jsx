@@ -1,4 +1,4 @@
-// src/components/common/LabAssistant/ChatHistorySidebar.jsx
+// src/components/common/AiLabAssistant/ChatHistorySidebar.jsx
 // Slide-in conversation history: search, date groups, inline rename + delete.
 import { useState } from "react";
 import { Search, Pencil, Trash2, MessageSquare } from "lucide-react";

@@ -1,4 +1,4 @@
-// src/components/common/LabAssistant/SuggestedPrompts.jsx
+// src/components/common/AiLabAssistant/SuggestedPrompts.jsx
 const prompts = ["Search doctors", "Show patients", "Pending orders today", "Today's revenue"];
 
 export default function SuggestedPrompts({ onSelect }) {

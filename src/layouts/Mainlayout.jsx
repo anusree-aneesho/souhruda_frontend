@@ -7,7 +7,7 @@ import Topbar from "../components/common/Topbar/Topbar";
 import CommandPalette from "../components/common/CommandPalette/CommandPalette";
 import NewOrderModal from "../components/common/NewOrderModal/NewOrderModal";
 import HomeCollectionDetailModal from "../components/HomeCollection/DetailModal/HomeCollectionDetailModal";
-import LabAssistant from "../components/common/LabAssistant/LabAssistant";
+import LabAssistant from "../components/common/AiLabAssistant/LabAssistant";
 import Footer from "../components/common/Footer/Footer";
 
 export default function MainLayout() {

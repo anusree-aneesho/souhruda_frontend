@@ -4,6 +4,7 @@ import {
   getMeApi,
   logoutApi,
 } from "../api/api";
+import { clearAssistantSession } from "../api/assistantApi";
 
 const AuthContext = createContext(null);
 
@@ -63,6 +64,7 @@ export function AuthProvider({ children }) {
 
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(STORAGE_KEY);
+        clearAssistantSession();
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -104,6 +106,9 @@ export function AuthProvider({ children }) {
         initials: getInitials(backendUser.name),
       };
 
+      // A fresh login must never inherit the previous user's assistant session.
+      clearAssistantSession();
+
       localStorage.setItem(TOKEN_KEY, data.token);
       localStorage.setItem(
         STORAGE_KEY,
@@ -132,6 +137,7 @@ export function AuthProvider({ children }) {
       setUser(null);
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(TOKEN_KEY);
+      clearAssistantSession();
     }
   }
 

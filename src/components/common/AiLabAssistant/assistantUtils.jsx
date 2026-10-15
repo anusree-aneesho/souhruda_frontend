@@ -1,4 +1,4 @@
-// src/components/common/LabAssistant/assistantUtils.jsx
+// src/components/common/AiLabAssistant/assistantUtils.jsx
 // Shared rendering helpers for assistant chat tables (curated columns,
 // status pills, signed Download PDF buttons) and inline bold text.
 
@@ -35,14 +35,14 @@ const statusPillClass = (tone) => {
 };
 
 const PATIENT_COLUMNS = [
-  { key: "patient_number", label: "Patient Number" },
+  { key: "patient_number", label: "Patient ID" },
   { key: "name", label: "Name" },
-  { key: "gender", label: "Gender" },
+  // { key: "gender", label: "Gender" },
   { key: "age", label: "Age" },
   { key: "phone", label: "Phone" },
-  { key: "email", label: "Email" },
-  { key: "address", label: "Address" },
-  { key: "registered_on", label: "Registered On" },
+  // { key: "email", label: "Email" },
+  // { key: "address", label: "Address" },
+  // { key: "registered_on", label: "Registered On" },
 ];
 
 const REPORT_COLUMNS = [

@@ -1,4 +1,4 @@
-// src/components/common/LabAssistant/time.js
+// src/components/common/AiLabAssistant/time.js
 // Small date/time helpers for chat timestamps and history grouping.
 
 function parseDate(value) {

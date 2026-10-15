@@ -1,4 +1,4 @@
-// src/components/common/LabAssistant/MessageFeedback.jsx
+// src/components/common/AiLabAssistant/MessageFeedback.jsx
 import { useState } from "react";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 

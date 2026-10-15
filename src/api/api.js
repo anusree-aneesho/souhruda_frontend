@@ -1,3 +1,5 @@
+import { clearAssistantSession } from "./assistantApi";
+
 const API_BASE_URL = "http://localhost:8000/api/v1";
 
 async function request(endpoint, options = {}) {
@@ -22,6 +24,7 @@ async function request(endpoint, options = {}) {
     // Session expired (or token invalid) — clear it and redirect with a message
     localStorage.removeItem("souhruda_auth_token");
     localStorage.removeItem("souhruda_auth_user");
+    clearAssistantSession();
     sessionStorage.setItem(
       "souhruda_session_message",
       data.message || "Your session has expired. Please log in again."

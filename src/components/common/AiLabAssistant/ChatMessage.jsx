@@ -1,6 +1,7 @@
-// src/components/common/LabAssistant/ChatMessage.jsx
+// src/components/common/AiLabAssistant/ChatMessage.jsx
 import { Link, useNavigate } from "react-router-dom";
-import { Bot, User } from "lucide-react";
+import { User } from "lucide-react";
+import LabBotIcon from "./Labboticon";
 import { renderBold, renderDataTables } from "./assistantUtils";
 import Attachments from "./Attachments";
 import MessageFeedback from "./MessageFeedback";
@@ -195,24 +196,26 @@ export default function ChatMessage({
   const initials = getUserInitials();
 
   return (
-    <div className={`flex gap-2 ${isBot ? "justify-start" : "flex-row-reverse justify-end"}`}>
+    <div className={`flex w-full gap-2 ${isBot ? "flex-row justify-start" : "flex-row-reverse justify-start"}`}>
       <div
         className={`mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
           isBot ? "bg-teal-50 text-teal-600" : "bg-gray-200 text-gray-600"
         }`}
-        title={isBot ? "Lab Assistant" : "You"}
+        title={isBot ? "LabAgent" : "You"}
       >
-        {isBot ? <Bot size={14} /> : initials ? (
+        {isBot ? <LabBotIcon size={16} /> : initials ? (
           <span className="text-[10px] font-bold">{initials}</span>
         ) : (
           <User size={14} />
         )}
       </div>
 
-      <div className="flex max-w-[85%] min-w-0 flex-col items-start">
+      <div className={`flex max-w-[85%] min-w-0 flex-col ${isBot ? "items-start" : "items-end"}`}>
         <div
           className={`rounded-lg px-3 py-2 text-sm ${
-            isBot ? "bg-gray-100 text-gray-800" : "bg-teal-600 text-white"
+            isBot
+              ? "bg-gray-100 text-gray-800 rounded-tl-none"
+              : "bg-teal-600 text-white rounded-tr-none"
           }`}
         >
           {textElements}

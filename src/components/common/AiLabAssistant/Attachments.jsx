@@ -1,4 +1,4 @@
-// src/components/common/LabAssistant/Attachments.jsx
+// src/components/common/AiLabAssistant/Attachments.jsx
 // Renders message attachments: image previews + downloadable file chips.
 // Attachment endpoints are auth-gated, so blobs are fetched with the token.
 import { useEffect, useState } from "react";

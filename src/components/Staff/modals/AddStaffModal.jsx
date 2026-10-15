@@ -6,7 +6,10 @@ import { useAuth } from "../../../Context/AuthContext";
 import { STAFF_TITLES } from "../../Patients/patientTitles";
 
 
-const ALL_ROLES = ["Front Office", "Technician", "Lab Assistant", "Admin"];
+const ALL_ROLES = ["Front Office", "Technician", "Lab Assistant", "Lab Incharge", "Admin"];
+
+const SIGNATURE_TYPES = ["image/png", "image/jpeg", "image/webp"];
+const SIGNATURE_MAX_BYTES = 2 * 1024 * 1024; // 2 MB
 
 const NAME_REGEX = /^[A-Za-z\s]+$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -22,6 +25,8 @@ const emptyForm = {
   status: "Active",
   latitude: "",
   longitude: "",
+  signature: null, // File chosen in this session
+  remove_signature: false,
 };
 
 function validate(form, isTechnician, isAdmin) {
@@ -68,6 +73,14 @@ function validate(form, isTechnician, isAdmin) {
     }
   }
 
+  if (form.signature) {
+    if (!SIGNATURE_TYPES.includes(form.signature.type)) {
+      errors.signature = "Use a PNG, JPG or WEBP image.";
+    } else if (form.signature.size > SIGNATURE_MAX_BYTES) {
+      errors.signature = "Image must be 2 MB or smaller.";
+    }
+  }
+
   return errors;
 }
 
@@ -83,6 +96,22 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
   const isEditMode = Boolean(editingStaff);
   const isTechnician = form.role === "Technician";
   const isAdmin = form.role === "Admin";
+  const isLabIncharge = form.role === "Lab Incharge";
+
+  // Preview: the newly chosen file, else the signature already saved (edit mode).
+  const [signaturePreview, setSignaturePreview] = useState(null);
+  useEffect(() => {
+    if (!form.signature) {
+      setSignaturePreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(form.signature);
+    setSignaturePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [form.signature]);
+
+  const savedSignatureUrl = editingStaff?.signatureUrl && !form.remove_signature ? editingStaff.signatureUrl : null;
+  const shownSignature = signaturePreview || savedSignatureUrl;
 
   useEffect(() => {
     let cancelled = false;
@@ -111,6 +140,8 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
         status: editingStaff.status ?? "Active",
         latitude: editingStaff.latitude ?? "",
         longitude: editingStaff.longitude ?? "",
+        signature: null,
+        remove_signature: false,
       });
     } else {
       setForm(emptyForm);
@@ -154,6 +185,8 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
       staffId: editingStaff?.staffId,
       latitude: isTechnician ? form.latitude : null,
       longitude: isTechnician ? form.longitude : null,
+      signature: isLabIncharge ? form.signature : null,
+      remove_signature: isLabIncharge ? form.remove_signature : false,
     });
   }
 
@@ -278,6 +311,44 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
                 </div>
               </div>
               <p className="text-xs text-gray-400 mt-1">Used to match this technician to nearby home collection requests.</p>
+            </div>
+          )}
+
+          {isLabIncharge && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                Signature <span className="font-normal text-gray-400">(optional)</span>
+              </label>
+
+              {shownSignature && (
+                <div className="mb-2 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                  <img src={shownSignature} alt="Signature preview" className="h-14 max-w-[180px] object-contain bg-white rounded" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleChange("signature", null);
+                      if (!signaturePreview) handleChange("remove_signature", true);
+                    }}
+                    className="text-xs font-medium text-red-500 hover:underline cursor-pointer"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  handleChange("signature", file);
+                  if (file) handleChange("remove_signature", false);
+                  e.target.value = "";
+                }}
+                className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-teal-50 file:px-3.5 file:py-2 file:text-sm file:font-medium file:text-teal-700 hover:file:bg-teal-100 file:cursor-pointer"
+              />
+              {errors.signature && <p className="text-xs text-red-500 mt-1">{errors.signature}</p>}
+              <p className="text-xs text-gray-400 mt-1">PNG, JPG or WEBP, up to 2 MB. A transparent PNG works best on reports.</p>
             </div>
           )}
 

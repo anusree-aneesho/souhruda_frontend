@@ -90,7 +90,7 @@ export async function deleteTechnicianApi(id) {
 
 // ── Patients ───────────────────────────────────────────────
 
-export async function getPatientsApi(query = "", page = 1) {
+export async function getPatientsApi(query = "", page = 1) {       
   const params = new URLSearchParams();
   if (query) params.append("q", query);
   params.append("page", page);
@@ -282,7 +282,6 @@ export async function updateHomeCollectionStatusApi(hcCode, status, otp = null) 
     body: JSON.stringify(otp ? { status, otp } : { status }),
   });
 }
-
 export async function resolveHomeCollectionOrderApi(hcCode) {
   return request(`/home-collection-requests/${hcCode}/order`, {
     method: "POST",
@@ -480,10 +479,16 @@ export async function deleteOrderApi(orderId) {
   });
 }
 
-export async function updateOrderDiscountApi(orderId, { discount_type, discount_value }) {
+export async function markOrderPaidApi(orderId) {
+  return request(`/orders/${orderId}/mark-paid`, {
+    method: "PATCH",
+  });
+}
+
+export async function updateOrderDiscountApi(orderId, discountPercent) {
   return request(`/orders/${orderId}/discount`, {
     method: "PATCH",
-    body: JSON.stringify({ discount_type, discount_value }),
+    body: JSON.stringify({ discount_percent: discountPercent }),
   });
 }
 
@@ -527,23 +532,48 @@ export async function getPatientFollowUpRemindersApi(patientId) {
 }
 
 // ── Staff Management ──────────────────────────────────────
+function toStaffFormData(payload) {
+  const formData = new FormData();
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") return;
+    if (key === "signature") {
+      if (value instanceof File) formData.append("signature", value);
+      return;
+    }
+    if (key === "remove_signature") {
+      if (value) formData.append("remove_signature", "1");
+      return;
+    }
+    formData.append(key, value);
+  });
+  return formData;
+}
+
+const hasSignatureChange = (p) => p.signature instanceof File || p.remove_signature;
 
 export async function addStaffApi(payload) {
   return request("/staff-members", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: hasSignatureChange(payload) ? toStaffFormData(payload) : JSON.stringify(payload),
   });
 }
 
-export async function getStaffMembersApi() {
-  return request("/staff-members");
-}
-
 export async function updateStaffMemberApi(id, payload) {
+  if (hasSignatureChange(payload)) {
+    // Laravel can't read multipart on a real PUT, so POST with a _method override.
+    const formData = toStaffFormData(payload);
+    formData.append("_method", "PUT");
+    return request(`/staff-members/${id}`, { method: "POST", body: formData });
+  }
   return request(`/staff-members/${id}`, {
     method: "PUT",
     body: JSON.stringify(payload),
   });
+}
+
+
+export async function getStaffMembersApi() {
+  return request("/staff-members");
 }
 
 export async function updateTechnicianRatingApi(id, rating) {

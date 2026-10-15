@@ -3,7 +3,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import {
   Download, Printer, MessageCircle, Receipt, X, Pencil,  
-  User, Phone, Stethoscope, CalendarDays, FileCheck2,
+  User, Phone, Stethoscope, CalendarDays, FileCheck2, Wallet,
 } from "lucide-react";
 import Toast from "../../common/Toast/Toast";
 import { useToast } from "../../common/Toast/useToast";
@@ -13,9 +13,10 @@ import BillModal from "./BillModal";
 import EditBillModal from "./EditBillModal";  
 import WhatsAppSentModal from "./WhatsAppSentModal";
 import TestDetailView from "./TestDetailView";
+import AlertModal from "../../common/Modal/AlertModal";
 import { findOrderById } from "../../../data/labOrders";
 import { calculateFlag } from "../../../utils/calculateFlag";
-import { getOrderReportUrlApi, getOrderApi, getSettingsApi, getGstSettingsApi } from "../../../api/api";
+import { getOrderReportUrlApi, getOrderApi, getSettingsApi, getGstSettingsApi, markOrderPaidApi } from "../../../api/api";
 
 export default function Report() {
   const { orderId } = useParams();
@@ -26,8 +27,7 @@ export default function Report() {
   const [letterheadOn, setLetterheadOn] = useState(true);
   const [isBillOpen, setBillOpen] = useState(false);
   const [isEditBillOpen, setEditBillOpen] = useState(false);
-  const [discountType, setDiscountType] = useState("percentage");
-  const [discountValue, setDiscountValue] = useState(0);
+  const [discountPercent, setDiscountPercent] = useState(0);
   const [orderDates, setOrderDates] = useState({ collected: null, reported: null });
   const [isWhatsAppOpen, setWhatsAppOpen] = useState(false);
   const [isPreviewOpen, setPreviewOpen] = useState(false);
@@ -42,6 +42,7 @@ export default function Report() {
   const order = existingOrder || (state ? { orderId, ...state } : null);
 
   const [paymentDone, setPaymentDone] = useState(Boolean(order?.paymentDone));
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
 
   useEffect(() => {
     setPaymentDone(Boolean(order?.paymentDone));
@@ -50,14 +51,13 @@ export default function Report() {
   // Loads the discount and the collection / report dates from the order.
   useEffect(() => {
     let cancelled = false;
-    setDiscountType("percentage");
-    setDiscountValue(0);
+    setDiscountPercent(0);
     setOrderDates({ collected: null, reported: null });
     getOrderApi(orderId)
       .then((res) => {
         if (cancelled) return;
-        setDiscountType(res.data?.discount_type || "percentage");
-        setDiscountValue(Number(res.data?.discount_value) || 0);
+        setDiscountPercent(Number(res.data?.discount_percent) || 0);
+        setPaymentDone(res.data?.payment_status === "paid");
         setOrderDates({
           collected: res.data?.sample_collected_at ?? null,
           reported: res.data?.report_generated_at ?? res.data?.completed_at ?? null,
@@ -75,6 +75,18 @@ export default function Report() {
       })
       .catch((err) => console.error("Failed to load lab/GST settings:", err.message));
   }, []);
+
+  // Marks the order as paid in the database (orders.payment_status = "paid").
+  async function handleConfirmPayment() {
+    setConfirmingPayment(false);
+    try {
+      await markOrderPaidApi(orderId);
+      setPaymentDone(true);
+      showToast("Payment marked as paid");
+    } catch (err) {
+      showToast(err.message || "Failed to update payment status", "error");
+    }
+  }
 
   const patient = order?.patient || { name: "Aaa ff", age: "11", gender: "Male", regNo: "200128355" };
   const tests = order?.tests || [];
@@ -482,6 +494,29 @@ export default function Report() {
                   </div>
                 ))}
 
+                {/* Payment status — sits under "Referred by" */}
+                <div className="flex items-start gap-2.5">
+                  <span className="mt-0.5 h-7 w-7 shrink-0 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center">
+                    <Wallet size={14} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[11px] uppercase tracking-wide text-gray-400">Payment</p>
+                    <button
+                      type="button"
+                      disabled={paymentDone}
+                      onClick={() => setConfirmingPayment(true)}
+                      title={paymentDone ? "Payment received" : "Click to confirm payment"}
+                      className={`mt-0.5 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-white transition-colors ${
+                        paymentDone
+                          ? "bg-green-600 cursor-default"
+                          : "bg-red-600 hover:bg-red-700 cursor-pointer"
+                      }`}
+                    >
+                      {paymentDone ? "Paid" : "Unpaid"}
+                    </button>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
@@ -758,9 +793,7 @@ export default function Report() {
           tests={testsWithResults}
           billTotal={order?.billTotal}
           homeVisitFee={order?.homeVisitFee || 0}
-          discountType={discountType}
-          discountValue={discountValue}
-          paymentDone={paymentDone}
+          discountPercent={discountPercent}
           referredBy={order?.referredBy || "Self"}
           collectionDate={collectionDate}
           reportDate={reportDate}
@@ -774,15 +807,24 @@ export default function Report() {
           tests={testsWithResults}
           billTotal={order?.billTotal != null ? Number(order.billTotal) : null}
           homeVisitFee={order?.homeVisitFee || 0}
-          initialDiscount={discountValue}
-          initialDiscountType={discountType}
+          initialDiscount={discountPercent}
           onClose={() => setEditBillOpen(false)}
           onSaved={(updated) => {
-            setDiscountType(updated.discount_type || "percentage");
-            setDiscountValue(Number(updated.discount_value) || 0);
+            setDiscountPercent(Number(updated.discount_percent) || 0);
             setEditBillOpen(false);
             showToast("Discount updated");
           }}
+        />
+      )}
+
+      {confirmingPayment && (
+        <AlertModal
+          title="Confirm Payment"
+          message={`Mark Order ${orderId} as paid? This confirms the payment has been received.`}
+          confirmLabel="Yes, mark as paid"
+          cancelLabel="Cancel"
+          onConfirm={handleConfirmPayment}
+          onClose={() => setConfirmingPayment(false)}
         />
       )}
 

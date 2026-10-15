@@ -92,7 +92,7 @@ const BACKEND_FIELD_MAP = {
   max_distance_km: "maxDistanceKm",
 };
 
-export default function SettingsForm({ branchId = null, branchName = "" }) {
+export default function SettingsForm({ branchId = null, branchName = "", onSaved }) {
   const [formData, setFormData] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(true);
@@ -205,6 +205,7 @@ export default function SettingsForm({ branchId = null, branchName = "" }) {
         branchId
       );
       showToast("Settings saved successfully.");
+      onSaved?.(formData.labName);
     } catch (err) {
       // Laravel validation errors: { errors: { field_name: ["message1", "message2"] } }
       if (err.errors) {
@@ -235,7 +236,7 @@ export default function SettingsForm({ branchId = null, branchName = "" }) {
     <fieldset disabled={!canEdit} className={`min-w-0 border-0 p-0 mb-6 ${!canEdit ? "opacity-70" : ""}`}>
     <form
       onSubmit={handleSubmit}
-      className="bg-white rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)] max-w-2xl space-y-5"
+      className="bg-white rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)] w-full space-y-8"
     >
       {branchName && (
         <p className="text-sm text-teal-700 bg-teal-50 border border-teal-100 rounded-lg px-3 py-2">
@@ -248,64 +249,81 @@ export default function SettingsForm({ branchId = null, branchName = "" }) {
       )}
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
 
-      <FormField label="Lab Name" name="labName" value={formData.labName} onChange={handleChange} error={fieldErrors.labName} />
-      <FormField label="Address" name="address" value={formData.address} onChange={handleChange} error={fieldErrors.address} />
+      {/* Lab details */}
+      <section className="space-y-5">
+        <h2 className="text-xs font-semibold text-gray-400 tracking-wide uppercase">Lab details</h2>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <FormField label="City" name="city" value={formData.city} onChange={handleChange} error={fieldErrors.city} />
-        <FormField label="State" name="state" value={formData.state} onChange={handleChange} error={fieldErrors.state} />
-        <FormField label="Pincode" name="pincode" value={formData.pincode} onChange={handleChange} error={fieldErrors.pincode} />
-      </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          <FormField label="Lab Name" name="labName" value={formData.labName} onChange={handleChange} error={fieldErrors.labName} />
+          <FormField label="Lab License No." name="licenseNo" value={formData.licenseNo} onChange={handleChange} placeholder="NABL / ICMR / State License No." error={fieldErrors.licenseNo} />
+          <FormField label="Working Hours" name="workingHours" value={formData.workingHours} onChange={handleChange} placeholder="Mon-Sat, 7 AM - 8 PM" error={fieldErrors.workingHours} />
+        </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <FormField label="Phone Number" name="phone" value={formData.phone} onChange={handleChange} placeholder="0495 xxxxxxx" error={fieldErrors.phone} />
-        <FormField label="WhatsApp Sender Number" name="whatsappNumber" value={formData.whatsappNumber} onChange={handleChange} placeholder="+91 9xxxxxxxxx" error={fieldErrors.whatsappNumber} />
-      </div>
+        <FormField label="Address" name="address" value={formData.address} onChange={handleChange} error={fieldErrors.address} />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <FormField label="Email Address" name="email" type="email" value={formData.email} onChange={handleChange} error={fieldErrors.email} />
-        <FormField label="Website" name="website" value={formData.website} onChange={handleChange} placeholder="https://..." error={fieldErrors.website} />
-      </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <FormField label="City" name="city" value={formData.city} onChange={handleChange} error={fieldErrors.city} />
+          <FormField label="State" name="state" value={formData.state} onChange={handleChange} error={fieldErrors.state} />
+          <FormField label="Pincode" name="pincode" value={formData.pincode} onChange={handleChange} error={fieldErrors.pincode} />
+        </div>
+      </section>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <FormField label="Reg. No. Prefix" name="regNoPrefix" value={formData.regNoPrefix} onChange={handleChange} error={fieldErrors.regNoPrefix} />
-        <FormField label="Order No. Start" name="orderNoStart" value={formData.orderNoStart} onChange={handleChange} error={fieldErrors.orderNoStart} />
-      </div>
+      {/* Contact */}
+      <section className="space-y-5">
+        <h2 className="text-xs font-semibold text-gray-400 tracking-wide uppercase">Contact</h2>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <FormField label="Lab License No." name="licenseNo" value={formData.licenseNo} onChange={handleChange} placeholder="NABL / ICMR / State License No." error={fieldErrors.licenseNo} />
-        <FormField label="Working Hours" name="workingHours" value={formData.workingHours} onChange={handleChange} placeholder="Mon-Sat, 7 AM - 8 PM" error={fieldErrors.workingHours} />
-      </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+          <FormField label="Phone Number" name="phone" value={formData.phone} onChange={handleChange} placeholder="0495 xxxxxxx" error={fieldErrors.phone} />
+          <FormField label="WhatsApp Sender Number" name="whatsappNumber" value={formData.whatsappNumber} onChange={handleChange} placeholder="+91 9xxxxxxxxx" error={fieldErrors.whatsappNumber} />
+          <FormField label="Email Address" name="email" type="email" value={formData.email} onChange={handleChange} error={fieldErrors.email} />
+          <FormField label="Website" name="website" value={formData.website} onChange={handleChange} placeholder="https://..." error={fieldErrors.website} />
+        </div>
+      </section>
 
-      <div>
-        <label htmlFor="footerNote" className="block text-sm font-semibold text-gray-900 mb-1.5">
-          Report Footer Note / Disclaimer
-        </label>
-        <textarea
-          id="footerNote"
-          name="footerNote"
-          rows={3}
-          value={formData.footerNote}
-          onChange={handleChange}
-          placeholder="e.g. Reports are not valid for medico-legal purposes."
-          className={`w-full rounded-lg border px-3.5 py-2.5 text-sm text-gray-900 outline-none focus:ring-1 transition-colors ${
-            fieldErrors.footerNote
-              ? "border-red-300 focus:border-red-500 focus:ring-red-500"
-              : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
-          }`}
-        />
-        {fieldErrors.footerNote && <p className="text-xs text-red-600 mt-1">{fieldErrors.footerNote}</p>}
-      </div>
+      {/* Numbering & report */}
+      <section className="space-y-5">
+        <h2 className="text-xs font-semibold text-gray-400 tracking-wide uppercase">Numbering &amp; reports</h2>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <FormField label="Base Fee (₹)" name="baseFee" type="number" value={formData.baseFee} onChange={handleChange} error={fieldErrors.baseFee} />
-        <FormField label="Per KM Rate (₹/km)" name="perKmRate" type="number" value={formData.perKmRate} onChange={handleChange} error={fieldErrors.perKmRate} />
-        <FormField label="Free Radius (km)" name="freeRadius" type="number" value={formData.freeRadius} onChange={handleChange} error={fieldErrors.freeRadius} />
-        <FormField label="Maximum Distance (km)" name="maxDistanceKm" type="number" value={formData.maxDistanceKm} onChange={handleChange} error={fieldErrors.maxDistanceKm} />
-      </div>
-      <p className="text-xs text-gray-400 -mt-2">
-        Home collection fee = Base Fee + Per KM Rate × km beyond the Free Radius. Addresses farther than the Maximum Distance can't be booked.
-      </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+          <FormField label="Reg. No. Prefix" name="regNoPrefix" value={formData.regNoPrefix} onChange={handleChange} error={fieldErrors.regNoPrefix} />
+          <FormField label="Order No. Start" name="orderNoStart" value={formData.orderNoStart} onChange={handleChange} error={fieldErrors.orderNoStart} />
+        </div>
+
+        <div>
+          <label htmlFor="footerNote" className="block text-sm font-semibold text-gray-900 mb-1.5">
+            Report Footer Note / Disclaimer
+          </label>
+          <textarea
+            id="footerNote"
+            name="footerNote"
+            rows={3}
+            value={formData.footerNote}
+            onChange={handleChange}
+            placeholder="e.g. Reports are not valid for medico-legal purposes."
+            className={`w-full rounded-lg border px-3.5 py-2.5 text-sm text-gray-900 outline-none focus:ring-1 transition-colors ${
+              fieldErrors.footerNote
+                ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+            }`}
+          />
+          {fieldErrors.footerNote && <p className="text-xs text-red-600 mt-1">{fieldErrors.footerNote}</p>}
+        </div>
+      </section>
+
+      {/* Home collection */}
+      <section className="space-y-5">
+        <h2 className="text-xs font-semibold text-gray-400 tracking-wide uppercase">Home collection</h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+          <FormField label="Base Fee (₹)" name="baseFee" type="number" value={formData.baseFee} onChange={handleChange} error={fieldErrors.baseFee} />
+          <FormField label="Per KM Rate (₹/km)" name="perKmRate" type="number" value={formData.perKmRate} onChange={handleChange} error={fieldErrors.perKmRate} />
+          <FormField label="Free Radius (km)" name="freeRadius" type="number" value={formData.freeRadius} onChange={handleChange} error={fieldErrors.freeRadius} />
+          <FormField label="Maximum Distance (km)" name="maxDistanceKm" type="number" value={formData.maxDistanceKm} onChange={handleChange} error={fieldErrors.maxDistanceKm} />
+        </div>
+        <p className="text-xs text-gray-400">
+          Home collection fee = Base Fee + Per KM Rate × km beyond the Free Radius. Addresses farther than the Maximum Distance can't be booked.
+        </p>
+      </section>
 
       {canEdit && (
         <button

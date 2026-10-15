@@ -27,6 +27,22 @@ export default function Settings() {
     setFormVersion((v) => v + 1);
   }
 
+  function handleSettingsSaved(labName) {
+    branchesListRef.current?.refresh();
+
+    // keep the remembered "Viewing" branch name in sync too
+    setSelectedBranch((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, name: labName };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
+  }
+
   function handleSelectBranch(branch) {
     setSelectedBranch(branch);
     try {
@@ -44,17 +60,20 @@ export default function Settings() {
   return (
     <div className="space-y-6">
       <SettingsHeader onAddBranch={() => setShowAddBranch(true)} />
-      <SettingsForm
-        key={`${selectedBranch?.id ?? "default"}-${formVersion}`}
-        branchId={selectedBranch?.id ?? null}
-        branchName={selectedBranch?.name ?? ""}
-      />
-      <BranchesList
-        ref={branchesListRef}
-        selectedBranchId={selectedBranch?.id ?? null}
-        onSelectBranch={handleSelectBranch}
-        onBranchUpdated={handleBranchUpdated}
-      />
+      <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6">
+        <BranchesList
+          ref={branchesListRef}
+          selectedBranchId={selectedBranch?.id ?? null}
+          onSelectBranch={handleSelectBranch}
+          onBranchUpdated={handleBranchUpdated}
+        />
+        <SettingsForm
+          key={`${selectedBranch?.id ?? "default"}-${formVersion}`}
+          branchId={selectedBranch?.id ?? null}
+          branchName={selectedBranch?.name ?? ""}
+          onSaved={handleSettingsSaved}
+        />
+      </div>
 
       {showAddBranch && (
         <AddBranchModal onClose={() => setShowAddBranch(false)} onBranchAdded={handleBranchAdded} />

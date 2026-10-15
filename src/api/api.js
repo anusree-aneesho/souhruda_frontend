@@ -532,23 +532,48 @@ export async function getPatientFollowUpRemindersApi(patientId) {
 }
 
 // ── Staff Management ──────────────────────────────────────
+function toStaffFormData(payload) {
+  const formData = new FormData();
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") return;
+    if (key === "signature") {
+      if (value instanceof File) formData.append("signature", value);
+      return;
+    }
+    if (key === "remove_signature") {
+      if (value) formData.append("remove_signature", "1");
+      return;
+    }
+    formData.append(key, value);
+  });
+  return formData;
+}
+
+const hasSignatureChange = (p) => p.signature instanceof File || p.remove_signature;
 
 export async function addStaffApi(payload) {
   return request("/staff-members", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: hasSignatureChange(payload) ? toStaffFormData(payload) : JSON.stringify(payload),
   });
 }
 
-export async function getStaffMembersApi() {
-  return request("/staff-members");
-}
-
 export async function updateStaffMemberApi(id, payload) {
+  if (hasSignatureChange(payload)) {
+    // Laravel can't read multipart on a real PUT, so POST with a _method override.
+    const formData = toStaffFormData(payload);
+    formData.append("_method", "PUT");
+    return request(`/staff-members/${id}`, { method: "POST", body: formData });
+  }
   return request(`/staff-members/${id}`, {
     method: "PUT",
     body: JSON.stringify(payload),
   });
+}
+
+
+export async function getStaffMembersApi() {
+  return request("/staff-members");
 }
 
 export async function updateTechnicianRatingApi(id, rating) {

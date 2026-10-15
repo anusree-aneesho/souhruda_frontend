@@ -98,9 +98,7 @@ function StaffSearch({ value, onChange }) {
 function RoleFilter({ value, onChange, roles }) {
   return (
     <div className="flex flex-col gap-1 w-full sm:w-48">
-      <label htmlFor="staff-role-filter" className="text-xs font-medium text-gray-500">
-        Role
-      </label>
+      
       <select
         id="staff-role-filter"
         value={value}

@@ -81,7 +81,6 @@ export default function Technicians() {
   async function handleSaveTechnician(formData) {
     const isEdit = Boolean(formData.id);
     const payload = {
-<<<<<<< Updated upstream
       name: formData.name,
       email: formData.email,
       phone: formData.phone,
@@ -90,16 +89,6 @@ export default function Technicians() {
       latitude: formData.latitude,
       longitude: formData.longitude,
     };
-=======
-  name: formData.name,
-  email: formData.email,
-  phone: formData.phone,
-  branch_id: formData.branch_id,
-  status: formData.status,
-  latitude: formData.latitude,
-  longitude: formData.longitude,
-};
->>>>>>> Stashed changes
 
     // Rating is only editable (and only sent) on update — new technicians
     // default to 5.0 server-side, and StoreTechnicianRequest doesn't accept it.

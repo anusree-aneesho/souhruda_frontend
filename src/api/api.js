@@ -90,7 +90,7 @@ export async function deleteTechnicianApi(id) {
 
 // ── Patients ───────────────────────────────────────────────
 
-export async function getPatientsApi(query = "", page = 1) {
+export async function getPatientsApi(query = "", page = 1) {       
   const params = new URLSearchParams();
   if (query) params.append("q", query);
   params.append("page", page);
@@ -282,7 +282,6 @@ export async function updateHomeCollectionStatusApi(hcCode, status, otp = null) 
     body: JSON.stringify(otp ? { status, otp } : { status }),
   });
 }
-
 export async function resolveHomeCollectionOrderApi(hcCode) {
   return request(`/home-collection-requests/${hcCode}/order`, {
     method: "POST",
@@ -480,10 +479,16 @@ export async function deleteOrderApi(orderId) {
   });
 }
 
-export async function updateOrderDiscountApi(orderId, { discount_type, discount_value }) {
+export async function markOrderPaidApi(orderId) {
+  return request(`/orders/${orderId}/mark-paid`, {
+    method: "PATCH",
+  });
+}
+
+export async function updateOrderDiscountApi(orderId, discountPercent) {
   return request(`/orders/${orderId}/discount`, {
     method: "PATCH",
-    body: JSON.stringify({ discount_type, discount_value }),
+    body: JSON.stringify({ discount_percent: discountPercent }),
   });
 }
 

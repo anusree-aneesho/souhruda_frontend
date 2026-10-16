@@ -2,6 +2,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { markSampleCollectedApi, deleteOrderApi, getSampleCollectorsApi } from "../../api/api";
 
+// "Miss" + "Anusree" -> "Miss Anusree" (skips the title if it's empty)
+const displayName = (c) => [c?.title, c?.name].filter(Boolean).join(" ");
+
 export default function SampleCollectionModal({ order, onClose, onConfirmed, onCancelled }) {
   const [loading, setLoading] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
@@ -42,7 +45,7 @@ export default function SampleCollectionModal({ order, onClose, onConfirmed, onC
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const matches = collectors.filter(
-      (c) => !q || c.name.toLowerCase().includes(q)
+      (c) => !q || displayName(c).toLowerCase().includes(q)
     );
     return [
       ...matches.filter((c) => c.type === "lab_assistant"),
@@ -200,12 +203,12 @@ export default function SampleCollectionModal({ order, onClose, onConfirmed, onC
                   role="combobox"
                   aria-expanded={open}
                   aria-controls="sample-collector-list"
-                  value={open ? search : selected?.name ?? ""}
+                  value={open ? search : selected ? displayName(selected) : ""}
                   placeholder={
                     collectorsLoading
                       ? "Loading staff…"
                       : open && selected
-                      ? selected.name
+                      ? displayName(selected)
                       : "Search lab assistant or technician"
                   }
                   disabled={collectorsLoading || loading}
@@ -273,7 +276,7 @@ export default function SampleCollectionModal({ order, onClose, onConfirmed, onC
                               highlight === i ? "bg-teal-50" : ""
                             } ${isSelected ? "text-teal-700 font-medium" : "text-gray-800"}`}
                           >
-                            <span>{c.name}</span>
+                            <span>{displayName(c)}</span>
                           </div>
                         </li>
                       );

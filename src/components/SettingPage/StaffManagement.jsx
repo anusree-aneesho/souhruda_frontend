@@ -4,10 +4,9 @@ import { Plus, Search, Pencil, Trash2, Star } from "lucide-react";
 import AddStaffModal from "./modals/AddStaffModal";
 import TechnicianDetailsDrawer from "./TechnicianDetailsDrawer";
 import ConfirmModal from "../Patients/modals/ConfirmModal";
-import { addStaffApi, getStaffMembersApi, updateStaffMemberApi, deleteStaffMemberApi, updateTechnicianRatingApi } from "../../api/api";
+import { addStaffApi, getStaffMembersApi, getStaffRolesApi, updateStaffMemberApi, deleteStaffMemberApi, updateTechnicianRatingApi } from "../../api/api";
 import Toast from "../common/Toast/Toast";
 import { useToast } from "../common/Toast/useToast";
-import { useAuth } from "../../Context/AuthContext";
 import { formatNameWithTitle } from "../Patients/patientTitles";
 
 const TECHNICIAN_ROLE = "Technician";
@@ -239,15 +238,23 @@ export default function StaffManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [confirmingRemove, setConfirmingRemove] = useState(null); // staff | null
   const { toast, showToast, hideToast } = useToast();
-  const { user } = useAuth();
 
-  // Admin accounts are only listed (and filterable) for super admins — mirrors StaffController@index.
-  const roleOptions = useMemo(() => {
-    const base = ["Front Office", "Technician", "Lab Assistant"];
-    return String(user?.role ?? "").toLowerCase().replace(/[\s-]+/g, "_") === "super_admin"
-      ? [...base, "Admin"]
-      : base;
-  }, [user]);
+  // Role filter options come from the roles table (GET /staff-roles).
+  // The old fixed list is only a fallback if that request fails.
+  const [roleOptions, setRoleOptions] = useState(["Front Office", "Technician", "Lab Assistant", "Lab Incharge"]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getStaffRolesApi()
+      .then((res) => {
+        const labels = (res.data || []).map((r) => r.label);
+        if (!cancelled && labels.length) setRoleOptions(labels);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const showTechnicianColumns = roleFilter === TECHNICIAN_ROLE;
 

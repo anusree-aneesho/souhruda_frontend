@@ -485,10 +485,10 @@ export async function markOrderPaidApi(orderId) {
   });
 }
 
-export async function updateOrderDiscountApi(orderId, { discount_type, discount_value }) {
+export async function updateOrderDiscountApi(orderId, discountPercent) {
   return request(`/orders/${orderId}/discount`, {
     method: "PATCH",
-    body: JSON.stringify({ discount_type, discount_value }),
+    body: JSON.stringify({ discount_percent: discountPercent }),
   });
 }
 
@@ -574,6 +574,10 @@ export async function updateStaffMemberApi(id, payload) {
 
 export async function getStaffMembersApi() {
   return request("/staff-members");
+}
+
+export async function getStaffRolesApi() {
+  return request("/staff-roles");
 }
 
 export async function updateTechnicianRatingApi(id, rating) {

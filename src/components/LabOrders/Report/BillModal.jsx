@@ -2,8 +2,27 @@
 import { useState, useEffect, useRef } from "react";
 import { CheckCircle2, Download } from "lucide-react";
 import ModalShell from "../../common/Modal/ModalShell";
-import { getOrderBillUrlApi, getSettingsApi, getGstSettingsApi } from "../../../api/api";
+import { getOrderBillUrlApi, getOrderApi, getSettingsApi, getGstSettingsApi } from "../../../api/api";
 import { groupTestsByPackage, calcBillTotals } from "../../../utils/orderPricing";
+
+// "2026-10-16 10:44:00" / ISO string -> "16 Oct 2026, 04:14 PM" (India time)
+function formatOrderDate(raw) {
+  if (!raw) return "";
+  let normalized = String(raw).replace(" ", "T");
+  normalized = normalized.replace(/([+-]\d{2})$/, "$1:00");
+  const hasZone = /(Z|[+-]\d{2}:\d{2})$/i.test(normalized);
+  const d = new Date(hasZone ? normalized : normalized + "Z");
+  if (Number.isNaN(d.getTime())) return "";
+
+  return d.toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function BillModal({
   orderId,
@@ -15,8 +34,7 @@ export default function BillModal({
   discountValue = 0,
   paymentDone,
   referredBy,
-  collectionDate,
-  reportDate,
+  billDate, // when the order was created (date + time) — shown as "Billed On"
   onClose,
 }) {
   // Group by the package each test was actually billed under — same
@@ -51,6 +69,22 @@ export default function BillModal({
   const [downloadingBill, setDownloadingBill] = useState(false);
   const [downloadError, setDownloadError] = useState("");
   const iframeRef = useRef(null);
+
+  // "Billed On" = when the order was created. Loaded here from the order
+  // itself, so every screen that opens this modal shows it without having
+  // to pass a date in. An explicit billDate prop still wins if given.
+  const [orderedAt, setOrderedAt] = useState("");
+  const billedOn = billDate || formatOrderDate(orderedAt);
+
+  useEffect(() => {
+    let cancelled = false;
+    getOrderApi(orderId)
+      .then((res) => {
+        if (!cancelled) setOrderedAt(res.data?.ordered_at ?? "");
+      })
+      .catch((err) => console.error("Failed to load order date:", err.message));
+    return () => { cancelled = true; };
+  }, [orderId]);
 
   useEffect(() => {
     async function loadSettings() {
@@ -270,11 +304,10 @@ export default function BillModal({
       </tr>
       <tr>
         <td class="k">Reg / Order No.</td><td class="v">${patient.regNo || "-"} / ${orderId}</td>
-        <td class="k">Collection Date</td><td class="v">${collectionDate || "—"}</td>
+        <td class="k">Billed On</td><td class="v">${billedOn || "—"}</td>
       </tr>
       <tr>
-        <td class="k">Referred By</td><td class="v">${referredBy || "Self"}</td>
-        <td class="k">Report Date</td><td class="v">${reportDate || "—"}</td>
+        <td class="k">Referred By</td><td class="v" colspan="3">${referredBy || "Self"}</td>
       </tr>
     </table>
   </div>
@@ -342,8 +375,7 @@ export default function BillModal({
     ["Contact No.", patient.phone || "—"],
     ["Reg / Order No.", `${patient.regNo || "-"} / ${orderId}`],
     ["Referred By", referredBy || "Self"],
-    ["Collection Date", collectionDate || "—"],
-    ["Report Date", reportDate || "—"],
+    ["Billed On", billedOn || "—"],
   ];
 
   return (

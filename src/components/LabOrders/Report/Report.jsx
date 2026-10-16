@@ -859,8 +859,7 @@ export default function Report() {
           discountValue={discount.value}
           discountPercent={discount.type === "percentage" ? discount.value : 0}
           referredBy={order?.referredBy || "Self"}
-          collectionDate={collectionDate}
-          reportDate={reportDate}
+          billDate={registered}
           onClose={() => setBillOpen(false)}
         />
       )}

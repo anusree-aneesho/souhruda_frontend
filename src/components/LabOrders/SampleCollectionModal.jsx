@@ -1,6 +1,6 @@
 // src/components/LabOrders/SampleCollectionModal.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
-import { markSampleCollectedApi, deleteOrderApi, getSampleCollectorsApi } from "../../api/api";
+import { markSampleCollectedApi, deleteOrderApi, getSampleCollectorsApi, getOrderApi } from "../../api/api";
 
 // "Miss" + "Anusree" -> "Miss Anusree" (skips the title if it's empty)
 const displayName = (c) => [c?.title, c?.name].filter(Boolean).join(" ");
@@ -13,6 +13,28 @@ export default function SampleCollectionModal({ order, onClose, onConfirmed, onC
   const [collectorsLoading, setCollectorsLoading] = useState(true);
   // users.id of the chosen lab assistant / technician
   const [selectedCollector, setSelectedCollector] = useState("");
+
+  // Payment status shown on the modal (Paid / Unpaid). Starts from whatever the
+  // list row already knows, then is confirmed from the order itself.
+  const [paymentDone, setPaymentDone] = useState(
+    Boolean(order.paymentDone) || order.payment_status === "paid"
+  );
+  const [paymentLoading, setPaymentLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    getOrderApi(order.orderId)
+      .then((res) => {
+        if (!cancelled) setPaymentDone(res.data?.payment_status === "paid");
+      })
+      .catch((err) => console.error("Failed to load payment status:", err.message))
+      .finally(() => {
+        if (!cancelled) setPaymentLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [order.orderId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -167,6 +189,20 @@ export default function SampleCollectionModal({ order, onClose, onConfirmed, onC
             <div>
               <p className="text-xs font-medium text-gray-400 tracking-wide mb-1">REG. NO</p>
               <p className="text-sm font-medium text-teal-600">{order.regNo || "-"}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-400 tracking-wide mb-1">PAYMENT</p>
+              {paymentLoading ? (
+                <span className="inline-block h-6 w-16 rounded-full bg-gray-100 animate-pulse" />
+              ) : (
+                <span
+                  className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                    paymentDone ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
+                  }`}
+                >
+                  {paymentDone ? "Paid" : "Unpaid"}
+                </span>
+              )}
             </div>
           </div>
 

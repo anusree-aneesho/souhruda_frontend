@@ -901,9 +901,14 @@ export async function getRevenueOverTimeApi(range = "1 Year") {
   );
 }
 
-export async function markSampleCollectedApi(orderId) {
+export async function getSampleCollectorsApi() {
+  return request("/orders/sample-collectors");
+}
+
+export async function markSampleCollectedApi(orderId, collectorId) {
   return request(`/orders/${orderId}/mark-sample-collected`, {
     method: "PATCH",
+    body: JSON.stringify({ collector_id: collectorId }),
   });
 }
 

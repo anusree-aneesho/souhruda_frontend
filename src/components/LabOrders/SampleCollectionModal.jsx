@@ -1,17 +1,113 @@
 // src/components/LabOrders/SampleCollectionModal.jsx
-import { useState } from "react";
-import { markSampleCollectedApi, deleteOrderApi } from "../../api/api";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { markSampleCollectedApi, deleteOrderApi, getSampleCollectorsApi } from "../../api/api";
 
 export default function SampleCollectionModal({ order, onClose, onConfirmed, onCancelled }) {
   const [loading, setLoading] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [error, setError] = useState(null);
+  const [collectors, setCollectors] = useState([]);
+  const [collectorsLoading, setCollectorsLoading] = useState(true);
+  // users.id of the chosen lab assistant / technician
+  const [selectedCollector, setSelectedCollector] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    getSampleCollectorsApi()
+      .then((res) => {
+        if (!cancelled) setCollectors(res?.data ?? []);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message || "Couldn't load staff list.");
+      })
+      .finally(() => {
+        if (!cancelled) setCollectorsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // ── Searchable collector picker ──────────────────────────
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const [highlight, setHighlight] = useState(0);
+  const pickerRef = useRef(null);
+  const listRef = useRef(null);
+
+  const selected = collectors.find((c) => String(c.id) === selectedCollector);
+
+  // Flat, filtered list (lab assistants first, then technicians) so keyboard
+  // navigation has a single index to walk through.
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const matches = collectors.filter(
+      (c) => !q || c.name.toLowerCase().includes(q)
+    );
+    return [
+      ...matches.filter((c) => c.type === "lab_assistant"),
+      ...matches.filter((c) => c.type === "technician"),
+    ];
+  }, [collectors, search]);
+
+  // Close when clicking outside the picker
+  useEffect(() => {
+    function onDown(e) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
+        setOpen(false);
+        setSearch("");
+      }
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, []);
+
+  // Keep the highlighted row scrolled into view
+  useEffect(() => {
+    if (!open || !listRef.current) return;
+    listRef.current
+      .querySelector(`[data-index="${highlight}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [highlight, open]);
+
+  function chooseCollector(c) {
+    setSelectedCollector(String(c.id));
+    setError(null);
+    setOpen(false);
+    setSearch("");
+  }
+
+  function handlePickerKeyDown(e) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (!open) return setOpen(true);
+      setHighlight((h) => Math.min(h + 1, filtered.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlight((h) => Math.max(h - 1, 0));
+    } else if (e.key === "Enter") {
+      if (open && filtered[highlight]) {
+        e.preventDefault();
+        chooseCollector(filtered[highlight]);
+      }
+    } else if (e.key === "Escape") {
+      if (open) {
+        e.stopPropagation();
+        setOpen(false);
+        setSearch("");
+      }
+    }
+  }
 
   async function handleConfirm() {
+    if (!selectedCollector) {
+      setError("Please select who collected the sample.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      await markSampleCollectedApi(order.orderId);
+      await markSampleCollectedApi(order.orderId, Number(selectedCollector));
       onConfirmed(order.orderId);
     } catch (err) {
       setError(err.message || "Failed to update status.");
@@ -87,6 +183,107 @@ export default function SampleCollectionModal({ order, onClose, onConfirmed, onC
             )}
           </div>
 
+          {!confirmingCancel && (
+            <div ref={pickerRef}>
+              <label
+                htmlFor="sample-collector"
+                className="block text-xs font-medium text-gray-400 tracking-wide mb-2"
+              >
+                COLLECTED BY <span className="text-red-500">*</span>
+              </label>
+
+              <div className="relative">
+                <input
+                  id="sample-collector"
+                  type="text"
+                  autoComplete="off"
+                  role="combobox"
+                  aria-expanded={open}
+                  aria-controls="sample-collector-list"
+                  value={open ? search : selected?.name ?? ""}
+                  placeholder={
+                    collectorsLoading
+                      ? "Loading staff…"
+                      : open && selected
+                      ? selected.name
+                      : "Search lab assistant or technician"
+                  }
+                  disabled={collectorsLoading || loading}
+                  onFocus={() => {
+                    setOpen(true);
+                    setHighlight(0);
+                  }}
+                  onClick={() => setOpen(true)}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setOpen(true);
+                    setHighlight(0);
+                  }}
+                  onKeyDown={handlePickerKeyDown}
+                  className="w-full pl-3 pr-9 py-2.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 disabled:bg-gray-50 disabled:text-gray-400"
+                />
+                <svg
+                  className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 transition-transform ${
+                    open ? "rotate-180" : ""
+                  }`}
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 11.06l3.71-3.83a.75.75 0 111.08 1.04l-4.25 4.38a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+
+              {open && (
+                <ul
+                  id="sample-collector-list"
+                  ref={listRef}
+                  role="listbox"
+                  className="mt-1.5 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-sm py-1"
+                >
+                  {filtered.length === 0 ? (
+                    <li className="px-3 py-3 text-sm text-gray-400 text-center">
+                      No matching staff found
+                    </li>
+                  ) : (
+                    filtered.map((c, i) => {
+                      const showHeading = i === 0 || filtered[i - 1].type !== c.type;
+                      const isSelected = selectedCollector === String(c.id);
+                      return (
+                        <li key={`${c.type}-${c.id}`} role="presentation">
+                          {showHeading && (
+                            <p className="px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-gray-400 uppercase">
+                              {c.type === "lab_assistant" ? "Lab Assistants" : "Technicians"}
+                            </p>
+                          )}
+                          <div
+                            role="option"
+                            aria-selected={isSelected}
+                            data-index={i}
+                            onMouseEnter={() => setHighlight(i)}
+                            onMouseDown={(e) => {
+                              e.preventDefault(); // keep input focus, avoid blur race
+                              chooseCollector(c);
+                            }}
+                            className={`flex items-center justify-between px-3 py-2 text-sm cursor-pointer ${
+                              highlight === i ? "bg-teal-50" : ""
+                            } ${isSelected ? "text-teal-700 font-medium" : "text-gray-800"}`}
+                          >
+                            <span>{c.name}</span>
+                          </div>
+                        </li>
+                      );
+                    })
+                  )}
+                </ul>
+              )}
+            </div>
+          )}
+
           <p className="text-sm text-gray-500 pt-1">
             {confirmingCancel
               ? "Cancel this order? This cannot be undone from here."
@@ -134,7 +331,7 @@ export default function SampleCollectionModal({ order, onClose, onConfirmed, onC
               )}
               <button
                 onClick={handleConfirm}
-                disabled={loading}
+                disabled={loading || collectorsLoading || !selectedCollector}
                 className="px-5 py-2 text-sm rounded-lg bg-teal-600 text-white font-medium hover:bg-teal-700 disabled:opacity-50 cursor-pointer"
               >
                 {loading ? "Marking…" : "Mark Sample Collected"}

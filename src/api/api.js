@@ -485,10 +485,10 @@ export async function markOrderPaidApi(orderId) {
   });
 }
 
-export async function updateOrderDiscountApi(orderId, discountPercent) {
+export async function updateOrderDiscountApi(orderId, { discount_type, discount_value }) {
   return request(`/orders/${orderId}/discount`, {
     method: "PATCH",
-    body: JSON.stringify({ discount_percent: discountPercent }),
+    body: JSON.stringify({ discount_type, discount_value }),
   });
 }
 

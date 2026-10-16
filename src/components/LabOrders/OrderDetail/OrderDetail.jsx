@@ -33,7 +33,7 @@ function mapOrder(o) {
       return {
         id: item.id,
         name: lt?.name ?? "-",
-        unit: lt?.unit ?? "",
+        unit: item.resolved_unit ?? lt?.unit ?? "",
         category: lt?.category?.name ?? "General",
         range,
         rangeLow: item.resolved_range_low != null ? Number(item.resolved_range_low) : null,

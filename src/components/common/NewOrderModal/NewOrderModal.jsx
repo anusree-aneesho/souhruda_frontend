@@ -1,4 +1,4 @@
-// src/components/NewOrderModal/NewOrderModal.jsx
+// src/components/common/NewOrderModal/NewOrderModal.jsx
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import ModalShell from "../../common/Modal/ModalShell";
@@ -11,6 +11,7 @@ import PaymentStep from "./steps/PaymentStep";
 import { useOrderModal } from "../../../Context/OrderModalContext";
 import EditPatientModal from "../../Patients/modals/EditPatientModal";
 import QuickAddDoctorModal from "./QuickAddDoctorModal";
+import BillModal from "../../LabOrders/Report/BillModal";
 import Toast from "../../common/Toast/Toast";
 import {
   getPatientsApi,
@@ -62,7 +63,7 @@ function mapLabTestForOrder(t) {
     range: t.range_text || t.range_raw || "",
     price: Number(t.price) || 0,
     categoryId: t.category_id,
-    category: t.category_id,   
+    category: t.category_id,
   };
 }
 
@@ -191,6 +192,12 @@ export default function NewOrderModal() {
   const closeToast = useCallback(() => setToast(null), []);
   // Success toast (e.g. "Dr. X added successfully")
   const [toast, setToast] = useState(null);
+
+  // Discount chosen on the Confirm step
+  const [discount, setDiscount] = useState({ type: "percentage", value: 0 });
+
+  // Set after a paid order is created, so the real bill can be shown
+  const [billData, setBillData] = useState(null);
 
   async function handleEditSelectedPatient() {
     if (!selectedPatient?.id) return;
@@ -363,6 +370,8 @@ export default function NewOrderModal() {
     setSelectedTests([]);
     setAppliedPackageIds([]);
     setPaymentDone(false);
+    setDiscount({ type: "percentage", value: 0 });
+    setBillData(null);
     setAddress("");
     setPinnedLocation(null);
     setIsLocating(false);
@@ -382,6 +391,20 @@ export default function NewOrderModal() {
     setSelectedReminderIds([]);
     setToast(null);
     close();
+  }
+
+  // Closing the bill (after a paid order was created) goes to Lab Orders.
+  function handleBillClose() {
+    const info = billData;
+    resetAndClose();
+    navigate("/lab-orders", {
+      state: {
+        justCreated: {
+          orderId: info?.orderId,
+          patientName: info?.patient?.first_name,
+        },
+      },
+    });
   }
 
   function toggleTest(test) {
@@ -553,7 +576,8 @@ export default function NewOrderModal() {
         return;
       }
 
-      const { appliedPackages } = computeOrderPricing(selectedTests, packages, appliedPackageIds);
+      const pricing = computeOrderPricing(selectedTests, packages, appliedPackageIds);
+      const { appliedPackages } = pricing;
 
       const payload = {
         patient_id: patientId,
@@ -564,10 +588,40 @@ export default function NewOrderModal() {
         referred_by: referredBy,
         payment_received: paymentDone,
         follow_up_reminder_ids: selectedReminderIds,
+        discount_type: discount.type,
+        discount_value: Number(discount.value) || 0,
       };
 
       const res = await createOrderApi(payload);
       const order = res.data;
+
+      // Paid at creation: keep the modal open and show the real bill, now that
+      // the order exists in the database (so print / PDF download both work).
+      if (paymentDone) {
+        const billTests = [
+          ...pricing.appliedPackages.flatMap((pkg) =>
+            pkg.tests.map((t) => ({
+              ...t,
+              package_id: pkg.id,
+              package_name: pkg.name,
+              package_price: pkg.price,
+            }))
+          ),
+          ...pricing.individualTests,
+        ];
+
+        setBillData({
+          orderId: order.order_no,
+          patient: { ...currentPatient, phone: currentPatient?.contact },
+          tests: billTests,
+          billTotal: pricing.total,
+          discountType: discount.type,
+          discountValue: discount.value,
+          referredBy,
+        });
+        setIsSubmitting(false);
+        return;
+      }
 
       resetAndClose();
       navigate("/lab-orders", {
@@ -636,6 +690,24 @@ export default function NewOrderModal() {
     (isHomeCollection && step === 3 && (!address.trim() || !preferredDate || !pinnedLocation || !pinnedLocation.withinRadius));
 
   if (!isOpen) return null;
+
+  // A paid order was just created: show its real bill (print / download PDF work)
+  if (billData) {
+    return (
+      <BillModal
+        orderId={billData.orderId}
+        patient={billData.patient}
+        tests={billData.tests}
+        billTotal={billData.billTotal}
+        homeVisitFee={0}
+        discountType={billData.discountType}
+        discountValue={billData.discountValue}
+        paymentDone={true}
+        referredBy={billData.referredBy}
+        onClose={handleBillClose}
+      />
+    );
+  }
 
   return (
     <>
@@ -751,6 +823,8 @@ export default function NewOrderModal() {
             appliedPackageIds={appliedPackageIds}
             paymentDone={paymentDone}
             onPaymentDoneChange={setPaymentDone}
+            discount={discount}
+            onDiscountChange={setDiscount}
           />
         )}
 

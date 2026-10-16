@@ -3,9 +3,10 @@ import ModalShell from "../../common/Modal/ModalShell";
 import { updateOrderDiscountApi, getGstSettingsApi } from "../../../api/api";
 import { groupTestsByPackage, calcBillTotals } from "../../../utils/orderPricing";
 
+// props
 export default function EditBillModal({
   orderId, tests, billTotal, homeVisitFee = 0,
-  initialDiscount = 0, initialDiscountType = "percentage", onClose, onSaved,
+  initialDiscount = 0, initialDiscountType = "percentage", onClose, onSaved, onApply,
 }) {
   const [discountType, setDiscountType] = useState(initialDiscountType || "percentage");
   const [discount, setDiscount] = useState(String(initialDiscount || 0));
@@ -51,6 +52,12 @@ export default function EditBillModal({
           ? "Enter a discount between 0 and 100."
           : `Enter an amount between 0 and ${testsTotal.toFixed(2)}.`
       );
+      return;
+    }
+
+    // in handleSave, right after the `if (invalid) { ... return; }` block
+    if (onApply) {
+      onApply(discountType, value);
       return;
     }
     setSaving(true);

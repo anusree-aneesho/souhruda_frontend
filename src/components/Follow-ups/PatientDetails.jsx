@@ -97,6 +97,17 @@ export default function PatientDetails() {
   const pageStart = (currentPage - 1) * PAGE_SIZE;
   const pagedOrders = orders.slice(pageStart, pageStart + PAGE_SIZE);
 
+  // Two-letter avatar, same rule as the lab order report: first letter of the
+  // first two words of the displayed name ("Miss. Malu P" -> "MM").
+  const displayName = patient ? nameWithTitle(patient.title, patient.name) : "";
+  const initials = (displayName || "?")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+
   const gender = patient?.gender
     ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)
     : null;
@@ -142,11 +153,11 @@ export default function PatientDetails() {
               {/* Identity */}
               <div className="flex items-center gap-4 lg:w-[34%] shrink-0">
                 <div className="h-14 w-14 shrink-0 rounded-full bg-teal-600 text-white text-xl font-semibold flex items-center justify-center ring-4 ring-teal-50">
-                  {(patient.name || "?").charAt(0).toUpperCase()}
+                  {initials}
                 </div>
                 <div className="min-w-0">
                   <h1 className="text-lg font-bold text-gray-900 uppercase truncate">
-                    {nameWithTitle(patient.title, patient.name)}
+                    {displayName}
                   </h1>
                   <div className="flex flex-wrap gap-2 mt-1.5">
                     <span className="px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 text-xs font-medium">

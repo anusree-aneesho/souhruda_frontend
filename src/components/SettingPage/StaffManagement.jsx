@@ -39,6 +39,8 @@ function mapStaff(s) {
     status: s.status,
     latitude: s.latitude,
     longitude: s.longitude,
+    // Saved signature image URL — lets the Edit Staff form preview it.
+    signatureUrl: s.signature_url ?? null,
     // Technician-only (null for other roles)
     rating: s.rating,
     assignedJobs: s.assigned_jobs,

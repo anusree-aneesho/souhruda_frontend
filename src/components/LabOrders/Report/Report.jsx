@@ -485,7 +485,7 @@ export default function Report() {
               {/* Discount can only be edited while the order is unpaid */}
               {!paymentDone && (
                 <button type="button" onClick={() => setEditBillOpen(true)} className={actionBtn}>
-                  <Pencil size={16} /> Edit
+                  <Pencil size={16} /> Discount
                 </button>
               )}
 

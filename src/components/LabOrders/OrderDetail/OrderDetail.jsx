@@ -53,6 +53,7 @@ function mapOrder(o) {
     // completion time yet, so the in-app report does the same here.
     completedAt: o.completed_at || o.ordered_at,
     paymentDone: Boolean(o.payment_received),
+    paymentStatus: o.payment_status ?? "pending",
     referredBy: o.referred_by || "Self",
     billTotal: o.bill_total != null ? Number(o.bill_total) : null,
     homeVisitFee: Number(o.home_visit_fee) || 0,
@@ -266,6 +267,7 @@ export default function OrderDetail() {
         tests={tests}
         billTotal={billTotal}
         homeVisitFee={homeVisitFee}
+        paymentDone={order?.paymentStatus === "paid"} 
         results={results}
         flags={flags}
         onResultChange={handleResultChange}

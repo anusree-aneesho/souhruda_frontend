@@ -422,6 +422,10 @@ export default function Report() {
           onBill={() => setBillOpen(true)}
           onWhatsApp={() => setWhatsAppOpen(true)}
           onPrint={handlePrint}
+          onDownload={() => {
+            setDownloadError("");
+            setPreviewOpen(true);
+          }}
         />
       ) : (
         <>

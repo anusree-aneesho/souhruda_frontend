@@ -1,6 +1,6 @@
 // src/components/LabOrders/Report/TestDetailView.jsx
 import {
-  Receipt, MessageCircle, Printer,
+  Receipt, MessageCircle, Printer, Download,
   User, Phone, Stethoscope, CalendarDays, FileCheck2, Wallet,
 } from "lucide-react";
 import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
@@ -26,6 +26,7 @@ export default function TestDetailView({
   onBill,
   onWhatsApp,
   onPrint,
+  onDownload,
 }) {
   const hasRange = test.range && test.range !== "-";
 
@@ -59,6 +60,13 @@ export default function TestDetailView({
 
           <button type="button" onClick={onPrint} className={actionBtn}>
             <Printer size={16} /> Print
+          </button>
+          <button
+            type="button"
+            onClick={onDownload}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer"
+          >
+            <Download size={16} /> Download PDF
           </button>
         </div>
       </div>

@@ -52,7 +52,9 @@ function mapOrder(o) {
     // The PDF/Blade report already falls back to orderedAt when there's no
     // completion time yet, so the in-app report does the same here.
     completedAt: o.completed_at || o.ordered_at,
-    paymentDone: Boolean(o.payment_received),
+    paymentDone: o.payment_status === "paid",
+    discountType: o.discount_type || "percentage",
+    discountValue: Number(o.discount_value) || 0,
     paymentStatus: o.payment_status ?? "pending",
     referredBy: o.referred_by || "Self",
     billTotal: o.bill_total != null ? Number(o.bill_total) : null,
@@ -267,7 +269,9 @@ export default function OrderDetail() {
         tests={tests}
         billTotal={billTotal}
         homeVisitFee={homeVisitFee}
-        paymentDone={order?.paymentStatus === "paid"} 
+        paymentDone={paymentDone}
+        discountType={order?.discountType}
+        discountValue={order?.discountValue}
         results={results}
         flags={flags}
         onResultChange={handleResultChange}

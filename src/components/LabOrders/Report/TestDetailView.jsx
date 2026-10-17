@@ -1,7 +1,7 @@
 // src/components/LabOrders/Report/TestDetailView.jsx
 import {
   Receipt, MessageCircle, Printer,
-  User, Phone, Stethoscope, CalendarDays, FileCheck2,
+  User, Phone, Stethoscope, CalendarDays, FileCheck2, Wallet,
 } from "lucide-react";
 import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
 
@@ -15,8 +15,11 @@ export default function TestDetailView({
   flag,
   ageText,
   registered,
+  collectionDate,
   reportDate,
   referredBy,
+  paymentDone,
+  onMarkPaid,
   letterheadOn,
   onLetterheadChange,
   onBack,
@@ -54,8 +57,6 @@ export default function TestDetailView({
             <MessageCircle size={16} /> WhatsApp
           </button>
 
-
-
           <button type="button" onClick={onPrint} className={actionBtn}>
             <Printer size={16} /> Print
           </button>
@@ -88,7 +89,7 @@ export default function TestDetailView({
               { icon: User, label: "Age / Gender", value: `${ageText} · ${patient.gender || "—"}` },
               { icon: Phone, label: "Contact", value: patient.phone || "Not recorded" },
               { icon: Stethoscope, label: "Referred by", value: referredBy },
-              { icon: CalendarDays, label: "Collection date", value: registered },
+              { icon: CalendarDays, label: "Collection date", value: collectionDate || registered },
               { icon: FileCheck2, label: "Reported", value: reportDate },
             ].map(({ icon: Icon, label, value }) => (
               <div key={label} className="flex items-start gap-2.5">
@@ -101,6 +102,29 @@ export default function TestDetailView({
                 </div>
               </div>
             ))}
+
+            {/* Payment status — same block as the main report screen */}
+            <div className="flex items-start gap-2.5">
+              <span className="mt-0.5 h-7 w-7 shrink-0 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center">
+                <Wallet size={14} />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[11px] uppercase tracking-wide text-gray-400">Payment</p>
+                <button
+                  type="button"
+                  disabled={paymentDone}
+                  onClick={onMarkPaid}
+                  title={paymentDone ? "Payment received" : "Click to confirm payment"}
+                  className={`mt-0.5 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-white transition-colors ${
+                    paymentDone
+                      ? "bg-green-600 cursor-default"
+                      : "bg-red-600 hover:bg-red-700 cursor-pointer"
+                  }`}
+                >
+                  {paymentDone ? "Paid" : "Unpaid"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -411,8 +411,11 @@ export default function Report() {
           flag={flags[viewTest.id]}
           ageText={ageText}
           registered={registered}
+          collectionDate={collectionDate}
           reportDate={reportDate}
           referredBy={order?.referredBy || "Self"}
+          paymentDone={paymentDone}
+          onMarkPaid={() => setConfirmingPayment(true)}
           letterheadOn={letterheadOn}
           onLetterheadChange={setLetterheadOn}
           onBack={() => setViewTest(null)}

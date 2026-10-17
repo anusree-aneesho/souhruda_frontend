@@ -204,6 +204,8 @@ export default function BillModal({
 <meta charset="utf-8">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* Keep background colours (the green Paid box, badges) in the printout */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   @page { size: A4; margin: 0; }
   body {
     font-family: 'Noto Sans', 'DejaVu Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -252,7 +254,7 @@ export default function BillModal({
   .offers { background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 8px; padding: 10px 14px; margin: 10px 0 14px; }
   .offers .offers-title { font-size: 9.5px; font-weight: 700; color: #0f766e; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
   .offers .offer-row { font-size: 11.5px; color: #115e59; display: flex; justify-content: space-between; }
-  .totals { width: 100%; margin-top: 6px; }
+  .totals { width: 100%; margin-top: 6px; border-collapse: collapse; }
   .totals td { padding: 5px 12px; font-size: 12px; }
   .totals .label { color: #6b7280; text-align: right; }
   .totals .value { color: #374151; text-align: right; width: 110px; font-weight: 500; }
@@ -260,6 +262,14 @@ export default function BillModal({
   .totals .grand-row td { border-top: 2px solid #0d9488; padding-top: 12px; font-size: 15px; font-weight: 700; }
   .totals .grand-row .label { color: #0f766e; }
   .totals .grand-row .value { color: #0f766e; }
+
+  /* Paid state: green box, same look as the on-screen modal */
+  .totals .grand-row.paid td { background: #f0fdf4; border-top: none; padding: 12px 16px; }
+  .totals .grand-row.paid td:first-child { border-radius: 8px 0 0 8px; text-align: right; }
+  .totals .grand-row.paid td:last-child { border-radius: 0 8px 8px 0; }
+  .totals .grand-row.paid .label,
+  .totals .grand-row.paid .value { color: #15803d; }
+
   .paid-badge {
     display: inline-block; background: #dcfce7; color: #15803d; font-size: 10px; font-weight: 700;
     text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 10px; border-radius: 999px; margin-top: 8px;
@@ -295,7 +305,7 @@ export default function BillModal({
   <div class="details">
     <table>
       <tr>
-        <td class="k">Name</td><td class="v">${patient.name}${paymentDone ? ` <span class="paid-badge">Paid</span>` : ""}</td>
+        <td class="k">Name</td><td class="v">${patient.name}</td>
         <td class="k">Age</td><td class="v">${ageDisplay}</td>
       </tr>
       <tr>
@@ -341,7 +351,7 @@ export default function BillModal({
            <tr><td class="label" style="width:auto;">GST (${gstRate}%)</td><td class="value">Rs. ${gstAmount.toFixed(2)}</td></tr>`
         : ""
     }
-    <tr class="grand-row"><td class="label" style="width:auto;">Total Payable</td><td class="value">Rs. ${grandTotal.toFixed(2)}</td></tr>
+    <tr class="grand-row${paymentDone ? " paid" : ""}"><td class="label" style="width:auto;">${paymentDone ? "Paid" : "Total Payable"}</td><td class="value">Rs. ${grandTotal.toFixed(2)}</td></tr>
   </table>
 
   <div class="footer">

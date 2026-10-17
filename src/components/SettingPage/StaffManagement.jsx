@@ -9,7 +9,7 @@ import Toast from "../common/Toast/Toast";
 import { useToast } from "../common/Toast/useToast";
 import { formatNameWithTitle } from "../Patients/patientTitles";
 
-const TECHNICIAN_ROLE = "Technician";
+const TECHNICIAN_ROLE = "Lab Technician";
 
 const TECHNICIAN_STATUS_STYLES = {
   Available: "bg-teal-50 text-teal-700",
@@ -19,7 +19,7 @@ const TECHNICIAN_STATUS_STYLES = {
 
 const ROLE_VALUE_MAP = {
   "Front Office": "front_office",
-  "Technician": "technician",
+  "Lab Technician": "technician",
   "Lab Assistant": "lab_assistant",
   "Lab Incharge": "lab_incharge",
   "Admin": "admin",
@@ -241,7 +241,7 @@ export default function StaffManagement() {
 
   // Role filter options come from the roles table (GET /staff-roles).
   // The old fixed list is only a fallback if that request fails.
-  const [roleOptions, setRoleOptions] = useState(["Front Office", "Technician", "Lab Assistant", "Lab Incharge"]);
+  const [roleOptions, setRoleOptions] = useState(["Front Office", "Lab Technician", "Lab Assistant", "Lab Incharge"]);
 
   useEffect(() => {
     let cancelled = false;

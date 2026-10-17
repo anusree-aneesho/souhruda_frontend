@@ -6,7 +6,7 @@ import { useAuth } from "../../../Context/AuthContext";
 import { STAFF_TITLES } from "../../Patients/patientTitles";
 
 
-const ALL_ROLES = ["Front Office", "Technician", "Lab Assistant", "Lab Incharge", "Admin"];
+const ALL_ROLES = ["Front Office", "Lab Technician", "Lab Assistant", "Lab Incharge", "Admin"];
 
 const SIGNATURE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const SIGNATURE_MAX_BYTES = 2 * 1024 * 1024; // 2 MB
@@ -31,7 +31,9 @@ const emptyForm = {
 
 function validate(form, isTechnician, isAdmin) {
   const errors = {};
-
+  if (!form.title) {
+  errors.title = "Select a title.";
+}
   if (!form.name.trim()) {
     errors.name = "Name is required.";
   } else if (!NAME_REGEX.test(form.name.trim())) {
@@ -94,9 +96,8 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
   const [isLocating, setIsLocating] = useState(false);
   const [errors, setErrors] = useState({});
   const isEditMode = Boolean(editingStaff);
-  const isTechnician = form.role === "Technician";
+  const isTechnician = form.role === "Lab Technician";
   const isAdmin = form.role === "Admin";
-  const isLabIncharge = form.role === "Lab Incharge";
 
   // Preview: the newly chosen file, else the signature already saved (edit mode).
   const [signaturePreview, setSignaturePreview] = useState(null);
@@ -185,8 +186,8 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
       staffId: editingStaff?.staffId,
       latitude: isTechnician ? form.latitude : null,
       longitude: isTechnician ? form.longitude : null,
-      signature: isLabIncharge ? form.signature : null,
-      remove_signature: isLabIncharge ? form.remove_signature : false,
+      signature: form.signature,
+      remove_signature: form.remove_signature,
     });
   }
 
@@ -200,13 +201,16 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
               <select
                 value={form.title}
                 onChange={(e) => handleChange("title", e.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
+                  errors.title ? "border-red-300 focus:border-red-400 focus:ring-red-400" : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+                }`}
               >
                 <option value="">Select</option>
                 {STAFF_TITLES.map((t) => (
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
+              {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1.5">Full Name</label>
@@ -314,7 +318,7 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
             </div>
           )}
 
-          {isLabIncharge && (
+          {(
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1.5">
                 Signature <span className="font-normal text-gray-400">(optional)</span>

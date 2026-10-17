@@ -1,12 +1,16 @@
 // src/components/LabOrders/OrderDetail/ResultsTable.jsx
+import { useState, useEffect } from "react";
 import ResultRow from "./ResultRow";
-import { groupTestsByPackage } from "../../../utils/orderPricing";
+import { groupTestsByPackage, calcBillTotals } from "../../../utils/orderPricing";
+import { getGstSettingsApi } from "../../../api/api";
 
 export default function ResultsTable({
   tests,
   billTotal,
   homeVisitFee = 0,
   paymentDone = false,
+  discountType = "percentage",
+  discountValue = 0,
   results,
   flags,
   onResultChange,
@@ -16,14 +20,36 @@ export default function ResultsTable({
   onEditRange,
 }) {
   const { packageGroups, individualTests } = groupTestsByPackage(tests);
+  const [gstRate, setGstRate] = useState(0);
 
-  // billTotal comes from the server (order.bill_total) — the amount the
-  // patient was actually charged. Fall back to summing catalog prices only
-  // if it's ever missing (e.g. an older order), so the page never breaks.
+  // GST % of the branch (0 when the lab isn't GST registered)
+  useEffect(() => {
+    getGstSettingsApi()
+      .then((res) => {
+        const g = res.data;
+        setGstRate(g?.is_gst_registered ? Number(g.gst_rate) || 0 : 0);
+      })
+      .catch(() => {});
+  }, []);
+
+  // billTotal comes from the server (order.bill_total): the gross tests amount.
+  // Fall back to summing catalog prices only if it's ever missing.
   const fallbackTotal = tests.reduce((sum, t) => sum + t.price, 0);
   const testsTotal = billTotal != null ? billTotal : fallbackTotal;
-  // Home collection orders: the home visit fee is billed on top of the tests.
-  const total = testsTotal + Number(homeVisitFee || 0);
+  const visitFee = Number(homeVisitFee || 0);
+
+  // Same calculation as the Bill modal: discount on tests only,
+  // home visit fee added after, then GST on the result.
+  const { discountAmount, subtotal, gstAmount, grandTotal } = calcBillTotals({
+    testsTotal,
+    discountType,
+    discountValue: Number(discountValue) || 0,
+    homeVisitFee: visitFee,
+    gstRate,
+  });
+
+  const hasDiscount = Number(discountValue) > 0;
+  const isPercentage = discountType === "percentage";
 
   const allResultsEntered = tests.every((t) => (results[t.id] || "").trim() !== "");
   const isSaving = savingAction !== null;
@@ -62,7 +88,7 @@ export default function ResultsTable({
         </table>
       </div>
 
-      {/* Bill breakdown — hidden once payment has been received */}
+      {/* Bill breakdown: hidden once payment has been received */}
       {!paymentDone && (
         <div className="mt-4 pt-4 border-t border-gray-100">
           <div className="flex items-center justify-between pb-2 mb-1">
@@ -104,44 +130,63 @@ export default function ResultsTable({
             </div>
           ))}
 
-          {homeVisitFee > 0 && (
-            <div className="flex items-center justify-between py-2 border-t border-gray-100">
-              <span className="flex items-center gap-2 text-sm text-gray-900">
-                <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
-                Home visit fee
-              </span>
-              <span className="text-sm text-gray-700">₹{Number(homeVisitFee).toFixed(2)}</span>
+          {/* Price summary: tests total, discount, home visit fee, subtotal, GST, total */}
+          <div className="mt-3 rounded-xl bg-teal-50/60 px-5 py-4 space-y-2 text-sm">
+            <div className="flex items-center justify-between text-gray-600">
+              <span>Tests total</span>
+              <span>₹{testsTotal.toFixed(2)}</span>
             </div>
-          )}
+
+            {hasDiscount && (
+              <div className="flex items-center justify-between text-green-700">
+                <span>Discount{isPercentage ? ` (${Number(discountValue)}%)` : ""}</span>
+                <span>− ₹{discountAmount.toFixed(2)}</span>
+              </div>
+            )}
+
+            {visitFee > 0 && (
+              <div className="flex items-center justify-between text-gray-600">
+                <span>Home visit fee</span>
+                <span>₹{visitFee.toFixed(2)}</span>
+              </div>
+            )}
+
+            {gstRate > 0 && (
+              <>
+                <div className="flex items-center justify-between text-gray-600">
+                  <span>Subtotal</span>
+                  <span>₹{subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center justify-between text-gray-600">
+                  <span>GST ({gstRate}%)</span>
+                  <span>₹{gstAmount.toFixed(2)}</span>
+                </div>
+              </>
+            )}
+
+            <div className="flex items-center justify-between border-t border-teal-100 pt-3">
+              <span className="text-base font-semibold text-teal-700">Total payable</span>
+              <span className="text-xl font-bold text-teal-700">₹{grandTotal.toFixed(2)}</span>
+            </div>
+          </div>
         </div>
       )}
 
-      <div
-        className={`flex flex-col sm:flex-row sm:items-center gap-3 mt-4 ${
-          paymentDone ? "sm:justify-end" : "sm:justify-between"
-        }`}
-      >
-        {!paymentDone && (
-          <p className="text-sm text-gray-700">
-            Bill total: <span className="font-semibold text-gray-900">₹{total.toFixed(2)}</span>
-          </p>
-        )}
-        <div className="flex gap-3">
-          <button
-            onClick={onSaveClose}
-            disabled={isSaving}
-            className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {savingAction === "close" ? "Saving…" : "Save & Close"}
-          </button>
-          <button
-            onClick={onMarkCompleted}
-            disabled={isSaving || !allResultsEntered}
-            className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {savingAction === "complete" ? "Saving…" : "Mark Completed & View Report"}
-          </button>
-        </div>
+      <div className="flex justify-end gap-3 mt-4">
+        <button
+          onClick={onSaveClose}
+          disabled={isSaving}
+          className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {savingAction === "close" ? "Saving…" : "Save & Close"}
+        </button>
+        <button
+          onClick={onMarkCompleted}
+          disabled={isSaving || !allResultsEntered}
+          className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {savingAction === "complete" ? "Saving…" : "Mark Completed & View Report"}
+        </button>
       </div>
     </div>
   );

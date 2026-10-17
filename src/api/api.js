@@ -506,8 +506,17 @@ export async function getOrderBillUrlApi(orderId) {
 
 // ── FollowUp ──────────────────────────────────────
 
-export async function getFollowUpRemindersApi(page = 1) {
-  return request(`/follow-up-reminders?page=${page}`);
+// Accepts either a page number (old usage) or { page, status, q, per_page }.
+export async function getFollowUpRemindersApi(params = 1) {
+  const opts = typeof params === "number" ? { page: params } : params;
+  const query = new URLSearchParams();
+  if (opts.page) query.set("page", opts.page);
+  if (opts.status && opts.status !== "All") query.set("status", opts.status);
+  if (opts.q) query.set("q", opts.q);
+  if (opts.per_page) query.set("per_page", opts.per_page);
+
+  const qs = query.toString();
+  return request(`/follow-up-reminders${qs ? `?${qs}` : ""}`);
 }
 
 export async function markFollowUpReminderDoneApi(id) {

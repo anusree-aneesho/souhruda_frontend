@@ -3,7 +3,7 @@ import FollowUpRow from "./FollowUpRow";
 import FollowUpCard from "./FollowUpCard";
 import EmptyState from "./EmptyState";
 
-export default function FollowUpsTable({ followUps, onView, onViewPatient }) {
+export default function FollowUpsTable({ followUps, isFiltered, onView, onViewPatient }) {
   if (followUps.length === 0) {
     return (
       <div>
@@ -14,7 +14,7 @@ export default function FollowUpsTable({ followUps, onView, onViewPatient }) {
             </span>
           ))}
         </div>
-        <EmptyState />
+        <EmptyState filtered={isFiltered} />
       </div>
     );
   }

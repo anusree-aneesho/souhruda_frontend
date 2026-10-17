@@ -6,7 +6,7 @@ import { nameWithTitle } from "../../Patients/patientTitles";
 export default function FollowUpRow({ title, patient, patientNumber, test, due, status, onView, onViewPatient }) {
   return (
     <tr className="border-b border-gray-100 last:border-0">
-      <td className="py-3 text-sm text-gray-500">{patientNumber}</td>
+      <td className="py-3 text-sm text-teal-600">{patientNumber}</td>
       <td className="py-3 text-sm font-medium text-gray-900">
         <button
           onClick={onViewPatient}
@@ -23,9 +23,9 @@ export default function FollowUpRow({ title, patient, patientNumber, test, due, 
       <td className="py-3 text-right">
         <button
           onClick={onView}
-          className="text-xs text-teal-600 font-medium cursor-pointer"
+          className="text-sm text-teal-600 font-medium hover:underline cursor-pointer"
         >
-          View
+          View →
         </button>
       </td>
     </tr>

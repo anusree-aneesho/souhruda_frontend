@@ -443,12 +443,12 @@ export default function BillModal({
                 </p>
                 <p className="text-base font-bold text-gray-900 truncate">{patient.name}</p>
               </div>
-              {paymentDone && (
+              {/* {paymentDone && (
                 <span className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2.5 py-1 rounded-full shrink-0">
                   <CheckCircle2 size={13} />
                   Paid
                 </span>
-              )}
+              )} */}
             </div>
 
             <div className="grid grid-cols-2 gap-x-4 gap-y-3">

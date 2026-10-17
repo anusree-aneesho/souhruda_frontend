@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import {
-  Download, Printer, MessageCircle, Receipt, X, Pencil,  
+  Download, Printer, MessageCircle, Receipt, X, Pencil,
   User, Phone, Stethoscope, CalendarDays, FileCheck2, Wallet,
 } from "lucide-react";
 import Toast from "../../common/Toast/Toast";
@@ -10,7 +10,7 @@ import { useToast } from "../../common/Toast/useToast";
 import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
 import FollowUpSuggestions from "./FollowUpSuggestions";
 import BillModal from "./BillModal";
-import EditBillModal from "./EditBillModal";  
+import EditBillModal from "./EditBillModal";
 import WhatsAppSentModal from "./WhatsAppSentModal";
 import TestDetailView from "./TestDetailView";
 import AlertModal from "../../common/Modal/AlertModal";
@@ -27,6 +27,7 @@ export default function Report() {
   const [letterheadOn, setLetterheadOn] = useState(true);
   const [isBillOpen, setBillOpen] = useState(false);
   const [isEditBillOpen, setEditBillOpen] = useState(false);
+  // Discount saved on the order: { type: "percentage" | "fixed", value }
   const [discount, setDiscount] = useState({ type: "percentage", value: 0 });
   const [orderDates, setOrderDates] = useState({ collected: null, reported: null });
   const [isWhatsAppOpen, setWhatsAppOpen] = useState(false);
@@ -36,8 +37,6 @@ export default function Report() {
   const [downloadError, setDownloadError] = useState("");
   const [labInfo, setLabInfo] = useState(null);
   const [gstInfo, setGstInfo] = useState(null);
-  // Report signatories: sample collector + branch Lab Incharge ({ role, name, signature })
-  const [signatories, setSignatories] = useState([]);
   const iframeRef = useRef(null);
 
   const existingOrder = findOrderById(orderId);
@@ -50,12 +49,11 @@ export default function Report() {
     setPaymentDone(Boolean(order?.paymentDone));
   }, [orderId]);
 
-  // Loads the discount and the collection / report dates from the order.
+  // Loads the discount, payment status and the collection / report dates from the order.
   useEffect(() => {
     let cancelled = false;
     setDiscount({ type: "percentage", value: 0 });
     setOrderDates({ collected: null, reported: null });
-    setSignatories([]);
     getOrderApi(orderId)
       .then((res) => {
         if (cancelled) return;
@@ -64,7 +62,6 @@ export default function Report() {
           value: Number(res.data?.discount_value) || 0,
         });
         setPaymentDone(res.data?.payment_status === "paid");
-        setSignatories(res.data?.report_signatories ?? []);
         setOrderDates({
           collected: res.data?.sample_collected_at ?? null,
           reported: res.data?.report_generated_at ?? res.data?.completed_at ?? null,
@@ -197,22 +194,6 @@ export default function Report() {
     const addressLine = [labInfo.address, labInfo.city, labInfo.state, labInfo.pincode]
       .filter(Boolean)
       .join(", ");
-
-    const escapeHtml = (v) =>
-      String(v ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
-
-    const signaturesHtml = signatories.length
-      ? `<div class="signatures">${signatories
-          .map(
-            (sg) => `
-        <div class="sig ${sg.role === "Lab Incharge" ? "sig-right" : ""}">
-          ${sg.signature ? `<img src="${escapeHtml(sg.signature)}" alt="Signature">` : `<div class="sig-space"></div>`}
-          <div class="sig-name">${escapeHtml(sg.name)}</div>
-          <div class="sig-role">${escapeHtml(sg.role)}</div>
-        </div>`
-          )
-          .join("")}</div>`
-      : "";
 
     const panelsHtml = Object.entries(testsByCategory)
       .map(([category, categoryTests]) => {
@@ -358,18 +339,9 @@ export default function Report() {
 
     .end-line { text-align: center; font-size: 9px; color: #9ca3af; letter-spacing: 0.05em; margin: 2px 24px 4px 24px; flex-shrink: 0; }
 
-    .signatures { display: flex; justify-content: space-between; gap: 24px; padding: 6px 24px 6px 24px; flex-shrink: 0; }
-    .report-bottom { margin-top: auto; flex-shrink: 0; }
-    .sig { min-width: 180px; text-align: center; }
-    .sig.sig-right { margin-left: auto; }
-    .sig img { display: block; max-height: 56px; max-width: 180px; object-fit: contain; margin: 0 auto 2px auto; }
-    .sig .sig-space { height: 56px; }
-    .sig .sig-name { border-top: 1px solid #9ca3af; padding-top: 2px; font-size: 10px; font-weight: 700; color: #111827; }
-    .sig .sig-role { font-size: 9px; color: #6b7280; }
-
     .disclaimer-strip { text-align: center; font-size: 9px; color: #6b7280; font-style: italic; padding: 0 24px 6px 24px; flex-shrink: 0; }
 
-    .footer-meta { display: flex; justify-content: space-between; font-size: 8.5px; color: #9ca3af; padding: 4px 24px; border-top: 1px solid #e5e7eb; flex-shrink: 0; }
+    .footer-meta { display: flex; justify-content: space-between; font-size: 8.5px; color: #9ca3af; padding: 4px 24px; border-top: 1px solid #e5e7eb; flex-shrink: 0; margin-top: auto; }
     .footer-band { background: #0d9488; color: #ffffff; text-align: center; font-size: 10px; font-weight: 700; letter-spacing: 0.03em; padding: 6px 12px; flex-shrink: 0; }
 </style>
 </head>
@@ -403,15 +375,11 @@ export default function Report() {
 
     <div class="end-line">**** End of Report ****</div>
 
-    <div class="report-bottom">
-    ${signaturesHtml}
-
     ${labInfo.footer_note ? `<div class="disclaimer-strip">${labInfo.footer_note}</div>` : `<div class="disclaimer-strip">Reports are not valid for medico-legal purposes.</div>`}
 
     <div class="footer-meta">
         <span>Generated on: ${formatDateTime(new Date())}</span>
         <span>Page 1 of 1</span>
-    </div>
     </div>
 
     <div class="footer-band">${labInfo.lab_name}</div>
@@ -426,12 +394,7 @@ export default function Report() {
     doc.write(html);
     doc.close();
     iframe.contentWindow.focus();
-    // Wait for the logo / signature images to finish loading, otherwise they
-    // can be missing from the printout.
-    const pending = Array.from(doc.images)
-      .filter((img) => !img.complete)
-      .map((img) => new Promise((resolve) => { img.onload = img.onerror = resolve; }));
-    Promise.all(pending).then(() => setTimeout(() => iframe.contentWindow.print(), 250));
+    setTimeout(() => iframe.contentWindow.print(), 250);
   }
 
   const actionBtn =
@@ -473,9 +436,14 @@ export default function Report() {
               <button type="button" onClick={() => setBillOpen(true)} className={actionBtn}>
                 <Receipt size={16} /> Bill
               </button>
-              <button type="button" onClick={() => setEditBillOpen(true)} className={actionBtn}>
-                <Pencil size={16} /> Edit
-              </button>
+
+              {/* Discount can only be edited while the order is unpaid */}
+              {!paymentDone && (
+                <button type="button" onClick={() => setEditBillOpen(true)} className={actionBtn}>
+                  <Pencil size={16} /> Edit
+                </button>
+              )}
+
               <button type="button" onClick={() => setWhatsAppOpen(true)} className={actionBtn}>
                 <MessageCircle size={16} /> WhatsApp
               </button>
@@ -809,34 +777,13 @@ export default function Report() {
                   **** End of Report ****
                 </div>
 
-                <div className="mt-auto">
-                {signatories.length > 0 && (
-                  <div className="flex justify-between gap-6 px-6 pt-1.5 pb-1.5">
-                    {signatories.map((sg) => (
-                      <div
-                        key={`${sg.role}-${sg.name}`}
-                        className={`text-center min-w-[180px] ${sg.role === "Lab Incharge" ? "ml-auto" : ""}`}
-                      >
-                        {sg.signature ? (
-                          <img src={sg.signature} alt="Signature" className="block max-h-14 max-w-[180px] object-contain mx-auto mb-0.5" />
-                        ) : (
-                          <div className="h-14" />
-                        )}
-                        <div className="border-t border-gray-400 pt-0.5 text-[10px] font-bold text-gray-900">{sg.name}</div>
-                        <div className="text-[9px] text-gray-500">{sg.role}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
                 <div className="text-center text-[9px] text-gray-500 italic px-6 pb-1.5">
                   {labInfo?.footer_note || "Reports are not valid for medico-legal purposes."}
                 </div>
 
-                <div className="flex justify-between text-[8.5px] text-gray-400 border-t border-gray-200 px-6 py-1">
+                <div className="flex justify-between text-[8.5px] text-gray-400 border-t border-gray-200 px-6 py-1 mt-auto">
                   <span>Generated on: {formatDateTime(new Date())}</span>
                   <span>Page 1 of 1</span>
-                </div>
                 </div>
 
                 <div className="bg-teal-600 text-white text-center text-[10px] font-bold tracking-[0.03em] py-1.5">
@@ -857,14 +804,15 @@ export default function Report() {
           homeVisitFee={order?.homeVisitFee || 0}
           discountType={discount.type}
           discountValue={discount.value}
-          discountPercent={discount.type === "percentage" ? discount.value : 0}
+          paymentDone={paymentDone}
           referredBy={order?.referredBy || "Self"}
-          billDate={registered}
+          collectionDate={collectionDate}
+          reportDate={reportDate}
           onClose={() => setBillOpen(false)}
         />
       )}
 
-      {isEditBillOpen && (
+      {isEditBillOpen && !paymentDone && (
         <EditBillModal
           orderId={orderId}
           tests={testsWithResults}

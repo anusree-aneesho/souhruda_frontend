@@ -76,7 +76,7 @@ export default function EditBillModal({
   }
 
   return (
-    <ModalShell title="Discount Price Details" onClose={onClose} maxWidth="max-w-md">
+    <ModalShell title="Price Details" onClose={onClose} maxWidth="max-w-md">
       <div className="px-6 py-5 space-y-4">
         <div className="space-y-1.5">
           {packageGroups.map((pkg) => (

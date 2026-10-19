@@ -21,6 +21,8 @@ const emptyForm = {
   criteria: "",
   note: "",
   isActive: true,
+  hasParameters: false,
+  parameterIds: [],
   demographicRanges: { ...emptyDemographicRanges },
 };
 
@@ -49,6 +51,14 @@ function validate(form, customRows) {
   const demographicErrors = {};
   const customRowErrors = {};
 
+  // A group test (e.g. CBC) is made of other tests, so it has no unit, critical
+  // values or ranges of its own — only its parameters.
+  const isGroup = form.hasParameters;
+
+  if (isGroup && form.parameterIds.length === 0) {
+    errors.parameters = "Select at least one parameter.";
+  }
+
   if (!form.category) {
     errors.category = "Select a category.";
   }
@@ -59,7 +69,7 @@ function validate(form, customRows) {
     errors.name = "Must be 150 characters or fewer.";
   }
 
-  if (form.unit && form.unit.length > 30) {
+  if (!isGroup && form.unit && form.unit.length > 30) {
     errors.unit = "Must be 30 characters or fewer.";
   }
 
@@ -74,8 +84,8 @@ function validate(form, customRows) {
     }
   }
 
-  const hasCriticalLow = form.criticalLow !== "";
-  const hasCriticalHigh = form.criticalHigh !== "";
+  const hasCriticalLow = !isGroup && form.criticalLow !== "";
+  const hasCriticalHigh = !isGroup && form.criticalHigh !== "";
   const criticalLow = Number(form.criticalLow);
   const criticalHigh = Number(form.criticalHigh);
 
@@ -98,10 +108,10 @@ function validate(form, customRows) {
     }
   }
 
-  const filledFixedRanges = Object.entries(form.demographicRanges).filter(([, v]) => v.trim() !== "");
-  const filledCustomRows = customRows.filter((row) => row.value.trim() !== "" || row.label.trim() !== "");
+  const filledFixedRanges = isGroup ? [] : Object.entries(form.demographicRanges).filter(([, v]) => v.trim() !== "");
+  const filledCustomRows = isGroup ? [] : customRows.filter((row) => row.value.trim() !== "" || row.label.trim() !== "");
 
-  if (filledFixedRanges.length === 0 && filledCustomRows.length === 0) {
+  if (!isGroup && filledFixedRanges.length === 0 && filledCustomRows.length === 0) {
     errors.demographicRanges = "Enter a range for at least one demographic group.";
   }
 
@@ -134,13 +144,22 @@ function validate(form, customRows) {
   return { errors, demographicErrors, customRowErrors };
 }
 
-export default function AddTestModal({ categories, defaultCategory, editingTest, onClose, onSave }) {
+export default function AddTestModal({
+  categories,
+  defaultCategory,
+  editingTest,
+  onClose,
+  onSave,
+  allTests = [],            // [{ id, name, category, isGroup }] across every category
+  groupNamesByTestId = {},  // { [testId]: [names of the groups that include it] }
+}) {
   const [form, setForm] = useState(emptyForm);
   const [customRows, setCustomRows] = useState([]);
   const [errors, setErrors] = useState({});
   const [demographicErrors, setDemographicErrors] = useState({});
   const [customRowErrors, setCustomRowErrors] = useState({});
   const [confirmingRow, setConfirmingRow] = useState(null); // custom row | null
+  const [parameterSearch, setParameterSearch] = useState("");
   const isEditMode = Boolean(editingTest);
 
   useEffect(() => {
@@ -160,6 +179,8 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
         criteria: editingTest.criteria || "",
         note: editingTest.note || "",
         isActive: editingTest.isActive ?? true,
+        hasParameters: (editingTest.parameterIds || []).length > 0,
+        parameterIds: editingTest.parameterIds || [],
         demographicRanges: { ...emptyDemographicRanges, ...fixedRanges },
       });
       setCustomRows(extractCustomRows(ranges));
@@ -171,11 +192,24 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
     setDemographicErrors({});
     setCustomRowErrors({});
     setConfirmingRow(null);
+    setParameterSearch("");
   }, [editingTest, defaultCategory]);
 
   function handleChange(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: undefined }));
+  }
+
+  // Clicking a test adds it to the end of the list, so the order picked is the
+  // order the parameters are shown in.
+  function handleToggleParameter(id) {
+    setForm((prev) => ({
+      ...prev,
+      parameterIds: prev.parameterIds.includes(id)
+        ? prev.parameterIds.filter((p) => p !== id)
+        : [...prev.parameterIds, id],
+    }));
+    setErrors((prev) => ({ ...prev, parameters: undefined }));
   }
 
   function handleDemographicRangeChange(group, value) {
@@ -240,10 +274,12 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
 
     onSave({
       ...form,
-      demographicRanges: mergedDemographicRanges,
+      demographicRanges: form.hasParameters ? {} : mergedDemographicRanges,
+      unit: form.hasParameters ? "" : form.unit,
+      parameterIds: form.hasParameters ? form.parameterIds : [],
       price: parseFloat(form.price) || 0,
-      criticalLow: form.criticalLow === "" ? null : parseFloat(form.criticalLow),
-      criticalHigh: form.criticalHigh === "" ? null : parseFloat(form.criticalHigh),
+      criticalLow: form.hasParameters || form.criticalLow === "" ? null : parseFloat(form.criticalLow),
+      criticalHigh: form.hasParameters || form.criticalHigh === "" ? null : parseFloat(form.criticalHigh),
       followupWeeks: form.followupWeeks === "" ? null : parseInt(form.followupWeeks, 10),
       note: form.note.trim() === "" ? null : form.note.trim(),
       id: editingTest?.id || form.name.trim().toLowerCase().replace(/\s+/g, "-"),
@@ -254,6 +290,21 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
     `w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
       hasError ? "border-red-300 focus:border-red-400 focus:ring-red-400" : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
     }`;
+
+  // Tests that can be picked as parameters: not the test itself, and not a group
+  // (groups are one level deep). Already-picked ones always stay visible.
+  const parameterSearchText = parameterSearch.trim().toLowerCase();
+  const parameterCandidates = allTests
+    .filter((t) => {
+      if (editingTest && t.id === editingTest.id) return false;
+      if (t.isGroup && !form.parameterIds.includes(t.id)) return false;
+      return t.name.toLowerCase().includes(parameterSearchText);
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  // A test that is already a parameter of some group can't become a group itself.
+  const ownGroupNames = editingTest ? groupNamesByTestId[editingTest.id] || [] : [];
+  const cannotBeGroup = ownGroupNames.length > 0;
 
   return (
     <>
@@ -290,9 +341,76 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
               </div>
             </div>
 
+            {/* Group toggle + parameter picker */}
+            <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-4 space-y-3">
+              <label className={`flex items-start gap-2.5 ${cannotBeGroup ? "opacity-60" : "cursor-pointer"}`}>
+                <input
+                  type="checkbox"
+                  checked={form.hasParameters}
+                  disabled={cannotBeGroup}
+                  onChange={(e) => {
+                    handleChange("hasParameters", e.target.checked);
+                    setErrors((prev) => ({ ...prev, parameters: undefined }));
+                  }}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer disabled:cursor-not-allowed"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-gray-900">This test has parameters</span>
+                  <span className="block text-xs text-gray-500 mt-0.5">
+                    For a group such as CBC. The price below is the group's own price; each parameter stays a separate test with its own price.
+                  </span>
+                </span>
+              </label>
+
+              {cannotBeGroup && (
+                <p className="text-xs text-amber-600">
+                  This test is a parameter of {ownGroupNames.join(", ")}, so it can't have parameters of its own.
+                </p>
+              )}
+
+              {form.hasParameters && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-gray-900">Parameters</p>
+                    <p className="text-xs text-gray-500">
+                      {form.parameterIds.length} selected · shown in the order you pick them
+                    </p>
+                  </div>
+                  <input
+                    value={parameterSearch}
+                    onChange={(e) => setParameterSearch(e.target.value)}
+                    placeholder="Search tests..."
+                    className={inputClass(false)}
+                  />
+                  <div
+                    className={`max-h-48 overflow-y-auto rounded-lg border bg-white divide-y divide-gray-100 ${
+                      errors.parameters ? "border-red-300" : "border-gray-200"
+                    }`}
+                  >
+                    {parameterCandidates.length === 0 && (
+                      <p className="text-xs text-gray-400 text-center py-4">No tests found.</p>
+                    )}
+                    {parameterCandidates.map((t) => (
+                      <label key={t.id} className="flex items-center gap-2.5 px-3 py-2 text-sm cursor-pointer hover:bg-gray-50">
+                        <input
+                          type="checkbox"
+                          checked={form.parameterIds.includes(t.id)}
+                          onChange={() => handleToggleParameter(t.id)}
+                          className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                        />
+                        <span className="flex-1 text-gray-900">{t.name}</span>
+                        <span className="text-xs text-gray-400">{t.category}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {errors.parameters && <p className="text-xs text-red-500">{errors.parameters}</p>}
+                </div>
+              )}
+            </div>
+
             {/* Row 2: Unit + Price */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div className={form.hasParameters ? "hidden" : ""}>
                 <label className="block text-sm font-semibold text-gray-900 mb-1.5">Unit</label>
                 <input
                   value={form.unit}
@@ -317,7 +435,7 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
             </div>
 
             {/* Row 3: Critical Low + Critical High */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className={form.hasParameters ? "hidden" : "grid grid-cols-2 gap-4"}>
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-1.5">Critical Low</label>
                 <input
@@ -398,7 +516,7 @@ export default function AddTestModal({ categories, defaultCategory, editingTest,
             </div>
 
             {/* Demographic ranges: two boxes per row */}
-            <div className="space-y-3 pt-1">
+            <div className={form.hasParameters ? "hidden" : "space-y-3 pt-1"}>
               <label className="block text-sm font-semibold text-gray-900">
                 Range by Category / Demographic Group
               </label>

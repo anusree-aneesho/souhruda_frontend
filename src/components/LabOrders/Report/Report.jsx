@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import {
-  Download, Printer, MessageCircle, Receipt, X, Pencil,
+  Download, Printer, MessageCircle, Receipt, X, Pencil,  
   User, Phone, Stethoscope, CalendarDays, FileCheck2, Wallet,
 } from "lucide-react";
 import Toast from "../../common/Toast/Toast";
@@ -10,12 +10,13 @@ import { useToast } from "../../common/Toast/useToast";
 import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
 import FollowUpSuggestions from "./FollowUpSuggestions";
 import BillModal from "./BillModal";
-import EditBillModal from "./EditBillModal";
+import EditBillModal from "./EditBillModal";  
 import WhatsAppSentModal from "./WhatsAppSentModal";
 import TestDetailView from "./TestDetailView";
 import AlertModal from "../../common/Modal/AlertModal";
 import { findOrderById } from "../../../data/labOrders";
 import { calculateFlag } from "../../../utils/calculateFlag";
+import { buildReportRowsByCategory } from "../../../utils/reportRows";
 import { getOrderReportUrlApi, getOrderApi, getSettingsApi, getGstSettingsApi, markOrderPaidApi } from "../../../api/api";
 
 export default function Report() {
@@ -27,7 +28,6 @@ export default function Report() {
   const [letterheadOn, setLetterheadOn] = useState(true);
   const [isBillOpen, setBillOpen] = useState(false);
   const [isEditBillOpen, setEditBillOpen] = useState(false);
-  // Discount saved on the order: { type: "percentage" | "fixed", value }
   const [discount, setDiscount] = useState({ type: "percentage", value: 0 });
   const [orderDates, setOrderDates] = useState({ collected: null, reported: null });
   const [isWhatsAppOpen, setWhatsAppOpen] = useState(false);
@@ -37,8 +37,6 @@ export default function Report() {
   const [downloadError, setDownloadError] = useState("");
   const [labInfo, setLabInfo] = useState(null);
   const [gstInfo, setGstInfo] = useState(null);
-  // Report signatories: sample collector + branch Lab Incharge ({ role, name, signature })
-  const [signatories, setSignatories] = useState([]);
   const iframeRef = useRef(null);
 
   const existingOrder = findOrderById(orderId);
@@ -51,12 +49,11 @@ export default function Report() {
     setPaymentDone(Boolean(order?.paymentDone));
   }, [orderId]);
 
-  // Loads the discount, payment status and the collection / report dates from the order.
+  // Loads the discount and the collection / report dates from the order.
   useEffect(() => {
     let cancelled = false;
     setDiscount({ type: "percentage", value: 0 });
     setOrderDates({ collected: null, reported: null });
-    setSignatories([]);
     getOrderApi(orderId)
       .then((res) => {
         if (cancelled) return;
@@ -65,7 +62,6 @@ export default function Report() {
           value: Number(res.data?.discount_value) || 0,
         });
         setPaymentDone(res.data?.payment_status === "paid");
-        setSignatories(res.data?.report_signatories ?? []);
         setOrderDates({
           collected: res.data?.sample_collected_at ?? null,
           reported: res.data?.report_generated_at ?? res.data?.completed_at ?? null,
@@ -98,6 +94,11 @@ export default function Report() {
 
   const patient = order?.patient || { name: "Aaa ff", age: "11", gender: "Male", regNo: "200128355" };
   const tests = order?.tests || [];
+  // Group tests (e.g. CBC): the group row holds the price, its parameters hold the results.
+  //  - results/report views list the parameters (not the group row)
+  //  - the bill lists what was ordered (the group, not its parameters)
+  const resultTests = tests.filter((t) => !t.isGroup);
+  const billTests = tests.filter((t) => t.parentItemId == null);
 
   const ageText =
     patient.age !== undefined && patient.age !== null && patient.age !== "-" && patient.age !== ""
@@ -159,15 +160,13 @@ export default function Report() {
     [tests, results]
   );
 
-  const testsWithResults = tests.map((t) => ({ ...t, result: results[t.id] }));
+  const testsWithResults = resultTests.map((t) => ({ ...t, result: results[t.id] }));
+  const billTestsWithResults = billTests.map((t) => ({ ...t, result: results[t.id] }));
   const abnormalCount = testsWithResults.filter((t) =>
     ["low", "high", "abnormal"].includes(flags[t.id])
   ).length;
-  const testsByCategory = testsWithResults.reduce((acc, t) => {
-    acc[t.category] = acc[t.category] || [];
-    acc[t.category].push(t);
-    return acc;
-  }, {});
+  // Printed report / preview rows: a group (CBC) is a heading, its parameters follow.
+  const reportRowsByCategory = buildReportRowsByCategory(tests, results);
 
   function handleScheduleReminder(test) {
     console.log("Schedule reminder for", test.name);
@@ -199,33 +198,24 @@ export default function Report() {
       .filter(Boolean)
       .join(", ");
 
-    const escapeHtml = (v) =>
-      String(v ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
-
-    const signaturesHtml = signatories.length
-      ? `<div class="signatures">${signatories
-          .map(
-            (sg) => `
-        <div class="sig ${sg.role === "Lab Incharge" ? "sig-right" : ""}">
-          ${sg.signature ? `<img src="${escapeHtml(sg.signature)}" alt="Signature">` : `<div class="sig-space"></div>`}
-          <div class="sig-name">${escapeHtml(sg.name)}</div>
-          <div class="sig-role">${escapeHtml(sg.role)}</div>
-        </div>`
-          )
-          .join("")}</div>`
-      : "";
-
-    const panelsHtml = Object.entries(testsByCategory)
-      .map(([category, categoryTests]) => {
-        const rowsHtml = categoryTests
-          .map((t) => {
+    const panelsHtml = Object.entries(reportRowsByCategory)
+      .map(([category, categoryRows]) => {
+        const rowsHtml = categoryRows
+          .map((row) => {
+            if (row.kind === "group") {
+              return `
+                <tr class="group-row">
+                    <td colspan="4">${row.name}</td>
+                </tr>`;
+            }
+            const t = row.test;
             const flag = flags[t.id];
             const isAbnormal = ["low", "high", "abnormal"].includes(flag);
             const flagTag =
               flag === "high" ? `<span class="flag-tag">High</span>` : flag === "low" ? `<span class="flag-tag">Low</span>` : "";
             return `
                 <tr>
-                    <td>${t.name}</td>
+                    <td class="${row.kind === "parameter" ? "param-name" : ""}">${t.name}</td>
                     <td class="result ${isAbnormal ? "abnormal" : ""}">
                         ${results[t.id] || "—"}
                         ${flagTag}
@@ -351,6 +341,9 @@ export default function Report() {
     table.results th.result-col, table.results td.result-col { text-align: left; }
     table.results tbody td { padding: 4px 4px; font-size: 10.5px; border-bottom: 1px solid #f3f4f6; }
     table.results tbody tr { page-break-inside: avoid; }
+    table.results tbody tr.group-row { page-break-after: avoid; }
+    table.results tbody tr.group-row td { padding: 5px 8px; font-size: 10.5px; font-weight: 700; color: #0f766e; background: #f0fdfa; box-shadow: inset 3px 0 0 #0d9488; border-bottom: 1px solid #ccfbf1; letter-spacing: 0.01em; }
+    table.results tbody td.param-name { padding-left: 16px; }
 
     td.result { font-weight: 700; color: #111827; }
     td.result.abnormal { color: #d97706; }
@@ -359,18 +352,9 @@ export default function Report() {
 
     .end-line { text-align: center; font-size: 9px; color: #9ca3af; letter-spacing: 0.05em; margin: 2px 24px 4px 24px; flex-shrink: 0; }
 
-    .signatures { display: flex; justify-content: space-between; gap: 24px; padding: 6px 24px 6px 24px; flex-shrink: 0; }
-    .report-bottom { margin-top: auto; flex-shrink: 0; }
-    .sig { min-width: 180px; text-align: center; }
-    .sig.sig-right { margin-left: auto; }
-    .sig img { display: block; max-height: 56px; max-width: 180px; object-fit: contain; margin: 0 auto 2px auto; }
-    .sig .sig-space { height: 56px; }
-    .sig .sig-name { border-top: 1px solid #9ca3af; padding-top: 2px; font-size: 10px; font-weight: 700; color: #111827; }
-    .sig .sig-role { font-size: 9px; color: #6b7280; }
-
     .disclaimer-strip { text-align: center; font-size: 9px; color: #6b7280; font-style: italic; padding: 0 24px 6px 24px; flex-shrink: 0; }
 
-    .footer-meta { display: flex; justify-content: space-between; font-size: 8.5px; color: #9ca3af; padding: 4px 24px; border-top: 1px solid #e5e7eb; flex-shrink: 0; }
+    .footer-meta { display: flex; justify-content: space-between; font-size: 8.5px; color: #9ca3af; padding: 4px 24px; border-top: 1px solid #e5e7eb; flex-shrink: 0; margin-top: auto; }
     .footer-band { background: #0d9488; color: #ffffff; text-align: center; font-size: 10px; font-weight: 700; letter-spacing: 0.03em; padding: 6px 12px; flex-shrink: 0; }
 </style>
 </head>
@@ -404,15 +388,11 @@ export default function Report() {
 
     <div class="end-line">**** End of Report ****</div>
 
-    <div class="report-bottom">
-    ${signaturesHtml}
-
     ${labInfo.footer_note ? `<div class="disclaimer-strip">${labInfo.footer_note}</div>` : `<div class="disclaimer-strip">Reports are not valid for medico-legal purposes.</div>`}
 
     <div class="footer-meta">
         <span>Generated on: ${formatDateTime(new Date())}</span>
         <span>Page 1 of 1</span>
-    </div>
     </div>
 
     <div class="footer-band">${labInfo.lab_name}</div>
@@ -427,12 +407,7 @@ export default function Report() {
     doc.write(html);
     doc.close();
     iframe.contentWindow.focus();
-    // Wait for the logo / signature images to finish loading, otherwise they
-    // can be missing from the printout.
-    const pending = Array.from(doc.images)
-      .filter((img) => !img.complete)
-      .map((img) => new Promise((resolve) => { img.onload = img.onerror = resolve; }));
-    Promise.all(pending).then(() => setTimeout(() => iframe.contentWindow.print(), 250));
+    setTimeout(() => iframe.contentWindow.print(), 250);
   }
 
   const actionBtn =
@@ -447,23 +422,18 @@ export default function Report() {
           orderId={orderId}
           test={viewTest}
           flag={flags[viewTest.id]}
+          parameters={testsWithResults.filter((p) => p.parentItemId === viewTest.id)}
+          flags={flags}
           ageText={ageText}
           registered={registered}
-          collectionDate={collectionDate}
           reportDate={reportDate}
           referredBy={order?.referredBy || "Self"}
-          paymentDone={paymentDone}
-          onMarkPaid={() => setConfirmingPayment(true)}
           letterheadOn={letterheadOn}
           onLetterheadChange={setLetterheadOn}
           onBack={() => setViewTest(null)}
           onBill={() => setBillOpen(true)}
           onWhatsApp={() => setWhatsAppOpen(true)}
           onPrint={handlePrint}
-          onDownload={() => {
-            setDownloadError("");
-            setPreviewOpen(true);
-          }}
         />
       ) : (
         <>
@@ -481,7 +451,7 @@ export default function Report() {
               <button type="button" onClick={() => setBillOpen(true)} className={actionBtn}>
                 <Receipt size={16} /> Bill
               </button>
-
+              
               {/* Discount can only be edited while the order is unpaid */}
               {!paymentDone && (
                 <button type="button" onClick={() => setEditBillOpen(true)} className={actionBtn}>
@@ -580,7 +550,7 @@ export default function Report() {
           {/* ── Tests table ──────────────────────────────────────────── */}
           <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h3 className="font-semibold text-sm text-gray-900">Tests ({testsWithResults.length})</h3>
+              <h3 className="font-semibold text-sm text-gray-900">Tests ({billTestsWithResults.length})</h3>
               <p className="text-xs text-gray-400">Click View for the normal range and details</p>
             </div>
             <div className="overflow-x-auto">
@@ -596,7 +566,7 @@ export default function Report() {
                   </tr>
                 </thead>
                 <tbody>
-                  {testsWithResults.map((t, i) => (
+                  {billTestsWithResults.map((t, i) => (
                     <tr key={t.id} className="border-t border-gray-100 hover:bg-teal-50/30 transition-colors">
                       <td className="px-6 py-3.5 text-sm text-gray-400">{i + 1}</td>
                       <td className="py-3.5">
@@ -604,10 +574,27 @@ export default function Report() {
                         <p className="text-xs text-gray-400">{t.category}</p>
                       </td>
                       <td className="py-3.5 text-sm font-semibold text-gray-900">
-                        {t.result || "—"}
-                        {t.result && t.unit ? <span className="ml-1 text-xs font-normal text-gray-400">{t.unit}</span> : null}
+                        {t.isGroup ? (
+                          <span className="text-xs font-normal text-gray-500">
+                            {testsWithResults.filter((p) => p.parentItemId === t.id).length} parameters
+                          </span>
+                        ) : (
+                          <>
+                            {t.result || "—"}
+                            {t.result && t.unit ? <span className="ml-1 text-xs font-normal text-gray-400">{t.unit}</span> : null}
+                          </>
+                        )}
                       </td>
-                      <td className="py-3.5"><StatusBadge status={flags[t.id]} /></td>
+                      <td className="py-3.5">
+                        {t.isGroup ? (() => {
+                          const n = testsWithResults.filter(
+                            (p) => p.parentItemId === t.id && ["low", "high", "abnormal"].includes(flags[p.id])
+                          ).length;
+                          return n > 0
+                            ? <span className="text-xs font-medium text-amber-600">{n} abnormal</span>
+                            : <span className="text-xs text-gray-400">—</span>;
+                        })() : <StatusBadge status={flags[t.id]} />}
+                      </td>
                       <td className="py-3.5 text-sm text-gray-900">
                         {t.packageId != null ? (
                           <span className="text-teal-600 text-xs font-medium">In package</span>
@@ -775,7 +762,7 @@ export default function Report() {
                 </div>
 
                 {/* Tests by category */}
-                {Object.entries(testsByCategory).map(([category, categoryTests]) => (
+                {Object.entries(reportRowsByCategory).map(([category, categoryRows]) => (
                   <div key={category}>
                     <div className="text-center text-[11.5px] font-extrabold uppercase tracking-[0.04em] text-gray-900 mx-6 mt-2.5 mb-1.5">
                       {category.toUpperCase()}
@@ -792,12 +779,31 @@ export default function Report() {
                           </tr>
                         </thead>
                         <tbody>
-                          {categoryTests.map((t) => {
+                          {categoryRows.map((row) => {
+                            if (row.kind === "group") {
+                              return (
+                                <tr key={`group-${row.id}`} className="break-inside-avoid">
+                                  <td
+                                    colSpan={4}
+                                    className="px-2 py-1 text-[10.5px] font-bold text-teal-700 bg-teal-50 border-b border-teal-100"
+                                    style={{ boxShadow: "inset 3px 0 0 #0d9488" }}
+                                  >
+                                    {row.name}
+                                  </td>
+                                </tr>
+                              );
+                            }
+                            const t = row.test;
                             const flag = flags[t.id];
                             const isAbnormal = ["low", "high", "abnormal"].includes(flag);
                             return (
                               <tr key={t.id} className="break-inside-avoid">
-                                <td className="px-1 py-1 text-[10.5px] text-gray-800 border-b border-gray-100">{t.name}</td>
+                                <td
+                                  className="px-1 py-1 text-[10.5px] text-gray-800 border-b border-gray-100"
+                                  style={row.kind === "parameter" ? { paddingLeft: 16 } : undefined}
+                                >
+                                  {t.name}
+                                </td>
                                 <td
                                   className={`px-1 py-1 text-[10.5px] font-bold border-b border-gray-100 ${
                                     isAbnormal ? "text-amber-600" : "text-gray-900"
@@ -822,34 +828,13 @@ export default function Report() {
                   **** End of Report ****
                 </div>
 
-                <div className="mt-auto">
-                {signatories.length > 0 && (
-                  <div className="flex justify-between gap-6 px-6 pt-1.5 pb-1.5">
-                    {signatories.map((sg) => (
-                      <div
-                        key={`${sg.role}-${sg.name}`}
-                        className={`text-center min-w-[180px] ${sg.role === "Lab Incharge" ? "ml-auto" : ""}`}
-                      >
-                        {sg.signature ? (
-                          <img src={sg.signature} alt="Signature" className="block max-h-14 max-w-[180px] object-contain mx-auto mb-0.5" />
-                        ) : (
-                          <div className="h-14" />
-                        )}
-                        <div className="border-t border-gray-400 pt-0.5 text-[10px] font-bold text-gray-900">{sg.name}</div>
-                        <div className="text-[9px] text-gray-500">{sg.role}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
                 <div className="text-center text-[9px] text-gray-500 italic px-6 pb-1.5">
                   {labInfo?.footer_note || "Reports are not valid for medico-legal purposes."}
                 </div>
 
-                <div className="flex justify-between text-[8.5px] text-gray-400 border-t border-gray-200 px-6 py-1">
+                <div className="flex justify-between text-[8.5px] text-gray-400 border-t border-gray-200 px-6 py-1 mt-auto">
                   <span>Generated on: {formatDateTime(new Date())}</span>
                   <span>Page 1 of 1</span>
-                </div>
                 </div>
 
                 <div className="bg-teal-600 text-white text-center text-[10px] font-bold tracking-[0.03em] py-1.5">
@@ -865,12 +850,12 @@ export default function Report() {
         <BillModal
           orderId={orderId}
           patient={patient}
-          tests={testsWithResults}
+          tests={billTestsWithResults}
           billTotal={order?.billTotal}
           homeVisitFee={order?.homeVisitFee || 0}
           discountType={discount.type}
           discountValue={discount.value}
-          paymentDone={paymentDone}
+          discountPercent={discount.type === "percentage" ? discount.value : 0}
           referredBy={order?.referredBy || "Self"}
           collectionDate={collectionDate}
           reportDate={reportDate}
@@ -878,10 +863,10 @@ export default function Report() {
         />
       )}
 
-      {isEditBillOpen && !paymentDone && (
+      {isEditBillOpen && (
         <EditBillModal
           orderId={orderId}
-          tests={testsWithResults}
+          tests={billTestsWithResults}
           billTotal={order?.billTotal != null ? Number(order.billTotal) : null}
           homeVisitFee={order?.homeVisitFee || 0}
           initialDiscount={discount.value}

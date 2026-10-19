@@ -22,7 +22,8 @@ function mapOrder(o) {
       regNo: o.patient?.patient_number ?? "-",
       phone: o.patient?.phone ?? "",
     },
-    tests: (o.items || []).map((item) => {
+    // Sorted by id so a group (CBC) always lists its parameters in a stable order.
+    tests: [...(o.items || [])].sort((a, b) => a.id - b.id).map((item) => {
       const lt = item.lab_test;
       const range =
         item.resolved_range_text ||
@@ -44,6 +45,9 @@ function mapOrder(o) {
         packageName: item.test_package?.name ?? null,
         packagePrice: item.test_package ? Number(item.test_package.price) : null,
         labTestId: item.lab_test_id,
+        // Group tests (CBC): the parameters point back at the group row.
+        parentItemId: item.parent_item_id ?? null,
+        isGroup: Boolean(item.is_group),
         demographicGroup: item.demographic_group ?? null,
         rangeRaw: range === "-" ? "" : range,
       };
@@ -147,6 +151,9 @@ export default function OrderDetail() {
 
   const patient = order?.patient || { name: "Unknown", age: "-", gender: "-", regNo: "-" };
   const tests = order?.tests || [];
+  // A group test (CBC) has no result of its own — only its parameters do.
+  const resultTests = tests.filter((t) => !t.isGroup);
+  const groupItemIds = new Set(tests.filter((t) => t.isGroup).map((t) => t.id));
   const orderedAt = order?.orderedAt || "-";
   const paymentDone = Boolean(order?.paymentDone);
   const billTotal = order?.billTotal;
@@ -189,7 +196,9 @@ export default function OrderDetail() {
     setSaveError(null);
 
     try {
-      const resultsPayload = Object.entries(results).map(([itemId, value]) => ({
+      const resultsPayload = Object.entries(results)
+        .filter(([itemId]) => !groupItemIds.has(Number(itemId)))
+        .map(([itemId, value]) => ({
         order_item_id: Number(itemId),
         result_value: value || null,
       }));
@@ -227,7 +236,9 @@ export default function OrderDetail() {
     setSaveError(null);
 
     try {
-      const resultsPayload = Object.entries(results).map(([itemId, value]) => ({
+      const resultsPayload = Object.entries(results)
+        .filter(([itemId]) => !groupItemIds.has(Number(itemId)))
+        .map(([itemId, value]) => ({
         order_item_id: Number(itemId),
         result_value: value || null,
       }));
@@ -280,11 +291,11 @@ export default function OrderDetail() {
         savingAction={savingAction}
         onEditRange={setEditingRange}
       />
-      <ResultInsights tests={tests} flags={flags} />
+      <ResultInsights tests={resultTests} flags={flags} />
 
       {confirmingComplete && (
         <ConfirmCompleteOrderModal
-          tests={tests}
+          tests={resultTests}
           results={results}
           flags={flags}
           onResultChange={handleResultChange}

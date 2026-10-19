@@ -13,6 +13,8 @@ export default function TestDetailView({
   orderId,
   test,
   flag,
+  parameters = [],
+  flags = {},
   ageText,
   registered,
   collectionDate,
@@ -29,6 +31,9 @@ export default function TestDetailView({
   onDownload,
 }) {
   const hasRange = test.range && test.range !== "-";
+  // A group test (e.g. CBC) lists all its parameters; a plain test shows its own single row.
+  const isGroup = Boolean(test.isGroup);
+  const rangeOf = (t) => (t.range && t.range !== "-" ? t.range : null);
 
   const initials = (patient.name || "?")
     .split(" ")
@@ -141,19 +146,36 @@ export default function TestDetailView({
       <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h3 className="font-semibold text-sm text-gray-900 uppercase">{test.name}</h3>
-          <p className="text-xs text-gray-400">{test.category}</p>
+          <p className="text-xs text-gray-400">
+            {test.category}{isGroup ? ` · ${parameters.length} parameters` : ""}
+          </p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px]">
             <thead>
               <tr className="bg-gray-50 text-left">
-                <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide">TEST PARAMETER</th>
+                <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide">{isGroup ? "TEST PARAMETERS" : "TEST PARAMETER"}</th>
                 <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">RESULT</th>
                 <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">REFERENCE RANGE</th>
                 <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide">FLAG</th>
               </tr>
             </thead>
             <tbody>
+              {isGroup && parameters.map((p) => (
+                <tr key={p.id} className="border-t border-gray-100 hover:bg-teal-50/30 transition-colors">
+                  <td className="px-6 py-3.5 text-sm font-medium text-gray-900">{p.name}</td>
+                  <td className="py-3.5 text-sm font-semibold text-gray-900">
+                    {p.result || "—"}
+                    {p.result && p.unit ? <span className="ml-1 text-xs font-normal text-gray-400">{p.unit}</span> : null}
+                  </td>
+                  <td className="py-3.5 text-sm text-gray-600">
+                    {rangeOf(p) || "—"}
+                    {rangeOf(p) && p.unit ? <span className="ml-1 text-gray-400">{p.unit}</span> : null}
+                  </td>
+                  <td className="px-6 py-3.5"><StatusBadge status={flags[p.id]} /></td>
+                </tr>
+              ))}
+              {!isGroup && (
               <tr className="border-t border-gray-100 hover:bg-teal-50/30 transition-colors">
                 <td className="px-6 py-3.5">
                   <p className="text-sm font-medium text-gray-900">{test.name}</p>
@@ -173,6 +195,7 @@ export default function TestDetailView({
                   <StatusBadge status={flag} />
                 </td>
               </tr>
+              )}
             </tbody>
           </table>
         </div>

@@ -19,6 +19,29 @@ import {
 
 const dotColors = ["teal", "pink", "purple", "amber"];
 
+// Shapes one lab test from the API into what the Test Master components use.
+// `parameters` is only filled for a group test (e.g. CBC): the tests that make
+// it up. Each parameter is also a normal test in its own right.
+function mapTest(t) {
+  return {
+    id: t.id,
+    name: t.name,
+    unit: t.unit,
+    price: t.price,
+    criticalLow: t.critical_low,
+    criticalHigh: t.critical_high,
+    followupWeeks: t.followup_weeks,
+    criteria: t.criteria,
+    note: t.note ?? "",
+    isActive: t.is_active,
+    parameters: (t.parameters || []).map((p) => ({ id: p.id, name: p.name })),
+    parameterIds: (t.parameters || []).map((p) => p.id),
+    demographicRanges: Object.fromEntries(
+      (t.ranges || []).map((r) => [r.demographic_group, r.range_raw])
+    ),
+  };
+}
+
 export default function TestMaster() {
   const [categories, setCategories] = useState([]);
   const [testsByCategory, setTestsByCategory] = useState({});
@@ -56,21 +79,7 @@ export default function TestMaster() {
           const catName = catIdToName[t.category_id];
           if (!catName) return;
           if (!grouped[catName]) grouped[catName] = [];
-          grouped[catName].push({
-            id: t.id,
-            name: t.name,
-            unit: t.unit,
-            price: t.price,
-            criticalLow: t.critical_low,
-            criticalHigh: t.critical_high,
-            followupWeeks: t.followup_weeks,
-            criteria: t.criteria,
-            note: t.note ?? "",     
-            isActive: t.is_active,  
-            demographicRanges: Object.fromEntries(
-              (t.ranges || []).map((r) => [r.demographic_group, r.range_raw])
-            ),
-          });
+          grouped[catName].push(mapTest(t));
         });
         setTestsByCategory(grouped);
       } catch (err) {
@@ -88,6 +97,36 @@ export default function TestMaster() {
     ...cat,
     count: (testsByCategory[cat.name] || []).length,
   }));
+
+  // Everything the Add/Edit modal needs to pick parameters: every test across
+  // all categories, and which groups (if any) each test already belongs to.
+  const allTests = Object.entries(testsByCategory).flatMap(([categoryName, list]) =>
+    list.map((t) => ({
+      id: t.id,
+      name: t.name,
+      category: categoryName,
+      isGroup: (t.parameterIds || []).length > 0,
+    }))
+  );
+
+  // Every test by id (with its category), so a group can show its parameters
+  // even when they live in other categories.
+  const testsById = {};
+  Object.entries(testsByCategory).forEach(([categoryName, list]) => {
+    list.forEach((t) => {
+      testsById[t.id] = { ...t, category: categoryName };
+    });
+  });
+
+  const groupNamesByTestId = {};
+  Object.values(testsByCategory).forEach((list) => {
+    list.forEach((group) => {
+      (group.parameterIds || []).forEach((parameterId) => {
+        if (!groupNamesByTestId[parameterId]) groupNamesByTestId[parameterId] = [];
+        groupNamesByTestId[parameterId].push(group.name);
+      });
+    });
+  });
 
   async function handleAddCategory(name) {
     if (categories.some((c) => c.name.toLowerCase() === name.toLowerCase())) {
@@ -172,6 +211,8 @@ export default function TestMaster() {
       note: testData.note || null,
       is_active: testData.isActive, 
       ranges,
+      // Only sent when the modal supplies it, so editing never clears a group by accident.
+      ...(testData.parameterIds !== undefined && { parameter_ids: testData.parameterIds }),
     };
 
     const isEditing = Boolean(testModalState?.editingTest);
@@ -199,21 +240,7 @@ export default function TestMaster() {
         const targetList = updated[testData.category] || [];
         updated[testData.category] = [
           ...targetList,
-          {
-            id: saved.id,
-            name: saved.name,
-            unit: saved.unit,
-            price: saved.price,
-            criticalLow: saved.critical_low,
-            criticalHigh: saved.critical_high,
-            followupWeeks: saved.followup_weeks,
-            criteria: saved.criteria,
-            note: saved.note ?? "",
-            isActive: saved.is_active,   
-            demographicRanges: Object.fromEntries(
-              (saved.ranges || []).map((r) => [r.demographic_group, r.range_raw])
-            ),
-          },
+          mapTest(saved),
         ];
         return updated;
       });
@@ -269,6 +296,7 @@ export default function TestMaster() {
         <TestsTable
           categoryName={activeCategory}
           tests={(testsByCategory[activeCategory] || []).map((t) => ({ ...t, category: activeCategory }))}
+          testsById={testsById}
           onAddTest={() => setTestModalState({ editingTest: null })}
           onEditTest={(test) => setTestModalState({ editingTest: test })}
           onRemoveTest={handleRemoveTest}
@@ -292,6 +320,8 @@ export default function TestMaster() {
           categories={categories}
           defaultCategory={activeCategory}
           editingTest={testModalState.editingTest}
+          allTests={allTests}
+          groupNamesByTestId={groupNamesByTestId}
           onClose={() => setTestModalState(null)}
           onSave={handleSaveTest}
         />

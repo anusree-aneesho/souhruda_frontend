@@ -531,14 +531,9 @@ export default function Report() {
               <button type="button" onClick={() => setBillOpen(true)} className={actionBtn}>
                 <Receipt size={16} /> Bill
               </button>
-              
-              {/* Discount can only be edited while the order is unpaid */}
-              {!paymentDone && (
-                <button type="button" onClick={() => setEditBillOpen(true)} className={actionBtn}>
-                  <Pencil size={16} /> Payment
-                </button>
-              )}
-
+              <button type="button" onClick={() => setEditBillOpen(true)} className={actionBtn}>
+                <Pencil size={16} /> Edit
+              </button>
               <button type="button" onClick={() => setWhatsAppOpen(true)} className={actionBtn}>
                 <MessageCircle size={16} /> WhatsApp
               </button>
@@ -634,13 +629,11 @@ export default function Report() {
               <p className="text-xs text-gray-400">Click View for the normal range and details</p>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px]">
+              <table className="w-full min-w-[560px]">
                 <thead>
                   <tr className="bg-gray-50 text-left">
                     <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide">No.</th>
                     <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">TEST</th>
-                    <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">RESULT</th>
-                    <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">FLAG</th>
                     <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">BILL AMOUNT</th>
                     <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide text-right">ACTION</th>
                   </tr>
@@ -652,28 +645,6 @@ export default function Report() {
                       <td className="py-3.5">
                         <p className="text-sm font-medium text-gray-900">{t.name}</p>
                         <p className="text-xs text-gray-400">{t.category}</p>
-                      </td>
-                      <td className="py-3.5 text-sm font-semibold text-gray-900">
-                        {t.isGroup ? (
-                          <span className="text-xs font-normal text-gray-500">
-                            {testsWithResults.filter((p) => p.parentItemId === t.id).length} parameters
-                          </span>
-                        ) : (
-                          <>
-                            {t.result || "—"}
-                            {t.result && t.unit ? <span className="ml-1 text-xs font-normal text-gray-400">{t.unit}</span> : null}
-                          </>
-                        )}
-                      </td>
-                      <td className="py-3.5">
-                        {t.isGroup ? (() => {
-                          const n = testsWithResults.filter(
-                            (p) => p.parentItemId === t.id && ["low", "high", "abnormal"].includes(flags[p.id])
-                          ).length;
-                          return n > 0
-                            ? <span className="text-xs font-medium text-amber-600">{n} abnormal</span>
-                            : <span className="text-xs text-gray-400">—</span>;
-                        })() : <StatusBadge status={flags[t.id]} />}
                       </td>
                       <td className="py-3.5 text-sm text-gray-900">
                         {t.packageId != null ? (

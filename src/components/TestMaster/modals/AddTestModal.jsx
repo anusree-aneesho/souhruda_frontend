@@ -23,6 +23,8 @@ const emptyForm = {
   isActive: true,
   hasParameters: false,
   parameterIds: [],
+  isParameter: false,
+  groupIds: [],
   demographicRanges: { ...emptyDemographicRanges },
 };
 
@@ -57,6 +59,10 @@ function validate(form, customRows) {
 
   if (isGroup && form.parameterIds.length === 0) {
     errors.parameters = "Select at least one parameter.";
+  }
+
+  if (form.isParameter && form.groupIds.length === 0) {
+    errors.groups = "Select at least one test.";
   }
 
   if (!form.category) {
@@ -151,7 +157,7 @@ export default function AddTestModal({
   onClose,
   onSave,
   allTests = [],            // [{ id, name, category, isGroup }] across every category
-  groupNamesByTestId = {},  // { [testId]: [names of the groups that include it] }
+  groupIdsByTestId = {},    // { [testId]: [ids of the groups that include it] }
 }) {
   const [form, setForm] = useState(emptyForm);
   const [customRows, setCustomRows] = useState([]);
@@ -160,6 +166,7 @@ export default function AddTestModal({
   const [customRowErrors, setCustomRowErrors] = useState({});
   const [confirmingRow, setConfirmingRow] = useState(null); // custom row | null
   const [parameterSearch, setParameterSearch] = useState("");
+  const [groupSearch, setGroupSearch] = useState("");
   const isEditMode = Boolean(editingTest);
 
   useEffect(() => {
@@ -181,6 +188,8 @@ export default function AddTestModal({
         isActive: editingTest.isActive ?? true,
         hasParameters: (editingTest.parameterIds || []).length > 0,
         parameterIds: editingTest.parameterIds || [],
+        isParameter: (groupIdsByTestId[editingTest.id] || []).length > 0,
+        groupIds: groupIdsByTestId[editingTest.id] || [],
         demographicRanges: { ...emptyDemographicRanges, ...fixedRanges },
       });
       setCustomRows(extractCustomRows(ranges));
@@ -193,6 +202,7 @@ export default function AddTestModal({
     setCustomRowErrors({});
     setConfirmingRow(null);
     setParameterSearch("");
+    setGroupSearch("");
   }, [editingTest, defaultCategory]);
 
   function handleChange(field, value) {
@@ -210,6 +220,16 @@ export default function AddTestModal({
         : [...prev.parameterIds, id],
     }));
     setErrors((prev) => ({ ...prev, parameters: undefined }));
+  }
+
+  function handleToggleGroup(id) {
+    setForm((prev) => ({
+      ...prev,
+      groupIds: prev.groupIds.includes(id)
+        ? prev.groupIds.filter((g) => g !== id)
+        : [...prev.groupIds, id],
+    }));
+    setErrors((prev) => ({ ...prev, groups: undefined }));
   }
 
   function handleDemographicRangeChange(group, value) {
@@ -277,6 +297,7 @@ export default function AddTestModal({
       demographicRanges: form.hasParameters ? {} : mergedDemographicRanges,
       unit: form.hasParameters ? "" : form.unit,
       parameterIds: form.hasParameters ? form.parameterIds : [],
+      groupIds: form.isParameter ? form.groupIds : [],
       price: parseFloat(form.price) || 0,
       criticalLow: form.hasParameters || form.criticalLow === "" ? null : parseFloat(form.criticalLow),
       criticalHigh: form.hasParameters || form.criticalHigh === "" ? null : parseFloat(form.criticalHigh),
@@ -302,9 +323,16 @@ export default function AddTestModal({
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  // A test that is already a parameter of some group can't become a group itself.
-  const ownGroupNames = editingTest ? groupNamesByTestId[editingTest.id] || [] : [];
-  const cannotBeGroup = ownGroupNames.length > 0;
+  // Tests that can be chosen as "the test this parameter belongs to": only tests
+  // that already have parameters, and never the test being edited.
+  const groupSearchText = groupSearch.trim().toLowerCase();
+  const groupCandidates = allTests
+    .filter((t) => {
+      if (editingTest && t.id === editingTest.id) return false;
+      if (!t.isGroup && !form.groupIds.includes(t.id)) return false;
+      return t.name.toLowerCase().includes(groupSearchText);
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <>
@@ -341,31 +369,73 @@ export default function AddTestModal({
               </div>
             </div>
 
-            {/* Group toggle + parameter picker */}
+            {/* Group toggles: this test has parameters  /  this test is a parameter of another test */}
             <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-4 space-y-3">
-              <label className={`flex items-start gap-2.5 ${cannotBeGroup ? "opacity-60" : "cursor-pointer"}`}>
-                <input
-                  type="checkbox"
-                  checked={form.hasParameters}
-                  disabled={cannotBeGroup}
-                  onChange={(e) => {
-                    handleChange("hasParameters", e.target.checked);
-                    setErrors((prev) => ({ ...prev, parameters: undefined }));
-                  }}
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer disabled:cursor-not-allowed"
-                />
-                <span>
-                  <span className="block text-sm font-semibold text-gray-900">This test has parameters</span>
-                  <span className="block text-xs text-gray-500 mt-0.5">
-                    For a group such as CBC. The price below is the group's own price; each parameter stays a separate test with its own price.
-                  </span>
-                </span>
-              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <label className={`flex items-center gap-2.5 ${form.isParameter ? "opacity-50" : "cursor-pointer"}`}>
+                  <input
+                    type="checkbox"
+                    checked={form.hasParameters}
+                    disabled={form.isParameter}
+                    onChange={(e) => {
+                      handleChange("hasParameters", e.target.checked);
+                      setErrors((prev) => ({ ...prev, parameters: undefined }));
+                    }}
+                    className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer disabled:cursor-not-allowed"
+                  />
+                  <span className="text-sm font-semibold text-gray-900">This test has parameters</span>
+                </label>
 
-              {cannotBeGroup && (
-                <p className="text-xs text-amber-600">
-                  This test is a parameter of {ownGroupNames.join(", ")}, so it can't have parameters of its own.
-                </p>
+                <label className={`flex items-center gap-2.5 ${form.hasParameters ? "opacity-50" : "cursor-pointer"}`}>
+                  <input
+                    type="checkbox"
+                    checked={form.isParameter}
+                    disabled={form.hasParameters}
+                    onChange={(e) => {
+                      handleChange("isParameter", e.target.checked);
+                      setErrors((prev) => ({ ...prev, groups: undefined }));
+                    }}
+                    className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer disabled:cursor-not-allowed"
+                  />
+                  <span className="text-sm font-semibold text-gray-900">This parameter is included in a test</span>
+                </label>
+              </div>
+
+              {form.isParameter && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-gray-900">Included in</p>
+                    <p className="text-xs text-gray-500">{form.groupIds.length} selected</p>
+                  </div>
+                  <input
+                    value={groupSearch}
+                    onChange={(e) => setGroupSearch(e.target.value)}
+                    placeholder="Search tests..."
+                    className={inputClass(false)}
+                  />
+                  <div
+                    className={`max-h-48 overflow-y-auto rounded-lg border bg-white divide-y divide-gray-100 ${
+                      errors.groups ? "border-red-300" : "border-gray-200"
+                    }`}
+                  >
+                    {groupCandidates.length === 0 && (
+                      <p className="text-xs text-gray-400 text-center py-4">No tests with parameters found.</p>
+                    )}
+                    {groupCandidates.map((t) => (
+                      <label key={t.id} className="flex items-center gap-2.5 px-3 py-2 text-sm cursor-pointer hover:bg-gray-50">
+                        <input
+                          type="checkbox"
+                          checked={form.groupIds.includes(t.id)}
+                          onChange={() => handleToggleGroup(t.id)}
+                          className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                        />
+                        <span className="flex-1 text-gray-900">{t.name}</span>
+                        <span className="text-xs text-gray-400">{t.category}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {errors.groups && <p className="text-xs text-red-500">{errors.groups}</p>}
+                </div>
               )}
 
               {form.hasParameters && (

@@ -9,7 +9,8 @@ import LabOrderCard from "./LabOrdersTable/LabOrderCard";
 import SampleCollectionModal from "./SampleCollectionModal";
 import Toast from "../common/Toast/Toast";
 import { useToast } from "../common/Toast/useToast";
-import { getOrdersApi } from "../../api/api";
+import { getOrdersApi, getGstSettingsApi } from "../../api/api";
+import { calcBillTotals } from "../../utils/orderPricing";
 import CancelledOrderModal from "./CancelledOrderModal";
 
 const PER_PAGE = 9;
@@ -32,7 +33,17 @@ function tabToStatus(tab) {
   return tab;
 }
 
-function mapOrder(o) {
+// gstRate is passed in so the BILL column shows the real payable total
+// (tests − discount + GST) — the same figure the dashboard revenue uses.
+function mapOrder(o, gstRate = 0) {
+  const { grandTotal } = calcBillTotals({
+    testsTotal: Number(o.bill_total) || 0,
+    discountType: o.discount_type || "percentage",
+    discountValue: Number(o.discount_value) || 0,
+    homeVisitFee: 0,
+    gstRate,
+  });
+
   return {
     orderId: o.order_no,
     patient: o.patient?.display_name || [o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" "),
@@ -45,7 +56,7 @@ function mapOrder(o) {
           day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
         })
       : "",
-    bill: Number(o.bill_total || 0).toFixed(2),
+    bill: Number(grandTotal || 0).toFixed(2),
     rawStatus: o.status,
     items: o.items || [],
     isHomeCollection: Boolean(o.home_collection_id),
@@ -64,7 +75,8 @@ export default function LabOrders() {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isTodayFilter, setIsTodayFilter] = useState(initialToday);
-  const [orders, setOrders] = useState([]);
+  const [rawOrders, setRawOrders] = useState([]);
+  const [gstInfo, setGstInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [page, setPage] = useState(1);
@@ -73,6 +85,15 @@ export default function LabOrders() {
   const [modalOrder, setModalOrder] = useState(null);
   const [cancelledOrder, setCancelledOrder] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // GST setting — needed so the BILL column matches the payable total.
+  useEffect(() => {
+    getGstSettingsApi()
+      .then((res) => setGstInfo(res.data))
+      .catch(() => setGstInfo(null));
+  }, []);
+
+  const gstRate = gstInfo?.is_gst_registered ? Number(gstInfo.gst_rate) || 0 : 0;
 
   // OrderDetail navigates here with { justDeleted: { orderId, patientName } }
   // right after a successful order deletion — same pattern as the justBooked
@@ -110,7 +131,7 @@ export default function LabOrders() {
     })
       .then((res) => {
         if (!cancelled) {
-          setOrders((res.data || []).map(mapOrder));
+          setRawOrders(res.data || []);
           setLastPage(res.last_page ?? res.meta?.last_page ?? 1);
           setTotal(res.total ?? res.meta?.total ?? 0);
         }
@@ -126,6 +147,13 @@ export default function LabOrders() {
       cancelled = true;
     };
   }, [activeTab, isTodayFilter, search, page, refreshKey]);
+
+  // Map after both the orders and the GST rate are known, so the bill
+  // updates automatically if the GST setting loads after the list.
+  const orders = useMemo(
+    () => rawOrders.map((o) => mapOrder(o, gstRate)),
+    [rawOrders, gstRate]
+  );
 
   // Reset to page 1 whenever the filter or search changes.
   useEffect(() => {
@@ -158,15 +186,15 @@ export default function LabOrders() {
   // Pending orders need a "sample collected" confirmation step before
   // opening the order detail / results page. Anything past pending
   // (sample_collected, completed) opens straight through, as before.
-function handleOpenOrder(order) {
-  if (order.rawStatus === "pending") {
-    setModalOrder(order);
-  } else if (order.rawStatus === "cancelled") {
-    setCancelledOrder(order);
-  } else {
-    navigate(`/lab-orders/${order.orderId}`);
+  function handleOpenOrder(order) {
+    if (order.rawStatus === "pending") {
+      setModalOrder(order);
+    } else if (order.rawStatus === "cancelled") {
+      setCancelledOrder(order);
+    } else {
+      navigate(`/lab-orders/${order.orderId}`);
+    }
   }
-}
 
   function handleSampleCollected(orderId, patientName) {
     setModalOrder(null);
@@ -238,12 +266,13 @@ function handleOpenOrder(order) {
           </>
         )}
       </div>
+
       {cancelledOrder && (
-  <CancelledOrderModal
-    order={cancelledOrder}
-    onClose={() => setCancelledOrder(null)}
-  />
-)}
+        <CancelledOrderModal
+          order={cancelledOrder}
+          onClose={() => setCancelledOrder(null)}
+        />
+      )}
 
       {modalOrder && (
         <SampleCollectionModal

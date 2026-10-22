@@ -276,12 +276,17 @@ export async function assignTechnicianApi(hcCode, technicianId) {
   });
 }
 
-export async function updateHomeCollectionStatusApi(hcCode, status, otp = null) {
+export async function updateHomeCollectionStatusApi(hcCode, status, otp, paymentReceived = false) {
   return request(`/home-collection-requests/${hcCode}/status`, {
     method: "POST",
-    body: JSON.stringify(otp ? { status, otp } : { status }),
+    body: JSON.stringify({
+      status,
+      otp,
+      payment_received: paymentReceived,
+    }),
   });
 }
+
 export async function resolveHomeCollectionOrderApi(hcCode) {
   return request(`/home-collection-requests/${hcCode}/order`, {
     method: "POST",

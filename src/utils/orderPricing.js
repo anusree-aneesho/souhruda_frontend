@@ -158,9 +158,9 @@ export function calcBillTotals({ testsTotal, discountType, discountValue, homeVi
 
   // Discount applies to tests only; home visit fee is added at full price
   const subtotal = round2(Math.max(0, tests - discountAmount) + fee);
-
-  // GST is charged on the base amount (before discount)
-  const gstAmount = round2(((tests + fee) * (Number(gstRate) || 0)) / 100);
+  
+  // GST is charged on the tests total (before discount); home visit fee is excluded
+  const gstAmount = round2((tests * (Number(gstRate) || 0)) / 100);
 
   const grandTotal = round2(subtotal + gstAmount);
 

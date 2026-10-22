@@ -193,10 +193,10 @@ export default function NewOrderModal() {
   // Success toast (e.g. "Dr. X added successfully")
   const [toast, setToast] = useState(null);
 
-  // Discount chosen on the Confirm step
+  // Discount chosen on the Confirm / Payment step
   const [discount, setDiscount] = useState({ type: "percentage", value: 0 });
 
-  // Set after a paid order is created, so the real bill can be shown
+  // Set after a paid order / booking is created, so the real bill can be shown
   const [billData, setBillData] = useState(null);
 
   async function handleEditSelectedPatient() {
@@ -356,7 +356,8 @@ export default function NewOrderModal() {
   const [isLocating, setIsLocating] = useState(false);
   const [preferredDate, setPreferredDate] = useState("");
   const [timeSlot, setTimeSlot] = useState("Morning · 7–9 AM");
-  const [paymentMethod, setPaymentMethod] = useState("UPI");
+  // CHANGED: default is "Cash" (matches the tab ids in PaymentStep)
+  const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [isBooking, setIsBooking] = useState(false);
   const [bookingError, setBookingError] = useState("");
 
@@ -377,7 +378,7 @@ export default function NewOrderModal() {
     setIsLocating(false);
     setPreferredDate("");
     setTimeSlot("Morning · 7–9 AM");
-    setPaymentMethod("UPI");
+    setPaymentMethod("Cash"); // CHANGED: was "UPI"
     setIsBooking(false);
     setBookingError("");
     setIsSubmitting(false);
@@ -393,10 +394,15 @@ export default function NewOrderModal() {
     close();
   }
 
-  // Closing the bill (after a paid order was created) goes to Lab Orders.
+  // CHANGED: closing the bill goes to Home Collection or Lab Orders,
+  // depending on which flow created it.
   function handleBillClose() {
     const info = billData;
     resetAndClose();
+    if (info?.flow === "home") {
+      navigate("/home-collection", { state: { justBooked: info.created } });
+      return;
+    }
     navigate("/lab-orders", {
       state: {
         justCreated: {
@@ -560,6 +566,13 @@ export default function NewOrderModal() {
       return;
     }
 
+    // ADDED: entering the Payment step starts clean (discount off, not paid),
+    // matching PaymentStep's own fresh local state.
+    if (isHomeCollection && step === 3) {
+      setDiscount({ type: "percentage", value: 0 });
+      setPaymentDone(false);
+    }
+
     setStep((s) => s + 1);
   }
 
@@ -611,10 +624,12 @@ export default function NewOrderModal() {
         ];
 
         setBillData({
+          flow: "order",
           orderId: order.order_no,
           patient: { ...currentPatient, phone: currentPatient?.contact },
           tests: billTests,
           billTotal: pricing.total,
+          homeVisitFee: 0,
           discountType: discount.type,
           discountValue: discount.value,
           referredBy,
@@ -656,7 +671,8 @@ export default function NewOrderModal() {
         return;
       }
 
-      const { appliedPackages } = computeOrderPricing(selectedTests, packages, appliedPackageIds);
+      const pricing = computeOrderPricing(selectedTests, packages, appliedPackageIds);
+      const { appliedPackages } = pricing;
 
       const payload = {
         patient_id: patientId,
@@ -669,9 +685,50 @@ export default function NewOrderModal() {
         slot_label: timeSlot,
         payment_mode: paymentMethod.toLowerCase(),
         referred_by: referredBy,
+        // ADDED: the backend must accept/save these for the saved bill to match
+        payment_received: paymentDone,
+        discount_type: discount.type,
+        discount_value: Number(discount.value) || 0,
       };
 
       const created = await createHomeCollectionRequestApi(payload);
+
+      // ADDED: "Payment already received" ticked -> show the bill instead of
+      // leaving straight away.
+      if (paymentDone) {
+        const billTests = [
+          ...pricing.appliedPackages.flatMap((pkg) =>
+            pkg.tests.map((t) => ({
+              ...t,
+              packageId: pkg.id,
+              packageName: pkg.name,
+              packagePrice: pkg.price,
+            }))
+          ),
+          ...pricing.individualTests,
+        ];
+
+        // ASSUMPTION: the response carries the order number. If your API uses
+        // a different field, change this line.
+        const billOrderId =
+          created?.order_no ?? created?.data?.order_no ?? created?.order?.order_no ?? created?.id;
+
+        setBillData({
+          flow: "home",
+          created,
+          orderId: billOrderId,
+          patient: { ...currentPatient, phone: currentPatient?.contact },
+          tests: billTests,
+          billTotal: pricing.total,
+          homeVisitFee: pinnedLocation.collectionCharge,
+          discountType: discount.type,
+          discountValue: discount.value,
+          referredBy,
+        });
+        setIsBooking(false);
+        return;
+      }
+
       resetAndClose();
       navigate("/home-collection", { state: { justBooked: created } });
     } catch (err) {
@@ -691,7 +748,7 @@ export default function NewOrderModal() {
 
   if (!isOpen) return null;
 
-  // A paid order was just created: show its real bill (print / download PDF work)
+  // A paid order / booking was just created: show its real bill
   if (billData) {
     return (
       <BillModal
@@ -699,7 +756,7 @@ export default function NewOrderModal() {
         patient={billData.patient}
         tests={billData.tests}
         billTotal={billData.billTotal}
-        homeVisitFee={0}
+        homeVisitFee={billData.homeVisitFee ?? 0} // CHANGED: was hardcoded 0
         discountType={billData.discountType}
         discountValue={billData.discountValue}
         paymentDone={true}
@@ -838,6 +895,8 @@ export default function NewOrderModal() {
               feeBreakdown={pinnedLocation?.feeBreakdown}
               paymentMethod={paymentMethod}
               onPaymentMethodChange={setPaymentMethod}
+              onDiscountChange={setDiscount}
+              onPaymentReceivedChange={setPaymentDone} // CHANGED: was setPaymentReceived (undefined)
             />
             {bookingError && (
               <p className="px-6 text-sm text-red-600">{bookingError}</p>
@@ -861,7 +920,7 @@ export default function NewOrderModal() {
           ) : (
             <button
               onClick={() => setStep((s) => s - 1)}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isBooking}
               className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
             >
               ← Back
@@ -879,10 +938,14 @@ export default function NewOrderModal() {
           ) : (
             <button
               onClick={isHomeCollection ? handleConfirmBooking : handleCreateOrder}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isBooking}
               className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-40 cursor-pointer"
             >
-              {isSubmitting ? "Creating…" : isHomeCollection ? "Confirm Booking" : "Create Order"}
+              {isSubmitting || isBooking
+                ? "Creating…"
+                : isHomeCollection
+                ? "Confirm Booking"
+                : "Create Order"}
             </button>
           )}
         </div>

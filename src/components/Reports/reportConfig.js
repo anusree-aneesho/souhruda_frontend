@@ -61,6 +61,7 @@ import PendingTestsReport from "./PendingTestsReport";
 import TestPerformanceReport from "./TestPerformanceReport";
 import TestVolumeReport from "./TestVolumeReport";
 import TestsQuickTable from "./TestsQuickTable";
+import DailyRevenueReport from "./DailyRevenueReport";
 
 
 export const REPORT_CATEGORIES = [
@@ -194,7 +195,7 @@ export const REPORT_CATEGORIES = [
         title: "Daily Revenue",
         description: "Day-by-day revenue trend for the selected range.",
         icon: CalendarDays,
-        component: null,
+        component: DailyRevenueReport,
       },
       {
         key: "payment-collection",

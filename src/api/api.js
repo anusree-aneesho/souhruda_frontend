@@ -737,12 +737,29 @@ export async function getPatientTestHistoryApi({
   );
 }
 
-export async function getFinanceReportApi({ dateFrom, dateTo } = {}) {
+export async function getFinanceReportApi({ dateFrom, dateTo, type } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  if (type) params.append("type", type);
+  const qs = params.toString();
+  return request(`/reports/finance${qs ? `?${qs}` : ""}`);
+}
+
+export async function getDailyRevenueReportApi({ date, type } = {}) {
+  const params = new URLSearchParams();
+  if (date) params.append("date", date);
+  if (type) params.append("type", type);
+  const qs = params.toString();
+  return request(`/reports/finance/daily-revenue${qs ? `?${qs}` : ""}`);
+}
+
+export async function getDiscountsReportApi({ dateFrom, dateTo } = {}) {
   const params = new URLSearchParams();
   if (dateFrom) params.append("date_from", dateFrom);
   if (dateTo) params.append("date_to", dateTo);
   const qs = params.toString();
-  return request(`/reports/finance${qs ? `?${qs}` : ""}`);
+  return request(`/reports/finance/discounts${qs ? `?${qs}` : ""}`);
 }
 
 export async function getDayReportApi(date) {

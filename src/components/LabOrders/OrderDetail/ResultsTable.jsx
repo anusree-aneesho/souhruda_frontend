@@ -1,6 +1,7 @@
 // src/components/LabOrders/OrderDetail/ResultsTable.jsx
-import { useState, useEffect } from "react";
+import { Fragment, useState, useEffect } from "react";
 import ResultRow from "./ResultRow";
+import GroupHeaderRows from "./GroupHeaderRows";
 import { groupTestsByPackage, calcBillTotals } from "../../../utils/orderPricing";
 import { getGstSettingsApi } from "../../../api/api";
 
@@ -19,7 +20,20 @@ export default function ResultsTable({
   savingAction,
   onEditRange,
 }) {
-  const { packageGroups, individualTests } = groupTestsByPackage(tests);
+  // Group tests (e.g. CBC) come with one child row per parameter. The group row
+  // carries the price; its parameters carry the results.
+  const topLevelTests = tests.filter((t) => t.parentItemId == null);
+  const parametersByGroup = new Map();
+  tests
+    .filter((t) => t.parentItemId != null)
+    .forEach((t) => {
+      if (!parametersByGroup.has(t.parentItemId)) parametersByGroup.set(t.parentItemId, []);
+      parametersByGroup.get(t.parentItemId).push(t);
+    });
+  const isGroupTest = (t) => (parametersByGroup.get(t.id) || []).length > 0;
+
+  // The bill lists what was ordered — a group shows once, at its common price.
+  const { packageGroups, individualTests } = groupTestsByPackage(topLevelTests);
   const [gstRate, setGstRate] = useState(0);
 
   // GST % of the branch (0 when the lab isn't GST registered)
@@ -34,7 +48,7 @@ export default function ResultsTable({
 
   // billTotal comes from the server (order.bill_total): the gross tests amount.
   // Fall back to summing catalog prices only if it's ever missing.
-  const fallbackTotal = tests.reduce((sum, t) => sum + t.price, 0);
+  const fallbackTotal = topLevelTests.reduce((sum, t) => sum + t.price, 0);
   const testsTotal = billTotal != null ? billTotal : fallbackTotal;
   const visitFee = Number(homeVisitFee || 0);
 
@@ -51,7 +65,10 @@ export default function ResultsTable({
   const hasDiscount = Number(discountValue) > 0;
   const isPercentage = discountType === "percentage";
 
-  const allResultsEntered = tests.every((t) => (results[t.id] || "").trim() !== "");
+  // Only parameters and normal tests take a result — never the group row itself.
+  const allResultsEntered = tests
+    .filter((t) => !isGroupTest(t))
+    .every((t) => (results[t.id] || "").trim() !== "");
   const isSaving = savingAction !== null;
 
   return (
@@ -74,16 +91,37 @@ export default function ResultsTable({
             </tr>
           </thead>
           <tbody>
-            {tests.map((test) => (
-              <ResultRow
-                key={test.id}
-                test={test}
-                result={results[test.id] || ""}
-                flag={flags[test.id]}
-                onResultChange={onResultChange}
-                onEditRange={onEditRange}
-              />
-            ))}
+            {topLevelTests.map((test) => {
+              if (!isGroupTest(test)) {
+                return (
+                  <ResultRow
+                    key={test.id}
+                    test={test}
+                    result={results[test.id] || ""}
+                    flag={flags[test.id]}
+                    onResultChange={onResultChange}
+                    onEditRange={onEditRange}
+                  />
+                );
+              }
+
+              const parameters = parametersByGroup.get(test.id);
+              return (
+                <Fragment key={test.id}>
+                  <GroupHeaderRows test={test} parameterCount={parameters.length} />
+                  {parameters.map((parameter) => (
+                    <ResultRow
+                      key={parameter.id}
+                      test={parameter}
+                      result={results[parameter.id] || ""}
+                      flag={flags[parameter.id]}
+                      onResultChange={onResultChange}
+                      onEditRange={onEditRange}
+                    />
+                  ))}
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>

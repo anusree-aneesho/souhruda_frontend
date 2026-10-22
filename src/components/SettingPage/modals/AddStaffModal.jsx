@@ -1,6 +1,7 @@
 // src/components/SettingPage/modals/AddStaffModal.jsx
 import { useState, useEffect } from "react";
 import ModalShell from "../../common/Modal/ModalShell";
+import ImageCropModal from "../../common/Modal/ImageCropModal";
 import { getBranchesApi } from "../../../api/api";
 import { useAuth } from "../../../Context/AuthContext";
 import { STAFF_TITLES } from "../../Patients/patientTitles";
@@ -101,6 +102,8 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
 
   // Preview: the newly chosen file, else the signature already saved (edit mode).
   const [signaturePreview, setSignaturePreview] = useState(null);
+  // Image waiting in the crop dialog (null = dialog closed).
+  const [cropFile, setCropFile] = useState(null);
   useEffect(() => {
     if (!form.signature) {
       setSignaturePreview(null);
@@ -327,6 +330,15 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
               {shownSignature && (
                 <div className="mb-2 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
                   <img src={shownSignature} alt="Signature preview" className="h-14 max-w-[180px] object-contain bg-white rounded" />
+                  {form.signature && (
+                    <button
+                      type="button"
+                      onClick={() => setCropFile(form.signature)}
+                      className="text-xs font-medium text-teal-600 hover:underline cursor-pointer"
+                    >
+                      Crop
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
@@ -345,14 +357,33 @@ export default function AddStaffModal({ editingStaff, onClose, onSave }) {
                 accept="image/png,image/jpeg,image/webp"
                 onChange={(e) => {
                   const file = e.target.files?.[0] ?? null;
+                  e.target.value = "";
+                  // Valid image -> crop first. The 2 MB limit is checked on the
+                  // cropped result, so a big photo can be cropped down to size.
+                  if (file && SIGNATURE_TYPES.includes(file.type) && file.size <= 20 * 1024 * 1024) {
+                    setCropFile(file);
+                    return;
+                  }
+                  // Wrong type / too large: store it so the normal validation message shows.
                   handleChange("signature", file);
                   if (file) handleChange("remove_signature", false);
-                  e.target.value = "";
                 }}
                 className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-teal-50 file:px-3.5 file:py-2 file:text-sm file:font-medium file:text-teal-700 hover:file:bg-teal-100 file:cursor-pointer"
               />
               {errors.signature && <p className="text-xs text-red-500 mt-1">{errors.signature}</p>}
-              <p className="text-xs text-gray-400 mt-1">PNG, JPG or WEBP, up to 2 MB. A transparent PNG works best on reports.</p>
+              <p className="text-xs text-gray-400 mt-1">PNG, JPG or WEBP, up to 2 MB. A transparent PNG works best on reports. You can crop the image after choosing it.</p>
+              {cropFile && (
+                <ImageCropModal
+                  file={cropFile}
+                  title="Crop signature"
+                  onCancel={() => setCropFile(null)}
+                  onConfirm={(cropped) => {
+                    handleChange("signature", cropped);
+                    handleChange("remove_signature", false);
+                    setCropFile(null);
+                  }}
+                />
+              )}
             </div>
           )}
 

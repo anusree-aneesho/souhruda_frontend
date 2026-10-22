@@ -3,11 +3,15 @@ import { Pencil } from "lucide-react";
 import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
 
 export default function ResultRow({ test, result, flag, onResultChange, onEditRange }) {
+  // A parameter of a group test (e.g. Haemoglobin under CBC). The group's heading
+  // row carries the price, so a parameter shows none of its own.
+  const isParameter = test.parentItemId != null;
+
   return (
     <tr className="group border-b border-gray-100 last:border-0">
-      <td className="py-3">
+      <td className={`py-3 ${isParameter ? "pl-5" : ""}`}>
         <p className="text-sm font-medium text-gray-900">{test.name}</p>
-        <p className="text-xs text-gray-400">{test.category}</p>
+        {!isParameter && <p className="text-xs text-gray-400">{test.category}</p>}
       </td>
       <td className="py-3 text-sm text-gray-500">{test.unit || "-"}</td>
       <td className="py-3 text-sm text-teal-600">
@@ -36,7 +40,7 @@ export default function ResultRow({ test, result, flag, onResultChange, onEditRa
       </td>
       <td className="py-3"><StatusBadge status={flag} /></td>
       <td className="py-3 text-sm">
-        {test.packageId != null ? (
+        {isParameter ? null : test.packageId != null ? (
           <span className="text-teal-600 text-xs font-medium">In package</span>
         ) : (
           <span className="text-gray-900">₹{test.price.toFixed(2)}</span>

@@ -531,9 +531,11 @@ export default function Report() {
               <button type="button" onClick={() => setBillOpen(true)} className={actionBtn}>
                 <Receipt size={16} /> Bill
               </button>
+             {!paymentDone && (
               <button type="button" onClick={() => setEditBillOpen(true)} className={actionBtn}>
-                <Pencil size={16} /> Edit
+                <Pencil size={16} /> Payment
               </button>
+            )}
               <button type="button" onClick={() => setWhatsAppOpen(true)} className={actionBtn}>
                 <MessageCircle size={16} /> WhatsApp
               </button>
@@ -928,6 +930,7 @@ export default function Report() {
           homeVisitFee={order?.homeVisitFee || 0}
           discountType={discount.type}
           discountValue={discount.value}
+          paymentDone={paymentDone}
           discountPercent={discount.type === "percentage" ? discount.value : 0}
           referredBy={order?.referredBy || "Self"}
           collectionDate={collectionDate}

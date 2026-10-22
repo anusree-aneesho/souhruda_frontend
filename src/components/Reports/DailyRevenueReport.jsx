@@ -3,9 +3,12 @@ import { useState, useEffect, useCallback } from "react";
 import { IndianRupee, CheckCircle2, Clock, ClipboardList, FlaskConical, Home } from "lucide-react";
 import StatCard from "../common/StatCard";
 import ReportToolbar from "./shared/ReportToolbar";
+import Pagination from "./shared/Pagination";
 import { formatCurrency, todayIso } from "./shared/format";
 import { exportToCsv, exportToPdf } from "../../utils/reportExport";
 import { getDailyRevenueReportApi } from "../../api/api";
+
+const PAGE_SIZE = 10;
 
 const TYPE_OPTIONS = [
   { value: "", label: "All orders" },
@@ -57,10 +60,12 @@ export default function DailyRevenueReport({ onBack }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
+    setPage(1); // back to the first page whenever the date or type changes
     try {
       const res = await getDailyRevenueReportApi({ date, type });
       setData(res);
@@ -80,6 +85,10 @@ export default function DailyRevenueReport({ onBack }) {
   const orders = data?.orders || [];
   const isToday = date === todayIso();
 
+  const totalPages = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
+  const pagedOrders = orders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Exports use ALL orders, not just the visible page.
   const headers = ["Order No", "Patient", "Type", "Time", "Status", "Revenue", "Paid", "Pending"];
   const csvRows = orders.map((o) => [
     o.order_no,
@@ -161,8 +170,9 @@ export default function DailyRevenueReport({ onBack }) {
       </div>
 
       <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-100">
+        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-900">Orders on this day</h3>
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -192,7 +202,7 @@ export default function DailyRevenueReport({ onBack }) {
                   </td>
                 </tr>
               ) : (
-                orders.map((o) => (
+                pagedOrders.map((o) => (
                   <tr key={o.order_no} className="border-b border-gray-50 last:border-0">
                     <td className="px-4 py-3 text-gray-900">{o.order_no}</td>
                     <td className="px-4 py-3 text-gray-900">{o.patient_name}</td>

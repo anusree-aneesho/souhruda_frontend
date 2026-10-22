@@ -62,6 +62,8 @@ import TestPerformanceReport from "./TestPerformanceReport";
 import TestVolumeReport from "./TestVolumeReport";
 import TestsQuickTable from "./TestsQuickTable";
 import DailyRevenueReport from "./DailyRevenueReport";
+import DiscountsReport from "./DiscountsReport";
+import FinanceQuickView from "./FinanceQuickView";
 
 
 export const REPORT_CATEGORIES = [
@@ -182,6 +184,7 @@ export const REPORT_CATEGORIES = [
     description: "Revenue, payments, discounts, and tax.",
     icon: IndianRupee,
     color: "bg-emerald-50 text-emerald-600",
+    quickView: FinanceQuickView, 
     items: [
       {
         key: "finance-summary",
@@ -216,7 +219,7 @@ export const REPORT_CATEGORIES = [
         title: "Discounts",
         description: "Discounts given, by staff and by test.",
         icon: Percent,
-        component: null,
+        component: DiscountsReport,
       },
       {
         key: "refunds",

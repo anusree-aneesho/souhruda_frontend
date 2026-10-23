@@ -61,7 +61,8 @@ function formatPaymentMode(mode) {
   return m.charAt(0).toUpperCase() + m.slice(1);
 }
 
-// Turns the order's `report_signatories` (sample collector + Lab Incharge) into
+// Turns the order's `report_signatories` (the Technician, Lab Assistant and Lab Incharge
+// chosen in Lab Settings) into
 // a simple list: [{ name, role, image }]. Accepts an array or an object of entries.
 function normalizeSignatories(raw) {
   if (!raw) return [];
@@ -370,7 +371,7 @@ export default function Report() {
     ${gstStripHtml}`
       : "";
 
-    // Signatures (sample collector + Lab Incharge) — same as the downloaded PDF
+    // Signatures (Technician, Lab Assistant, Lab Incharge from Lab Settings) — same as the downloaded PDF
     const signaturesHtml = signatories.length
       ? `
     <div class="signatures">
@@ -460,7 +461,7 @@ export default function Report() {
 
     /* Signatures sit at the bottom of the page, just above the disclaimer */
     .signatures { display: flex; justify-content: space-between; gap: 24px; padding: 8px 28px 4px 28px; margin-top: auto; flex-shrink: 0; }
-    .signatures .sig { width: 210px; text-align: center; }
+    .signatures .sig { flex: 1 1 0; max-width: 210px; min-width: 0; text-align: center; }
     .signatures .sig-img { height: 40px; max-width: 160px; object-fit: contain; display: block; margin: 0 auto 2px; }
     .signatures .sig-space { height: 40px; }
     .signatures .sig-line { border-top: 1px solid #9ca3af; margin-bottom: 3px; }
@@ -946,11 +947,11 @@ export default function Report() {
                   **** End of Report ****
                 </div>
 
-                {/* Signatures (sample collector + Lab Incharge) */}
+                {/* Signatures (Technician, Lab Assistant, Lab Incharge from Lab Settings) */}
                 {signatories.length > 0 && (
                   <div className="flex justify-between gap-6 px-7 pt-2 pb-1">
                     {signatories.map((sig, i) => (
-                      <div key={i} className="w-[210px] text-center">
+                      <div key={i} className="flex-1 min-w-0 max-w-[210px] text-center">
                         {sig.image ? (
                           <img
                             src={resolveImg(sig.image)}

@@ -136,6 +136,11 @@ export async function updateSettingsApi(settingsData, branchId) {
   });
 }
 
+export async function getSignatoryOptionsApi(branchId) {
+  const qs = branchId ? `?branch_id=${branchId}` : "";
+  return request(`/settings/signatory-options${qs}`);
+}
+
 // ── Branch ─────────────────────────────────────────────────
 
 export async function getBranchesApi() {

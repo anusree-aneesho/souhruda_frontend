@@ -2,8 +2,12 @@ import { useState, useEffect } from "react";
 import FormField from "./FormField";
 import Toast from "../../common/Toast/Toast";
 import { useToast } from "../../common/Toast/useToast";
-import { getSettingsApi, updateSettingsApi } from "../../../api/api";
+import { getSettingsApi, updateSettingsApi, getSignatoryOptionsApi } from "../../../api/api";
 import { useAuth } from "../../../Context/AuthContext";
+import LabLocationSection from "./LabLocationSection";
+import SignatoriesSection from "./SignatoriesSection";
+import { MAX_LOCATION_ACCURACY_M, SIGNATORY_SLOTS } from "./writeOnceFields";
+import AlertModal from "../../common/Modal/AlertModal";
 
 function validate(formData) {
   const errors = {};
@@ -90,7 +94,15 @@ const BACKEND_FIELD_MAP = {
   per_km_rate: "perKmRate",
   free_radius: "freeRadius",
   max_distance_km: "maxDistanceKm",
+  // write-once fields (shown by their own sections)
+  latitude: "location",
+  longitude: "location",
+  technician_user_id: "technician",
+  lab_assistant_user_id: "lab_assistant",
+  lab_incharge_user_id: "lab_incharge",
 };
+
+const EMPTY_SELECTION = { technician: "", lab_assistant: "", lab_incharge: "" };
 
 export default function SettingsForm({ branchId = null, branchName = "", onSaved }) {
   const [formData, setFormData] = useState(null);
@@ -101,12 +113,33 @@ export default function SettingsForm({ branchId = null, branchName = "", onSaved
   const { toast, showToast, hideToast } = useToast();
   const { user } = useAuth();
 
+  // Write-once fields. `saved*` is what the server holds (and has locked);
+  // `captured` / `selected` are pending choices that get locked on save.
+  const [savedLocation, setSavedLocation] = useState({ latitude: null, longitude: null, locked: false });
+  const [savedSignatories, setSavedSignatories] = useState({});
+  const [captured, setCaptured] = useState(null);
+  const [selected, setSelected] = useState(EMPTY_SELECTION);
+  const [signatoryOptions, setSignatoryOptions] = useState(null);
+  const [signatoryOptionsError, setSignatoryOptionsError] = useState("");
+  const [signatoryBranch, setSignatoryBranch] = useState(null);
+  // Names of the write-once fields the pending save would lock (shows the confirm popup).
+  const [lockConfirm, setLockConfirm] = useState(null);
+
   const role = String(user?.role ?? "")
     .toLowerCase()
     .trim()
     .replace(/[\s-]+/g, "_");
 
   const canEdit = ["admin", "super_admin", "superadmin"].includes(role);
+
+  function applyLockState(s) {
+    setSavedLocation({
+      latitude: s.latitude ?? null,
+      longitude: s.longitude ?? null,
+      locked: !!s.location_locked,
+    });
+    setSavedSignatories(s.signatories ?? {});
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -139,6 +172,7 @@ export default function SettingsForm({ branchId = null, branchName = "", onSaved
           freeRadius: s.free_radius ?? "",
           maxDistanceKm: s.max_distance_km ?? "",
         });
+        applyLockState(s);
       } catch (err) {
         if (!cancelled) setError(err.message || "Failed to load settings.");
       } finally {
@@ -151,6 +185,43 @@ export default function SettingsForm({ branchId = null, branchName = "", onSaved
       cancelled = true;
     };
   }, [branchId]);
+
+  // Staff to choose signatories from — only admins can change them, so only
+  // they need the list.
+  useEffect(() => {
+    if (!canEdit) return;
+    let cancelled = false;
+
+    getSignatoryOptionsApi(branchId)
+      .then((res) => {
+        if (cancelled) return;
+        setSignatoryOptions(res.data);
+        setSignatoryBranch(res.branch ?? null);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setSignatoryOptions({});
+        setSignatoryOptionsError(err.message || "Couldn't load the staff list.");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [branchId, canEdit]);
+
+  function clearFieldError(name) {
+    setFieldErrors((prev) => (prev[name] ? { ...prev, [name]: undefined } : prev));
+  }
+
+  function handleCapture(value) {
+    setCaptured(value);
+    clearFieldError("location");
+  }
+
+  function handleSelectSignatory(key, value) {
+    setSelected((prev) => ({ ...prev, [key]: value }));
+    clearFieldError(key);
+  }
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -178,6 +249,32 @@ export default function SettingsForm({ branchId = null, branchName = "", onSaved
       return;
     }
     setFieldErrors({});
+
+    // Write-once fields that this save would lock for good.
+    const locksNow = [];
+    if (!savedLocation.locked && captured) {
+      if (captured.accuracy > MAX_LOCATION_ACCURACY_M) {
+        setError(
+          `The captured location is only accurate to ±${captured.accuracy} m. Please retry until it is ±${MAX_LOCATION_ACCURACY_M} m or better.`
+        );
+        return;
+      }
+      locksNow.push("the lab location");
+    }
+    SIGNATORY_SLOTS.forEach(({ key, label }) => {
+      if (!savedSignatories[key]?.locked && selected[key]) locksNow.push(`the ${label.toLowerCase()} signatory`);
+    });
+
+    if (locksNow.length > 0) {
+      setLockConfirm(locksNow);
+      return;
+    }
+
+    await saveSettings();
+  }
+
+  async function saveSettings() {
+    setError("");
     setSaving(true);
 
     try {
@@ -201,9 +298,29 @@ export default function SettingsForm({ branchId = null, branchName = "", onSaved
           per_km_rate: Number(formData.perKmRate) || 0,
           free_radius: Number(formData.freeRadius) || 0,
           max_distance_km: Number(formData.maxDistanceKm) || 0,
+          // Only send write-once fields that are still open and have a value.
+          ...(!savedLocation.locked && captured
+            ? { latitude: captured.latitude, longitude: captured.longitude }
+            : {}),
+          ...Object.fromEntries(
+            SIGNATORY_SLOTS.filter(({ key }) => !savedSignatories[key]?.locked && selected[key]).map(
+              ({ key, field }) => [field, Number(selected[key])]
+            )
+          ),
         },
         branchId
       );
+
+      // Re-read so newly locked fields switch to their read-only state.
+      try {
+        const fresh = await getSettingsApi(branchId);
+        applyLockState(fresh.data);
+      } catch {
+        // non-fatal: the save itself succeeded
+      }
+      setCaptured(null);
+      setSelected(EMPTY_SELECTION);
+
       showToast("Settings saved successfully.");
       onSaved?.(formData.labName);
     } catch (err) {
@@ -233,6 +350,7 @@ export default function SettingsForm({ branchId = null, branchName = "", onSaved
   if (!formData) return <p className="text-sm text-red-500">{error || "Unable to load settings."}</p>;
 
   return (
+    <>
     <fieldset disabled={!canEdit} className={`min-w-0 border-0 p-0 mb-6 ${!canEdit ? "opacity-70" : ""}`}>
     <form
       onSubmit={handleSubmit}
@@ -325,6 +443,25 @@ export default function SettingsForm({ branchId = null, branchName = "", onSaved
         </p>
       </section>
 
+      <LabLocationSection
+        saved={savedLocation}
+        captured={captured}
+        onCapture={handleCapture}
+        error={fieldErrors.location}
+        canEdit={canEdit}
+      />
+
+      <SignatoriesSection
+        saved={savedSignatories}
+        selected={selected}
+        options={signatoryOptions}
+        optionsError={signatoryOptionsError}
+        branch={signatoryBranch}
+        onSelect={handleSelectSignatory}
+        errors={fieldErrors}
+        canEdit={canEdit}
+      />
+
       {canEdit && (
         <button
           type="submit"
@@ -336,5 +473,19 @@ export default function SettingsForm({ branchId = null, branchName = "", onSaved
       )}
     </form>
     </fieldset>
+
+    {lockConfirm && (
+      <AlertModal
+        title="Confirm permanent change"
+        message={`You are about to set ${lockConfirm.join(", ")}. These can't be changed once saved. Continue?`}
+        confirmLabel="Yes, save"
+        onClose={() => setLockConfirm(null)}
+        onConfirm={() => {
+          setLockConfirm(null);
+          saveSettings();
+        }}
+      />
+    )}
+    </>
   );
 }

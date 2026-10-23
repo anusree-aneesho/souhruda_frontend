@@ -173,7 +173,7 @@ export default function SampleCollectionModal({ order, onClose, onConfirmed, onC
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+            className="text-gray-400 hover:text-gray-600 text-xl leading-none cursor-pointer"
           >
             ×
           </button>

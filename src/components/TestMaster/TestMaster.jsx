@@ -118,12 +118,13 @@ export default function TestMaster() {
     });
   });
 
-  const groupNamesByTestId = {};
+  // { [testId]: [ids of the groups that include it] }
+  const groupIdsByTestId = {};
   Object.values(testsByCategory).forEach((list) => {
     list.forEach((group) => {
       (group.parameterIds || []).forEach((parameterId) => {
-        if (!groupNamesByTestId[parameterId]) groupNamesByTestId[parameterId] = [];
-        groupNamesByTestId[parameterId].push(group.name);
+        if (!groupIdsByTestId[parameterId]) groupIdsByTestId[parameterId] = [];
+        groupIdsByTestId[parameterId].push(group.id);
       });
     });
   });
@@ -213,6 +214,7 @@ export default function TestMaster() {
       ranges,
       // Only sent when the modal supplies it, so editing never clears a group by accident.
       ...(testData.parameterIds !== undefined && { parameter_ids: testData.parameterIds }),
+      ...(testData.groupIds !== undefined && { group_ids: testData.groupIds }),
     };
 
     const isEditing = Boolean(testModalState?.editingTest);
@@ -244,6 +246,25 @@ export default function TestMaster() {
         ];
         return updated;
       });
+
+      // Adding/removing this test from groups changes those groups' parameter lists,
+      // so reload the list instead of patching it by hand.
+      if (testData.groupIds !== undefined) {
+        try {
+          const testRes = await getLabTests();
+          const catIdToName = Object.fromEntries(categories.map((c) => [c.id, c.name]));
+          const grouped = {};
+          testRes.data.forEach((t) => {
+            const catName = catIdToName[t.category_id];
+            if (!catName) return;
+            if (!grouped[catName]) grouped[catName] = [];
+            grouped[catName].push(mapTest(t));
+          });
+          setTestsByCategory(grouped);
+        } catch (refreshErr) {
+          console.error("Failed to refresh tests:", refreshErr.message);
+        }
+      }
 
       setActiveCategory(testData.category);
       setTestModalState(null);
@@ -321,7 +342,7 @@ export default function TestMaster() {
           defaultCategory={activeCategory}
           editingTest={testModalState.editingTest}
           allTests={allTests}
-          groupNamesByTestId={groupNamesByTestId}
+          groupIdsByTestId={groupIdsByTestId}
           onClose={() => setTestModalState(null)}
           onSave={handleSaveTest}
         />

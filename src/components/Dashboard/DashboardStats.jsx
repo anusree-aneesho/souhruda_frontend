@@ -1,9 +1,13 @@
 // src/components/Dashboard/DashboardStats.jsx
 import { useState, useEffect } from "react";
 import StatCard from "../common/StatCard";
-import { FileText, Clock, MapPin, IndianRupee } from "lucide-react";
-import { getOrdersApi, getHomeCollectionRequestsApi } from "../../api/api";
+import TodaysRevenueCard from "./TodaysRevenueCard";
+import { FileText, Clock, MapPin } from "lucide-react";
+import { getOrdersApi, getHomeCollectionRequestsApi, getGstSettingsApi } from "../../api/api";
+import { calcBillTotals } from "../../utils/orderPricing";
 import { useNavigate } from "react-router-dom";
+import SampleCollectionModal from "../LabOrders/SampleCollectionModal";
+import CancelledOrderModal from "../LabOrders/CancelledOrderModal";
 
 // Local (browser) calendar date as YYYY-MM-DD — NOT toISOString(), which
 // gives UTC's date and can be a day off from IST near midnight.
@@ -22,29 +26,32 @@ export default function DashboardStats() {
   const navigate = useNavigate();
   const [todaysOrders, setTodaysOrders] = useState([]);
   const [pendingTotal, setPendingTotal] = useState(0);
+  const [gstInfo, setGstInfo] = useState(null);
   const [homeCollectionStat, setHomeCollectionStat] = useState({
     value: 0,
     sublabel: "0 awaiting assignment",
   });
+  const [modalOrder, setModalOrder] = useState(null);
+  const [cancelledOrder, setCancelledOrder] = useState(null);
+
+  // No backend endpoint filters orders by date, so pull the (paginated,
+  // most-recent-first) list and filter client-side. Also called again
+  // after an order is cancelled so the numbers update.
+  function loadTodaysOrders() {
+    const today = todayLocalDate();
+    return getOrdersApi({ per_page: 100 })
+      .then((res) => {
+        const rows = res.data || [];
+        setTodaysOrders(rows.filter((o) => toLocalDateString(o.ordered_at) === today));
+      })
+      .catch(() => setTodaysOrders([]));
+  }
 
   useEffect(() => {
     let cancelled = false;
     const today = todayLocalDate();
 
-    // No backend endpoint filters orders by date, so pull the (paginated,
-    // 20-per-page, most-recent-first) list and filter client-side. Fine at
-    // current volume — if the lab regularly does 20+ orders/day, this will
-    // undercount and needs a real ?date= filter added to OrderController.
-    getOrdersApi()
-      .then((res) => {
-        const rows = res.data || [];
-        if (!cancelled) {
-          setTodaysOrders(rows.filter((o) => toLocalDateString(o.ordered_at) === today));
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setTodaysOrders([]);
-      });
+    loadTodaysOrders();
 
     getOrdersApi({ status: "Pending" })
       .then((res) => {
@@ -68,13 +75,95 @@ export default function DashboardStats() {
         if (!cancelled) setHomeCollectionStat({ value: "—", sublabel: "couldn't load" });
       });
 
+    // GST setting — needed so revenue uses the same payable total as the bill.
+    getGstSettingsApi()
+      .then((res) => {
+        if (!cancelled) setGstInfo(res.data);
+      })
+      .catch(() => {
+        if (!cancelled) setGstInfo(null);
+      });
+
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const totalToday = todaysOrders.length;
   const completedToday = todaysOrders.filter((o) => o.status === "completed").length;
+
+  // Today's Revenue — lab orders only, cancelled orders left out.
+  // Each order counts at its real payable total (tests − discount + GST),
+  // the same calculation the bill uses. Paid = payment received; everything
+  // else is Pending.
+  const gstRate = gstInfo?.is_gst_registered ? Number(gstInfo.gst_rate) || 0 : 0;
+  const revenue = todaysOrders
+    .filter((o) => !o.home_collection_id && !o.is_cancelled && o.status !== "cancelled")
+    .reduce(
+      (acc, o) => {
+        const { grandTotal } = calcBillTotals({
+          testsTotal: Number(o.bill_total) || 0,
+          discountType: o.discount_type || "percentage",
+          discountValue: Number(o.discount_value) || 0,
+          homeVisitFee: 0,
+          gstRate,
+        });
+        const bucket = o.payment_status === "paid" ? acc.paid : acc.pending;
+        bucket.amount += grandTotal;
+        bucket.orders += 1;
+        // Details shown when the Total card is clicked
+        bucket.items.push({
+          orderNo: o.order_no,
+          patientName: [o.patient?.title, o.patient?.first_name, o.patient?.last_name]
+            .filter(Boolean)
+            .join(" "),
+          regNo: o.patient?.patient_number || "",
+          testsCount: o.items_count ?? o.items?.length ?? 0,
+          testNames: (o.items || []).map((i) => i.lab_test?.name).filter(Boolean),
+          orderedAt: o.ordered_at,
+          status: o.status,
+          amount: grandTotal,
+        });
+        return acc;
+      },
+      {
+        paid: { amount: 0, orders: 0, items: [] },
+        pending: { amount: 0, orders: 0, items: [] },
+      }
+    );
+  revenue.total = revenue.paid.amount + revenue.pending.amount;
+
+  // Same behaviour as the Today's Orders list:
+  // pending -> sample collection popup, cancelled -> cancelled popup,
+  // anything else -> order page.
+  function handleOpenOrder(item) {
+    if (item.status === "pending") {
+      setModalOrder(item);
+    } else if (item.status === "cancelled") {
+      setCancelledOrder({
+        orderId: item.orderNo,
+        patient: item.patientName,
+        regNo: item.regNo,
+        tests: item.testsCount,
+      });
+    } else {
+      navigate(`/lab-orders/${item.orderNo}`);
+    }
+  }
+
+  function handleSampleCollected(orderId) {
+    const patientName = modalOrder?.patientName;
+    setModalOrder(null);
+    navigate(`/lab-orders/${orderId}`, {
+      state: { justCollected: { orderId, patientName } },
+    });
+  }
+
+  function handleOrderCancelled() {
+    setModalOrder(null);
+    loadTodaysOrders();
+  }
 
   const stats = [
     {
@@ -101,13 +190,6 @@ export default function DashboardStats() {
       color: "blue",
       onClick: () => navigate("/home-collection?filter=today"),
     },
-    {
-      label: "Today's Revenue",
-      value: "₹1230.00",
-      sublabel: "lab orders only",
-      icon: IndianRupee,
-      color: "purple",
-    },
   ];
 
   return (
@@ -121,6 +203,30 @@ export default function DashboardStats() {
           <StatCard {...stat} />
         </div>
       ))}
+
+      <TodaysRevenueCard revenue={revenue} onOpenOrder={handleOpenOrder} />
+
+      {modalOrder && (
+        <SampleCollectionModal
+          order={{
+            orderId: modalOrder.orderNo,
+            patient: modalOrder.patientName,
+            regNo: modalOrder.regNo,
+            tests: modalOrder.testsCount,
+            testNames: modalOrder.testNames,
+          }}
+          onClose={() => setModalOrder(null)}
+          onConfirmed={handleSampleCollected}
+          onCancelled={handleOrderCancelled}
+        />
+      )}
+
+      {cancelledOrder && (
+        <CancelledOrderModal
+          order={cancelledOrder}
+          onClose={() => setCancelledOrder(null)}
+        />
+      )}
     </div>
   );
 }

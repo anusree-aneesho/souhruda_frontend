@@ -19,6 +19,30 @@ import { calculateFlag } from "../../../utils/calculateFlag";
 import { buildReportRowsByCategory } from "../../../utils/reportRows";
 import { getOrderReportUrlApi, getOrderApi, getSettingsApi, getGstSettingsApi, markOrderPaidApi } from "../../../api/api";
 
+// Turns the order's `report_signatories` (sample collector + Lab Incharge) into
+// a simple list: [{ name, role, image }]. Accepts an array or an object of entries.
+function normalizeSignatories(raw) {
+  if (!raw) return [];
+  const list = Array.isArray(raw) ? raw : Object.values(raw);
+  return list
+    .filter(Boolean)
+    .map((s) => {
+      const baseName = s.display_name || s.full_name || s.name || "";
+      const name =
+        s.title && baseName && !baseName.startsWith(s.title) ? `${s.title} ${baseName}` : baseName;
+      return {
+        name,
+        role: String(s.role_label || s.designation || s.label || s.role || "").replace(/_/g, " "),
+        image: s.signature_data_uri || s.signature_url || s.signature_image || s.signature || s.signature_path || "",
+      };
+    })
+    .filter((s) => s.name);
+}
+
+function resolveImg(src) {
+  return /^(data:|https?:)/.test(src) ? src : new URL(src, window.location.origin).href;
+}
+
 export default function Report() {
   const { orderId } = useParams();
   const location = useLocation();
@@ -37,6 +61,7 @@ export default function Report() {
   const [downloadError, setDownloadError] = useState("");
   const [labInfo, setLabInfo] = useState(null);
   const [gstInfo, setGstInfo] = useState(null);
+  const [signatories, setSignatories] = useState([]);
   const iframeRef = useRef(null);
 
   const existingOrder = findOrderById(orderId);
@@ -54,6 +79,7 @@ export default function Report() {
     let cancelled = false;
     setDiscount({ type: "percentage", value: 0 });
     setOrderDates({ collected: null, reported: null });
+    setSignatories([]);
     getOrderApi(orderId)
       .then((res) => {
         if (cancelled) return;
@@ -62,6 +88,7 @@ export default function Report() {
           value: Number(res.data?.discount_value) || 0,
         });
         setPaymentDone(res.data?.payment_status === "paid");
+        setSignatories(normalizeSignatories(res.data?.report_signatories));
         setOrderDates({
           collected: res.data?.sample_collected_at ?? null,
           reported: res.data?.report_generated_at ?? res.data?.completed_at ?? null,
@@ -282,6 +309,24 @@ export default function Report() {
     ${gstStripHtml}`
       : "";
 
+    // Signatures (sample collector + Lab Incharge) — same as the downloaded PDF
+    const signaturesHtml = signatories.length
+      ? `
+    <div class="signatures">
+        ${signatories
+          .map(
+            (s) => `
+        <div class="sig">
+            ${s.image ? `<img class="sig-img" src="${resolveImg(s.image)}" alt="Signature">` : `<div class="sig-space"></div>`}
+            <div class="sig-line"></div>
+            <div class="sig-name">${s.name}</div>
+            ${s.role ? `<div class="sig-role">${s.role}</div>` : ""}
+        </div>`
+          )
+          .join("")}
+    </div>`
+      : "";
+
     const html = `
 <!DOCTYPE html>
 <html>
@@ -352,6 +397,16 @@ export default function Report() {
 
     .end-line { text-align: center; font-size: 9px; color: #9ca3af; letter-spacing: 0.05em; margin: 2px 24px 4px 24px; flex-shrink: 0; }
 
+    /* Signatures sit at the bottom of the page, just above the disclaimer */
+    .signatures { display: flex; justify-content: space-between; gap: 24px; padding: 8px 28px 4px 28px; margin-top: auto; flex-shrink: 0; }
+    .signatures .sig { width: 210px; text-align: center; }
+    .signatures .sig-img { height: 40px; max-width: 160px; object-fit: contain; display: block; margin: 0 auto 2px; }
+    .signatures .sig-space { height: 40px; }
+    .signatures .sig-line { border-top: 1px solid #9ca3af; margin-bottom: 3px; }
+    .signatures .sig-name { font-size: 10px; font-weight: 700; color: #111827; }
+    .signatures .sig-role { font-size: 9px; color: #6b7280; text-transform: capitalize; }
+    .signatures ~ .footer-meta { margin-top: 0; }
+
     .disclaimer-strip { text-align: center; font-size: 9px; color: #6b7280; font-style: italic; padding: 0 24px 6px 24px; flex-shrink: 0; }
 
     .footer-meta { display: flex; justify-content: space-between; font-size: 8.5px; color: #9ca3af; padding: 4px 24px; border-top: 1px solid #e5e7eb; flex-shrink: 0; margin-top: auto; }
@@ -388,6 +443,8 @@ export default function Report() {
 
     <div class="end-line">**** End of Report ****</div>
 
+    ${signaturesHtml}
+
     ${labInfo.footer_note ? `<div class="disclaimer-strip">${labInfo.footer_note}</div>` : `<div class="disclaimer-strip">Reports are not valid for medico-legal purposes.</div>`}
 
     <div class="footer-meta">
@@ -407,7 +464,30 @@ export default function Report() {
     doc.write(html);
     doc.close();
     iframe.contentWindow.focus();
-    setTimeout(() => iframe.contentWindow.print(), 250);
+
+    // Wait for the logo / signature images to load before opening the print
+    // dialog, otherwise they can be missing from the printout.
+    let printed = false;
+    const printNow = () => {
+      if (printed) return;
+      printed = true;
+      iframe.contentWindow.print();
+    };
+    const pendingImgs = Array.from(doc.images || []).filter((img) => !img.complete);
+    if (pendingImgs.length === 0) {
+      setTimeout(printNow, 250);
+    } else {
+      let left = pendingImgs.length;
+      const onDone = () => {
+        left -= 1;
+        if (left <= 0) setTimeout(printNow, 100);
+      };
+      pendingImgs.forEach((img) => {
+        img.onload = onDone;
+        img.onerror = onDone;
+      });
+      setTimeout(printNow, 3000); // safety net if an image never finishes
+    }
   }
 
   const actionBtn =
@@ -451,9 +531,11 @@ export default function Report() {
               <button type="button" onClick={() => setBillOpen(true)} className={actionBtn}>
                 <Receipt size={16} /> Bill
               </button>
+             {!paymentDone && (
               <button type="button" onClick={() => setEditBillOpen(true)} className={actionBtn}>
-                <Pencil size={16} /> Edit
+                <Pencil size={16} /> Payment
               </button>
+            )}
               <button type="button" onClick={() => setWhatsAppOpen(true)} className={actionBtn}>
                 <MessageCircle size={16} /> WhatsApp
               </button>
@@ -799,6 +881,28 @@ export default function Report() {
                   **** End of Report ****
                 </div>
 
+                {/* Signatures (sample collector + Lab Incharge) */}
+                {signatories.length > 0 && (
+                  <div className="flex justify-between gap-6 px-7 pt-2 pb-1">
+                    {signatories.map((sig, i) => (
+                      <div key={i} className="w-[210px] text-center">
+                        {sig.image ? (
+                          <img
+                            src={resolveImg(sig.image)}
+                            alt="Signature"
+                            className="h-10 max-w-[160px] object-contain mx-auto mb-0.5"
+                          />
+                        ) : (
+                          <div className="h-10" />
+                        )}
+                        <div className="border-t border-gray-400 mb-[3px]" />
+                        <p className="text-[10px] font-bold text-gray-900">{sig.name}</p>
+                        {sig.role && <p className="text-[9px] text-gray-500 capitalize">{sig.role}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className="text-center text-[9px] text-gray-500 italic px-6 pb-1.5">
                   {labInfo?.footer_note || "Reports are not valid for medico-legal purposes."}
                 </div>
@@ -826,6 +930,7 @@ export default function Report() {
           homeVisitFee={order?.homeVisitFee || 0}
           discountType={discount.type}
           discountValue={discount.value}
+          paymentDone={paymentDone}
           discountPercent={discount.type === "percentage" ? discount.value : 0}
           referredBy={order?.referredBy || "Self"}
           collectionDate={collectionDate}

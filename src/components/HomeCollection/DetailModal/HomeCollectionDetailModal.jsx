@@ -9,12 +9,12 @@ import { useToast } from "../../common/Toast/useToast";
 import { formatNameWithTitle } from "../../Patients/patientTitles";
 import StatusStepper from "./StatusStepper";
 import RequestInfoBar from "./RequestInfoBar";
-import TestsList from "./TestsList";
 import TrackingMap from "./TrackingMap";
 import AssignTechnicianModal from "./AssignTechnicianModal";
 import PrintLabelModal from "./PrintLabelModal";
 import { useHomeCollectionModal } from "../../../Context/HomeCollectionModalContext";
 import { getHomeCollectionRequestApi, updateHomeCollectionStatusApi, resolveHomeCollectionOrderApi } from "../../../api/api";
+import BillModal from "../../LabOrders/Report/BillModal";
 
 function formatStatus(status) {
   return (status || "")
@@ -34,7 +34,73 @@ function formatPaymentStatus(status) {
   return status ? status.charAt(0).toUpperCase() + status.slice(1) : "";
 }
 
-// API response shape -> the shape RequestInfoBar / TestsList / StatusStepper expect
+const rs = (n) => `Rs. ${Number(n || 0).toFixed(2)}`;
+
+// Tests list + full payment breakdown, same layout as the bill
+function BillSection({ hc }) {
+  const isPercentage = hc.discountType === "percentage";
+
+  return (
+    <div>
+          <div className="flex items-center justify-between border-b border-gray-100 pb-2 mb-1">
+      <span className="text-xs font-medium text-gray-400 tracking-wide">ITEM</span>
+      <span className="text-xs font-medium text-gray-400 tracking-wide">AMOUNT</span>
+    </div>
+
+      {hc.tests.map((t) => (
+        <div key={t.id} className="flex items-center justify-between py-2 border-b border-gray-50 text-sm">
+          <span className="text-gray-900">{t.name}</span>
+          <span className="text-gray-700">{rs(t.price)}</span>
+        </div>
+      ))}
+
+      <div className="mt-3 space-y-1 text-sm text-gray-600">
+        <div className="flex justify-between">
+          <span>Tests total</span>
+          <span>{rs(hc.testsTotal)}</span>
+        </div>
+        {hc.discountAmount > 0 && (
+          <div className="flex justify-between text-green-700">
+            <span>Discount{isPercentage ? ` (${hc.discountValue}%)` : ""}</span>
+            <span>− {rs(hc.discountAmount)}</span>
+          </div>
+        )}
+        <div className="flex justify-between">
+          <span>Home visit fee</span>
+          <span>{rs(hc.collectionCharge)}</span>
+        </div>
+      </div>
+
+      {hc.gstRate > 0 && (
+        <div className="mt-3 space-y-1 text-sm text-gray-600">
+          <div className="flex justify-between">
+            <span>Subtotal</span>
+            <span>{rs(hc.subtotal)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>GST ({hc.gstRate}%)</span>
+            <span>{rs(hc.gstAmount)}</span>
+          </div>
+        </div>
+      )}
+
+      <div
+        className={`flex items-center justify-between rounded-lg px-4 py-3 mt-3 ${
+          hc.isPaid ? "bg-green-50" : "bg-teal-50"
+        }`}
+      >
+        <span className={`text-sm font-medium ${hc.isPaid ? "text-green-700" : "text-teal-700"}`}>
+          {hc.isPaid ? "Paid" : "Total payable"}
+        </span>
+        <span className={`text-lg font-bold ${hc.isPaid ? "text-green-700" : "text-teal-700"}`}>
+          {rs(hc.grandTotal)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// API response shape -> the shape RequestInfoBar / StatusStepper / BillSection expect
 function mapDetail(r) {
   return {
     id: r.hc_code,
@@ -60,6 +126,13 @@ function mapDetail(r) {
     tests: r.tests || [],
     testsTotal: r.tests_total,
     grandTotal: r.grand_total,
+    discountType: r.discount_type,
+    discountValue: Number(r.discount_value) || 0,
+    discountAmount: Number(r.discount_amount) || 0,
+    subtotal: Number(r.subtotal) || 0,
+    gstRate: Number(r.gst_rate) || 0,
+    gstAmount: Number(r.gst_amount) || 0,
+    isPaid: r.payment_status === "paid",
   };
 }
 
@@ -78,7 +151,11 @@ export default function HomeCollectionDetailModal() {
   const [cancelError, setCancelError] = useState(null);
   const { toast, showToast, hideToast } = useToast();
 
+  const [paymentReceived, setPaymentReceived] = useState(false);
+  const [showBill, setShowBill] = useState(false);
+
   useEffect(() => {
+    setPaymentReceived(false);
     if (!activeId) {
       setBaseHc(null);
       setLocalHc(null);
@@ -149,12 +226,16 @@ export default function HomeCollectionDetailModal() {
       return;
     }
 
+    const payNow = paymentReceived && !hc.isPaid;
+
     try {
-      const updated = await updateHomeCollectionStatusApi(hc.id, "collected", otpInput.trim());
+      const updated = await updateHomeCollectionStatusApi(hc.id, "collected", otpInput.trim(), payNow);
       setBaseHc(mapDetail(updated));
       setLocalHc(null);
       setOtpInput("");
+      setPaymentReceived(false);
       showToast(`${hc.id} marked Collected`);
+      if (payNow) setShowBill(true);
     } catch (err) {
       alert(err.message || "Couldn't confirm sample collection.");
     }
@@ -261,7 +342,19 @@ export default function HomeCollectionDetailModal() {
 
               {hc.status === "En Route" && <TrackingMap />}
 
-              <TestsList tests={hc.tests} total={hc.testsTotal} collectionCharge={hc.collectionCharge} grandTotal={hc.grandTotal} />
+              <BillSection hc={hc} />
+
+              {hc.status === "En Route" && !hc.isPaid && (
+                <label className="flex items-center gap-3 cursor-pointer select-none rounded-xl border border-gray-100 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={paymentReceived}
+                    onChange={(e) => setPaymentReceived(e.target.checked)}
+                    className="h-5 w-5 accent-teal-600 cursor-pointer"
+                  />
+                  <span className="text-sm font-medium text-gray-900">Payment already received</span>
+                </label>
+              )}
 
               {hc.status === "Processing" && (
                 <p className="text-sm text-gray-500 text-right">
@@ -380,6 +473,27 @@ export default function HomeCollectionDetailModal() {
 
       {cancelError && (
         <AlertModal title="Couldn't Cancel" message={cancelError} onClose={() => setCancelError(null)} />
+      )}
+
+      {showBill && hc && (
+        <BillModal
+          orderId={hc.linkedOrderId}
+          patient={{ ...hc.patient, regNo: hc.patient?.regNo }}
+          tests={hc.tests.map((t) => ({
+            ...t,
+            price: Number(t.price) || 0,
+            packageId: t.test_package_id,
+            packageName: t.package_name,
+            packagePrice: t.package_price,
+          }))}
+          billTotal={hc.testsTotal}
+          homeVisitFee={Number(hc.collectionCharge) || 0}
+          discountType={hc.discountType}
+          discountValue={hc.discountValue}
+          paymentDone={true}
+          referredBy={hc.referredBy}
+          onClose={() => setShowBill(false)}
+        />
       )}
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}

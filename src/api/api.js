@@ -484,9 +484,10 @@ export async function deleteOrderApi(orderId) {
   });
 }
 
-export async function markOrderPaidApi(orderId) {
+export async function markOrderPaidApi(orderId, paymentMode = "cash") {
   return request(`/orders/${orderId}/mark-paid`, {
     method: "PATCH",
+    body: JSON.stringify({ payment_mode: paymentMode }),
   });
 }
 
@@ -761,6 +762,16 @@ export async function getDiscountsReportApi({ dateFrom, dateTo } = {}) {
   const qs = params.toString();
   return request(`/reports/finance/discounts${qs ? `?${qs}` : ""}`);
 }
+
+export async function getPaymentCollectionReportApi({ dateFrom, dateTo, type } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  if (type) params.append("type", type);
+  const qs = params.toString();
+  return request(`/reports/finance/payment-collection${qs ? `?${qs}` : ""}`);
+}
+
 
 export async function getDayReportApi(date) {
   const params = new URLSearchParams();

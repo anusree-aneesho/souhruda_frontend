@@ -356,7 +356,7 @@ export default function NewOrderModal() {
   const [isLocating, setIsLocating] = useState(false);
   const [preferredDate, setPreferredDate] = useState("");
   const [timeSlot, setTimeSlot] = useState("Morning · 7–9 AM");
-  // CHANGED: default is "Cash" (matches the tab ids in PaymentStep)
+  // Default is "Cash". Shared by Home Collection (PaymentStep) and Lab Orders (ConfirmStep).
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [isBooking, setIsBooking] = useState(false);
   const [bookingError, setBookingError] = useState("");
@@ -378,7 +378,7 @@ export default function NewOrderModal() {
     setIsLocating(false);
     setPreferredDate("");
     setTimeSlot("Morning · 7–9 AM");
-    setPaymentMethod("Cash"); // CHANGED: was "UPI"
+    setPaymentMethod("Cash");
     setIsBooking(false);
     setBookingError("");
     setIsSubmitting(false);
@@ -394,7 +394,7 @@ export default function NewOrderModal() {
     close();
   }
 
-  // CHANGED: closing the bill goes to Home Collection or Lab Orders,
+  // Closing the bill goes to Home Collection or Lab Orders,
   // depending on which flow created it.
   function handleBillClose() {
     const info = billData;
@@ -566,7 +566,7 @@ export default function NewOrderModal() {
       return;
     }
 
-    // ADDED: entering the Payment step starts clean (discount off, not paid),
+    // Entering the Payment step starts clean (discount off, not paid),
     // matching PaymentStep's own fresh local state.
     if (isHomeCollection && step === 3) {
       setDiscount({ type: "percentage", value: 0 });
@@ -600,6 +600,8 @@ export default function NewOrderModal() {
         package_ids: appliedPackages.map((p) => p.id),
         referred_by: referredBy,
         payment_received: paymentDone,
+        // ADDED: cash | upi | card (only sent when payment is received)
+        payment_mode: paymentDone ? paymentMethod.toLowerCase() : null,
         follow_up_reminder_ids: selectedReminderIds,
         discount_type: discount.type,
         discount_value: Number(discount.value) || 0,
@@ -685,7 +687,7 @@ export default function NewOrderModal() {
         slot_label: timeSlot,
         payment_mode: paymentMethod.toLowerCase(),
         referred_by: referredBy,
-        // ADDED: the backend must accept/save these for the saved bill to match
+        // The backend must accept/save these for the saved bill to match
         payment_received: paymentDone,
         discount_type: discount.type,
         discount_value: Number(discount.value) || 0,
@@ -693,7 +695,7 @@ export default function NewOrderModal() {
 
       const created = await createHomeCollectionRequestApi(payload);
 
-      // ADDED: "Payment already received" ticked -> show the bill instead of
+      // "Payment already received" ticked -> show the bill instead of
       // leaving straight away.
       if (paymentDone) {
         const billTests = [
@@ -756,7 +758,7 @@ export default function NewOrderModal() {
         patient={billData.patient}
         tests={billData.tests}
         billTotal={billData.billTotal}
-        homeVisitFee={billData.homeVisitFee ?? 0} // CHANGED: was hardcoded 0
+        homeVisitFee={billData.homeVisitFee ?? 0}
         discountType={billData.discountType}
         discountValue={billData.discountValue}
         paymentDone={true}
@@ -882,6 +884,8 @@ export default function NewOrderModal() {
             onPaymentDoneChange={setPaymentDone}
             discount={discount}
             onDiscountChange={setDiscount}
+            paymentMethod={paymentMethod}              // ADDED
+            onPaymentMethodChange={setPaymentMethod}   // ADDED
           />
         )}
 
@@ -896,7 +900,7 @@ export default function NewOrderModal() {
               paymentMethod={paymentMethod}
               onPaymentMethodChange={setPaymentMethod}
               onDiscountChange={setDiscount}
-              onPaymentReceivedChange={setPaymentDone} // CHANGED: was setPaymentReceived (undefined)
+              onPaymentReceivedChange={setPaymentDone}
             />
             {bookingError && (
               <p className="px-6 text-sm text-red-600">{bookingError}</p>

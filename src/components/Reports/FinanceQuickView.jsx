@@ -66,7 +66,7 @@ export default function FinanceQuickView() {
         <button
           type="button"
           onClick={() => navigate("/reports/finance/finance-summary")}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-teal-700 hover:text-teal-800"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-teal-700 hover:text-teal-800 cursor-pointer"
         >
           View report <ArrowRight size={16} />
         </button>

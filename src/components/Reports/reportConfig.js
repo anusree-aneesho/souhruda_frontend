@@ -64,6 +64,7 @@ import TestsQuickTable from "./TestsQuickTable";
 import DailyRevenueReport from "./DailyRevenueReport";
 import DiscountsReport from "./DiscountsReport";
 import FinanceQuickView from "./FinanceQuickView";
+import PaymentCollectionReport from "./PaymentCollectionReport";
 
 
 export const REPORT_CATEGORIES = [
@@ -205,7 +206,7 @@ export const REPORT_CATEGORIES = [
         title: "Payment Collection",
         description: "Amounts collected, split by payment mode.",
         icon: Wallet,
-        component: null,
+        component: PaymentCollectionReport, 
       },
       {
         key: "pending-outstanding",

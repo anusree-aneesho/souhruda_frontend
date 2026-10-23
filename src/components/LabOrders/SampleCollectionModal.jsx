@@ -5,6 +5,14 @@ import { markSampleCollectedApi, deleteOrderApi, getSampleCollectorsApi, getOrde
 // "Miss" + "Anusree" -> "Miss Anusree" (skips the title if it's empty)
 const displayName = (c) => [c?.title, c?.name].filter(Boolean).join(" ");
 
+// ADDED: "upi" -> "UPI", "cash" -> "Cash", "card" -> "Card"
+function formatPaymentMode(mode) {
+  if (!mode) return "";
+  const m = String(mode).toLowerCase();
+  if (m === "upi") return "UPI";
+  return m.charAt(0).toUpperCase() + m.slice(1);
+}
+
 export default function SampleCollectionModal({ order, onClose, onConfirmed, onCancelled }) {
   const [loading, setLoading] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
@@ -19,13 +27,17 @@ export default function SampleCollectionModal({ order, onClose, onConfirmed, onC
   const [paymentDone, setPaymentDone] = useState(
     Boolean(order.paymentDone) || order.payment_status === "paid"
   );
+  // ADDED: how the order was paid (cash | upi | card), read from the order
+  const [paymentMode, setPaymentMode] = useState("");
   const [paymentLoading, setPaymentLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     getOrderApi(order.orderId)
       .then((res) => {
-        if (!cancelled) setPaymentDone(res.data?.payment_status === "paid");
+        if (cancelled) return;
+        setPaymentDone(res.data?.payment_status === "paid");
+        setPaymentMode(res.data?.payment_mode ?? ""); // ADDED
       })
       .catch((err) => console.error("Failed to load payment status:", err.message))
       .finally(() => {
@@ -204,6 +216,13 @@ export default function SampleCollectionModal({ order, onClose, onConfirmed, onC
                 </span>
               )}
             </div>
+            {/* ADDED: payment mode, only when the order is paid */}
+            {!paymentLoading && paymentDone && paymentMode && (
+              <div>
+                <p className="text-xs font-medium text-gray-400 tracking-wide mb-1">PAYMENT MODE</p>
+                <p className="text-sm font-medium text-gray-900">{formatPaymentMode(paymentMode)}</p>
+              </div>
+            )}
           </div>
 
           <div>

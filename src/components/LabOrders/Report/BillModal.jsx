@@ -24,6 +24,14 @@ function formatOrderDate(raw) {
   });
 }
 
+// ADDED: "upi" -> "UPI", "cash" -> "Cash", "card" -> "Card"
+function formatPaymentMode(mode) {
+  if (!mode) return "";
+  const m = String(mode).toLowerCase();
+  if (m === "upi") return "UPI";
+  return m.charAt(0).toUpperCase() + m.slice(1);
+}
+
 export default function BillModal({
   orderId,
   patient,
@@ -33,6 +41,7 @@ export default function BillModal({
   discountType = "percentage",
   discountValue = 0,
   paymentDone,
+  paymentMode, // ADDED: "cash" | "upi" | "card" (optional - loaded from the order if not given)
   referredBy,
   billDate, // when the order was created (date + time) — shown as "Billed On"
   onClose,
@@ -76,11 +85,19 @@ export default function BillModal({
   const [orderedAt, setOrderedAt] = useState("");
   const billedOn = billDate || formatOrderDate(orderedAt);
 
+  // ADDED: payment mode saved on the order. The prop wins if given.
+  const [savedPaymentMode, setSavedPaymentMode] = useState("");
+  const paymentModeLabel = paymentDone
+    ? formatPaymentMode(paymentMode || savedPaymentMode)
+    : "";
+
   useEffect(() => {
     let cancelled = false;
     getOrderApi(orderId)
       .then((res) => {
-        if (!cancelled) setOrderedAt(res.data?.ordered_at ?? "");
+        if (cancelled) return;
+        setOrderedAt(res.data?.ordered_at ?? "");
+        setSavedPaymentMode(res.data?.payment_mode ?? ""); // ADDED
       })
       .catch((err) => console.error("Failed to load order date:", err.message));
     return () => { cancelled = true; };
@@ -316,9 +333,16 @@ export default function BillModal({
         <td class="k">Reg / Order No.</td><td class="v">${patient.regNo || "-"} / ${orderId}</td>
         <td class="k">Billed On</td><td class="v">${billedOn || "—"}</td>
       </tr>
-      <tr>
+      ${
+        paymentModeLabel
+          ? `<tr>
+        <td class="k">Referred By</td><td class="v">${referredBy || "Self"}</td>
+        <td class="k">Payment Mode</td><td class="v">${paymentModeLabel}</td>
+      </tr>`
+          : `<tr>
         <td class="k">Referred By</td><td class="v" colspan="3">${referredBy || "Self"}</td>
-      </tr>
+      </tr>`
+      }
     </table>
   </div>
 
@@ -386,6 +410,8 @@ export default function BillModal({
     ["Reg / Order No.", `${patient.regNo || "-"} / ${orderId}`],
     ["Referred By", referredBy || "Self"],
     ["Billed On", billedOn || "—"],
+    // ADDED: only shown for paid orders that have a payment mode
+    ...(paymentModeLabel ? [["Payment Mode", paymentModeLabel]] : []),
   ];
 
   return (

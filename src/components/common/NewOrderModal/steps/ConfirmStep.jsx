@@ -1,9 +1,42 @@
 // src/components/common/NewOrderModal/steps/ConfirmStep.jsx
 import { useState, useEffect } from "react";
-import { Tag, Info } from "lucide-react";
+import { Tag, Info, Smartphone, Banknote, CreditCard } from "lucide-react";
 import { computeOrderPricing, calcBillTotals } from "../../../../utils/orderPricing";
 import { getGstSettingsApi } from "../../../../api/api";
 import EditBillModal from "../../../LabOrders/Report/EditBillModal";
+
+// ADDED: payment mode options (ids match the tab ids used in Home Collection)
+const PAYMENT_MODES = [
+  { id: "UPI", label: "UPI", Icon: Smartphone },
+  { id: "Cash", label: "Cash", Icon: Banknote },
+  { id: "Card", label: "Card", Icon: CreditCard },
+];
+
+// ADDED: the UPI / Cash / Card tabs
+function PaymentModeTabs({ value, onChange }) {
+  return (
+    <div role="radiogroup" aria-label="Payment mode" className="flex gap-2">
+      {PAYMENT_MODES.map(({ id, label, Icon }) => {
+        const active = value === id;
+        return (
+          <button
+            key={id}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => onChange(id)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer ${
+              active ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            <Icon size={16} />
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function ConfirmStep({
   patient,
@@ -14,6 +47,8 @@ export default function ConfirmStep({
   onPaymentDoneChange,
   discount,              // { type: "percentage" | "fixed", value: number }
   onDiscountChange,
+  paymentMethod = "Cash",   // ADDED: "UPI" | "Cash" | "Card"
+  onPaymentMethodChange,    // ADDED
 }) {
   const pricing = computeOrderPricing(selectedTests, packages, appliedPackageIds);
   const testsTotal = pricing.total;
@@ -99,6 +134,9 @@ export default function ConfirmStep({
           </div>
         ))}
       </div>
+
+      {/* ADDED: Payment mode tabs (UPI / Cash / Card) */}
+      <PaymentModeTabs value={paymentMethod} onChange={onPaymentMethodChange} />
 
       {/* Price summary */}
       <div className="rounded-xl bg-teal-50/60 px-5 py-4 space-y-2.5 text-sm">

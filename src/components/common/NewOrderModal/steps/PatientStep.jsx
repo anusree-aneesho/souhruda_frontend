@@ -161,12 +161,10 @@ export function ReferredByField({
   doctors = [],
   referredBy,
   onReferredByChange,
-  referredByError,
   onAddDoctor,
 }) {
   return (
     <div>
-      {/* Label row: "Referred By" on the left, "+ Add doctor" on the right */}
       <div className="flex items-center justify-between mb-1.5">
         <label className="text-sm font-medium text-gray-900">Referred By</label>
         <button
@@ -179,13 +177,10 @@ export function ReferredByField({
       </div>
 
       <select
-        value={referredBy}
-        onChange={(e) => onReferredByChange(e.target.value)}
-        className={`w-full rounded-lg border px-3 py-2.5 text-sm outline-none focus:border-teal-500 ${
-          referredByError ? "border-red-400" : "border-gray-200"
-        }`}
+        value={referredBy || "Self"}
+        onChange={(e) => onReferredByChange(e.target.value || "Self")}
+        className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-teal-500"
       >
-        <option value="">Select</option>
         <option value="Self">Self</option>
         {doctors.map((d) => (
           <option key={d.id ?? d.name} value={`Dr. ${d.name}`}>
@@ -193,10 +188,6 @@ export function ReferredByField({
           </option>
         ))}
       </select>
-
-      {referredByError && (
-        <p className="mt-1 text-xs text-red-500">Please select who referred the patient.</p>
-      )}
     </div>
   );
 }
@@ -209,6 +200,11 @@ export default function PatientStep({
   doctors, referredBy, onReferredByChange, referredByError,
   onAddDoctor, // ⬅️ NEW
 }) {
+
+    useEffect(() => {
+    if (!referredBy) onReferredByChange("Self");
+  }, [referredBy, onReferredByChange]);
+
   return (
     <div className="px-6 py-5 space-y-5">
       <div className="flex gap-2">

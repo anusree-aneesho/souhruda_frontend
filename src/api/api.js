@@ -90,7 +90,7 @@ export async function deleteTechnicianApi(id) {
 
 // ── Patients ───────────────────────────────────────────────
 
-export async function getPatientsApi(query = "", page = 1) {       
+export async function getPatientsApi(query = "", page = 1) {
   const params = new URLSearchParams();
   if (query) params.append("q", query);
   params.append("page", page);
@@ -498,7 +498,7 @@ export async function markOrderPaidApi(orderId, paymentMode = "cash") {
 
 export async function updateOrderDiscountApi(orderId, payload) {
   return request(`/orders/${orderId}/discount`, {
-    method: "PATCH",              // was "PUT"
+    method: "PATCH", // was "PUT"
     body: JSON.stringify(payload),
   });
 }
@@ -590,7 +590,6 @@ export async function updateStaffMemberApi(id, payload) {
     body: JSON.stringify(payload),
   });
 }
-
 
 export async function getStaffMembersApi() {
   return request("/staff-members");
@@ -777,7 +776,6 @@ export async function getPaymentCollectionReportApi({ dateFrom, dateTo, type } =
   return request(`/reports/finance/payment-collection${qs ? `?${qs}` : ""}`);
 }
 
-
 export async function getDayReportApi(date) {
   const params = new URLSearchParams();
   if (date) params.append("date", date);
@@ -894,6 +892,10 @@ export async function getStatisticsSummaryApi() {
 
 export async function getOrdersForRangeApi(range = "today") {
   return request(`/statistics/orders-for-range?range=${range}`);
+}
+
+export async function getRevenueForRangeApi(range = "today") {
+  return request(`/statistics/revenue-for-range?range=${range}`);
 }
 
 export async function getNewPatientsForRangeApi(range = "today") {

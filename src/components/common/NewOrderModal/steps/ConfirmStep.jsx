@@ -4,6 +4,9 @@ import { Tag, Info, Smartphone, Banknote, CreditCard } from "lucide-react";
 import { computeOrderPricing, calcBillTotals } from "../../../../utils/orderPricing";
 import { getGstSettingsApi } from "../../../../api/api";
 import EditBillModal from "../../../LabOrders/Report/EditBillModal";
+import QrCode from "../../QrCode"; // ADDED: QR for UPI payments
+
+const UPI_ID = "souhruda@upi"; // ADDED: put your lab's real UPI ID
 
 // ADDED: payment mode options (ids match the tab ids used in Home Collection)
 const PAYMENT_MODES = [
@@ -75,6 +78,9 @@ export default function ConfirmStep({
     gstRate,
   });
 
+  // ADDED: amount in the UPI QR = the grand total shown below (includes discount + GST)
+  const payableAmount = Number(totals.grandTotal) || 0;
+
   // Shape the discount modal expects (tests tagged with the package they're billed under).
   const billTests = [
     ...pricing.appliedPackages.flatMap((pkg) =>
@@ -137,6 +143,22 @@ export default function ConfirmStep({
 
       {/* ADDED: Payment mode tabs (UPI / Cash / Card) */}
       <PaymentModeTabs value={paymentMethod} onChange={onPaymentMethodChange} />
+
+      {/* ADDED: UPI QR, shown only when UPI is selected */}
+      {paymentMethod === "UPI" && (
+        <div className="rounded-xl border border-gray-100 bg-gray-50 px-5 py-5 flex flex-col items-center">
+          <QrCode
+            value={`upi://pay?pa=${UPI_ID}&pn=Souhruda${
+              payableAmount > 0 ? `&am=${payableAmount.toFixed(2)}` : ""
+            }&cu=INR`}
+            size={160}
+          />
+          <p className="mt-3 text-sm font-semibold text-gray-900">
+            {payableAmount > 0 ? `Scan to pay ₹${payableAmount.toFixed(2)}` : "Scan to pay"}
+          </p>
+          <p className="mt-1 text-xs text-gray-400">{UPI_ID}</p>
+        </div>
+      )}
 
       {/* Price summary */}
       <div className="rounded-xl bg-teal-50/60 px-5 py-4 space-y-2.5 text-sm">

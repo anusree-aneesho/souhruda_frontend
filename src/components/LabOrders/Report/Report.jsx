@@ -4,7 +4,6 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import {
   Download, Printer, MessageCircle, Receipt, X, Pencil,  
   User, Phone, Stethoscope, CalendarDays, FileCheck2, Wallet,
-  Smartphone, Banknote, CreditCard,
 } from "lucide-react";
 import Toast from "../../common/Toast/Toast";
 import { useToast } from "../../common/Toast/useToast";
@@ -14,52 +13,11 @@ import BillModal from "./BillModal";
 import EditBillModal from "./EditBillModal";  
 import WhatsAppSentModal from "./WhatsAppSentModal";
 import TestDetailView from "./TestDetailView";
-import ModalShell from "../../common/Modal/ModalShell";
+import AlertModal from "../../common/Modal/AlertModal";
 import { findOrderById } from "../../../data/labOrders";
 import { calculateFlag } from "../../../utils/calculateFlag";
 import { buildReportRowsByCategory } from "../../../utils/reportRows";
 import { getOrderReportUrlApi, getOrderApi, getSettingsApi, getGstSettingsApi, markOrderPaidApi } from "../../../api/api";
-
-// ADDED: payment mode options for the Confirm Payment popup
-const PAYMENT_MODES = [
-  { id: "UPI", label: "UPI", Icon: Smartphone },
-  { id: "Cash", label: "Cash", Icon: Banknote },
-  { id: "Card", label: "Card", Icon: CreditCard },
-];
-
-// ADDED: the UPI / Cash / Card tabs
-function PaymentModeTabs({ value, onChange }) {
-  return (
-    <div role="radiogroup" aria-label="Payment mode" className="flex justify-center gap-2">
-      {PAYMENT_MODES.map(({ id, label, Icon }) => {
-        const active = value === id;
-        return (
-          <button
-            key={id}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            onClick={() => onChange(id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer ${
-              active ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            <Icon size={16} />
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// ADDED: "upi" -> "UPI", "cash" -> "Cash", "card" -> "Card"
-function formatPaymentMode(mode) {
-  if (!mode) return "";
-  const m = String(mode).toLowerCase();
-  if (m === "upi") return "UPI";
-  return m.charAt(0).toUpperCase() + m.slice(1);
-}
 
 // Turns the order's `report_signatories` (the Technician, Lab Assistant and Lab Incharge
 // chosen in Lab Settings) into
@@ -112,10 +70,6 @@ export default function Report() {
 
   const [paymentDone, setPaymentDone] = useState(Boolean(order?.paymentDone));
   const [confirmingPayment, setConfirmingPayment] = useState(false);
-  // ADDED: mode chosen in the popup (default Cash) and the mode saved on the order
-  const [paymentMethod, setPaymentMethod] = useState("Cash");
-  const [savedPaymentMode, setSavedPaymentMode] = useState("");
-  const [savingPayment, setSavingPayment] = useState(false);
 
   useEffect(() => {
     setPaymentDone(Boolean(order?.paymentDone));
@@ -127,7 +81,6 @@ export default function Report() {
     setDiscount({ type: "percentage", value: 0 });
     setOrderDates({ collected: null, reported: null });
     setSignatories([]);
-    setSavedPaymentMode(""); // ADDED
     getOrderApi(orderId)
       .then((res) => {
         if (cancelled) return;
@@ -136,7 +89,6 @@ export default function Report() {
           value: Number(res.data?.discount_value) || 0,
         });
         setPaymentDone(res.data?.payment_status === "paid");
-        setSavedPaymentMode(res.data?.payment_mode ?? ""); // ADDED
         setSignatories(normalizeSignatories(res.data?.report_signatories));
         setOrderDates({
           collected: res.data?.sample_collected_at ?? null,
@@ -156,28 +108,15 @@ export default function Report() {
       .catch((err) => console.error("Failed to load lab/GST settings:", err.message));
   }, []);
 
-  // ADDED: opens the Confirm Payment popup with Cash selected by default
-  function openPaymentPopup() {
-    setPaymentMethod("Cash");
-    setConfirmingPayment(true);
-  }
-
-  // Marks the order as paid in the database (orders.payment_status = "paid")
-  // and saves how it was paid (orders.payment_mode = cash | upi | card).
+  // Marks the order as paid in the database (orders.payment_status = "paid").
   async function handleConfirmPayment() {
-    setSavingPayment(true);
+    setConfirmingPayment(false);
     try {
-      const mode = paymentMethod.toLowerCase();
-      const res = await markOrderPaidApi(orderId, mode);
+      await markOrderPaidApi(orderId);
       setPaymentDone(true);
-      setSavedPaymentMode(res?.data?.payment_mode ?? "");
-      setConfirmingPayment(false);
       showToast("Payment marked as paid");
     } catch (err) {
-      setConfirmingPayment(false);
       showToast(err.message || "Failed to update payment status", "error");
-    } finally {
-      setSavingPayment(false);
     }
   }
 
@@ -298,16 +237,14 @@ export default function Report() {
                 </tr>`;
             }
             const t = row.test;
-            const flag = flags[t.id];
-            const isAbnormal = ["low", "high", "abnormal"].includes(flag);
-            const flagTag =
-              flag === "high" ? `<span class="flag-tag">High</span>` : flag === "low" ? `<span class="flag-tag">Low</span>` : "";
+            // calculateFlag() returns "High" / "Low" / "Normal" — compare in lowercase
+            const flag = String(flags[t.id] ?? "").toLowerCase();
+            const isAbnormal = ["low", "high", "abnormal", "critical"].includes(flag);
             return `
                 <tr>
                     <td class="${row.kind === "parameter" ? "param-name" : ""}">${t.name}</td>
                     <td class="result ${isAbnormal ? "abnormal" : ""}">
                         ${results[t.id] || "—"}
-                        ${flagTag}
                     </td>
                     <td class="range">${t.range || "—"}</td>
                     <td class="range">${t.unit || ""}</td>
@@ -452,9 +389,8 @@ export default function Report() {
     table.results tbody tr.group-row td { padding: 5px 8px; font-size: 10.5px; font-weight: 700; color: #0f766e; background: #f0fdfa; box-shadow: inset 3px 0 0 #0d9488; border-bottom: 1px solid #ccfbf1; letter-spacing: 0.01em; }
     table.results tbody td.param-name { padding-left: 16px; }
 
-    td.result { font-weight: 700; color: #111827; }
-    td.result.abnormal { color: #d97706; }
-    td.result .flag-tag { font-size: 8px; font-weight: 700; margin-left: 3px; }
+    td.result { font-weight: 400; color: #111827; }
+    td.result.abnormal { font-weight: 700; }
     td.range { color: #6b7280; }
 
     .end-line { text-align: center; font-size: 9px; color: #9ca3af; letter-spacing: 0.05em; margin: 2px 24px 4px 24px; flex-shrink: 0; }
@@ -667,7 +603,7 @@ export default function Report() {
                     <button
                       type="button"
                       disabled={paymentDone}
-                      onClick={openPaymentPopup}
+                      onClick={() => setConfirmingPayment(true)}
                       title={paymentDone ? "Payment received" : "Click to confirm payment"}
                       className={`mt-0.5 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-white transition-colors ${
                         paymentDone
@@ -677,10 +613,6 @@ export default function Report() {
                     >
                       {paymentDone ? "Paid" : "Unpaid"}
                     </button>
-                    {/* ADDED: how it was paid */}
-                    {paymentDone && savedPaymentMode && (
-                      <p className="text-xs text-gray-500 mt-1">via {formatPaymentMode(savedPaymentMode)}</p>
-                    )}
                   </div>
                 </div>
 
@@ -913,8 +845,9 @@ export default function Report() {
                               );
                             }
                             const t = row.test;
-                            const flag = flags[t.id];
-                            const isAbnormal = ["low", "high", "abnormal"].includes(flag);
+                                            // calculateFlag() returns "High" / "Low" / "Normal" — compare in lowercase
+                            const flag = String(flags[t.id] ?? "").toLowerCase();
+                            const isAbnormal = ["low", "high", "abnormal", "critical"].includes(flag);
                             return (
                               <tr key={t.id} className="break-inside-avoid">
                                 <td
@@ -924,13 +857,11 @@ export default function Report() {
                                   {t.name}
                                 </td>
                                 <td
-                                  className={`px-1 py-1 text-[10.5px] font-bold border-b border-gray-100 ${
-                                    isAbnormal ? "text-amber-600" : "text-gray-900"
+                                  className={`px-1 py-1 text-[10.5px] border-b border-gray-100 ${
+                                    isAbnormal ? "font-bold text-gray-900" : "font-normal text-gray-900"
                                   }`}
                                 >
                                   {results[t.id] || "—"}
-                                  {flag === "high" && <span className="text-[8px] font-bold ml-1">High</span>}
-                                  {flag === "low" && <span className="text-[8px] font-bold ml-1">Low</span>}
                                 </td>
                                 <td className="px-1 py-1 text-[10.5px] text-gray-500 border-b border-gray-100">{t.range || "—"}</td>
                                 <td className="px-1 py-1 text-[10.5px] text-gray-500 border-b border-gray-100">{t.unit || ""}</td>
@@ -997,7 +928,6 @@ export default function Report() {
           discountType={discount.type}
           discountValue={discount.value}
           paymentDone={paymentDone}
-          paymentMode={savedPaymentMode}
           discountPercent={discount.type === "percentage" ? discount.value : 0}
           referredBy={order?.referredBy || "Self"}
           collectionDate={collectionDate}
@@ -1026,43 +956,15 @@ export default function Report() {
         />
       )}
 
-      {/* CHANGED: Confirm Payment popup now asks how the patient paid */}
       {confirmingPayment && (
-        <ModalShell
+        <AlertModal
           title="Confirm Payment"
-          onClose={() => !savingPayment && setConfirmingPayment(false)}
-          maxWidth="max-w-md"
-        >
-          <div className="px-6 py-5 space-y-5">
-            <p className="text-sm text-gray-600 text-center">
-              Mark Order {orderId} as paid? This confirms the payment has been received.
-            </p>
-            <div>
-              <p className="text-xs font-medium text-gray-400 tracking-wide text-center mb-2">
-                PAYMENT MODE
-              </p>
-              <PaymentModeTabs value={paymentMethod} onChange={setPaymentMethod} />
-            </div>
-          </div>
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
-            <button
-              type="button"
-              onClick={() => setConfirmingPayment(false)}
-              disabled={savingPayment}
-              className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirmPayment}
-              disabled={savingPayment}
-              className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50 cursor-pointer"
-            >
-              {savingPayment ? "Saving…" : "Yes, mark as paid"}
-            </button>
-          </div>
-        </ModalShell>
+          message={`Mark Order ${orderId} as paid? This confirms the payment has been received.`}
+          confirmLabel="Yes, mark as paid"
+          cancelLabel="Cancel"
+          onConfirm={handleConfirmPayment}
+          onClose={() => setConfirmingPayment(false)}
+        />
       )}
 
       {isWhatsAppOpen && (

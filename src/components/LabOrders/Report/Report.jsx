@@ -15,6 +15,7 @@ import EditBillModal from "./EditBillModal";
 import WhatsAppSentModal from "./WhatsAppSentModal";
 import TestDetailView from "./TestDetailView";
 import ModalShell from "../../common/Modal/ModalShell";
+import QrCode from "../../common/QrCode"; // ADDED: QR for UPI payments
 import { findOrderById } from "../../../data/labOrders";
 import { calculateFlag } from "../../../utils/calculateFlag";
 import { buildReportRowsByCategory } from "../../../utils/reportRows";
@@ -26,6 +27,8 @@ const PAYMENT_MODES = [
   { id: "Cash", label: "Cash", Icon: Banknote },
   { id: "Card", label: "Card", Icon: CreditCard },
 ];
+
+const UPI_ID = "souhruda@upi"; // ADDED: put your lab's real UPI ID
 
 // ADDED: the UPI / Cash / Card tabs
 function PaymentModeTabs({ value, onChange }) {
@@ -188,6 +191,18 @@ export default function Report() {
   //  - the bill lists what was ordered (the group, not its parameters)
   const resultTests = tests.filter((t) => !t.isGroup);
   const billTests = tests.filter((t) => t.parentItemId == null);
+
+  // ADDED: payment details shown in the Confirm Payment popup (also used for the UPI QR)
+  const subtotal = billTests.reduce(
+    (sum, t) => sum + (t.packageId != null ? 0 : Number(t.price || 0)),
+    0
+  );
+  const homeVisitFee = Number(order?.homeVisitFee || 0);
+  const discountAmount =
+    discount.type === "percentage"
+      ? (subtotal * Number(discount.value || 0)) / 100
+      : Number(discount.value || 0);
+  const payableAmount = Math.max(0, subtotal + homeVisitFee - discountAmount);
 
   const ageText =
     patient.age !== undefined && patient.age !== null && patient.age !== "-" && patient.age !== ""
@@ -1037,12 +1052,55 @@ export default function Report() {
             <p className="text-sm text-gray-600 text-center">
               Mark Order {orderId} as paid? This confirms the payment has been received.
             </p>
+            {/* ADDED: payment details with total amount */}
+            <div className="rounded-xl border border-gray-100 bg-gray-50 px-5 py-4 space-y-2 text-sm">
+              <p className="text-xs font-medium text-gray-400 tracking-wide mb-1">PAYMENT DETAILS</p>
+              <div className="flex justify-between text-gray-600">
+                <span>Subtotal</span>
+                <span>₹{subtotal.toFixed(2)}</span>
+              </div>
+              {homeVisitFee > 0 && (
+                <div className="flex justify-between text-gray-600">
+                  <span>Home visit fee</span>
+                  <span>₹{homeVisitFee.toFixed(2)}</span>
+                </div>
+              )}
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-gray-600">
+                  <span>
+                    Discount{discount.type === "percentage" ? ` (${discount.value}%)` : ""}
+                  </span>
+                  <span>− ₹{discountAmount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between border-t border-gray-200 pt-2 font-semibold text-gray-900">
+                <span>Total amount</span>
+                <span>₹{payableAmount.toFixed(2)}</span>
+              </div>
+            </div>
+
             <div>
               <p className="text-xs font-medium text-gray-400 tracking-wide text-center mb-2">
                 PAYMENT MODE
               </p>
               <PaymentModeTabs value={paymentMethod} onChange={setPaymentMethod} />
             </div>
+
+            {/* ADDED: UPI QR, shown only when UPI is selected */}
+            {paymentMethod === "UPI" && (
+              <div className="rounded-xl border border-gray-100 bg-gray-50 px-5 py-5 flex flex-col items-center">
+                <QrCode
+                  value={`upi://pay?pa=${UPI_ID}&pn=Souhruda${
+                    payableAmount > 0 ? `&am=${payableAmount.toFixed(2)}` : ""
+                  }&cu=INR`}
+                  size={176}
+                />
+                <p className="mt-3 text-sm font-semibold text-gray-900">
+                  {payableAmount > 0 ? `Scan to pay ₹${payableAmount.toFixed(2)}` : "Scan to pay"}
+                </p>
+                <p className="mt-1 text-xs text-gray-400">{UPI_ID}</p>
+              </div>
+            )}
           </div>
           <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
             <button

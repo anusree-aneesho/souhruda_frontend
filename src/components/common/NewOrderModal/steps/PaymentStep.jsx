@@ -1,56 +1,33 @@
 // src/components/common/NewOrderModal/steps/PaymentStep.jsx
-import { useEffect, useMemo, useState } from "react";
-import { Smartphone, Banknote, CreditCard, Tag, Info } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Tag, Info } from "lucide-react";
 import { computeOrderPricing, calcBillTotals } from "../../../../utils/orderPricing";
 import { getGstSettingsApi } from "../../../../api/api";
 import EditBillModal from "../../../LabOrders/Report/EditBillModal";
 
-const paymentMethods = [
-  { id: "UPI", icon: Smartphone },
-  { id: "Cash", icon: Banknote },
-  { id: "Card", icon: CreditCard },
-];
-
 const fmt = (n) => `₹${Number(n).toFixed(2)}`;
 
-// Deterministic pseudo-QR pattern, purely decorative.
-function QrPattern({ seed = 1 }) {
-  const cells = useMemo(() => {
-    const size = 10;
-    let s = seed;
-    const rand = () => {
-      s = (s * 9301 + 49297) % 233280;
-      return s / 233280;
-    };
-    return Array.from({ length: size * size }, () => rand() > 0.5);
-  }, [seed]);
+// CHANGED: helpers to read a test's name / price. Adjust the field names
+// below if your selectedTests objects use different ones.
+const testName = (t) => t.name ?? t.test_name ?? t.testName ?? "Test";
+const testPrice = (t) => Number(t.price ?? t.amount ?? t.test_price ?? 0);
 
-  return (
-    <div className="grid grid-cols-10 gap-0.5 w-40 h-40">
-      {cells.map((filled, i) => (
-        <div key={i} className={filled ? "bg-gray-900" : "bg-white"} />
-      ))}
-    </div>
-  );
-}
-
+// This step only shows the amount details (and the optional discount).
+// The payment mode tabs (UPI / Cash / Card), the QR / card hints and the
+// "Payment already received" checkbox were removed — no payment is taken at
+// booking. The payment is recorded later.
 export default function PaymentStep({
   selectedTests,
   packages = [],
   appliedPackageIds = [],
   collectionCharge = 0,
   feeBreakdown = null,
-  paymentMethod,
-  onPaymentMethodChange,
-  // optional: let the parent read these values when creating the order
+  // optional: let the parent read the discount when creating the booking
   onDiscountChange,
-  onPaymentReceivedChange,
 }) {
   const [discountEnabled, setDiscountEnabled] = useState(false);
   const [discount, setDiscount] = useState({ type: "percentage", value: 0 });
-  const [billOrder, setBillOrder] = useState(null);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
-  const [paymentReceived, setPaymentReceived] = useState(false);
   const [gstRate, setGstRate] = useState(0);
 
   useEffect(() => {
@@ -62,13 +39,12 @@ export default function PaymentStep({
       .catch(() => {});
   }, []);
 
-  // Default to Cash whenever this step opens
-  useEffect(() => {
-    onPaymentMethodChange("Cash");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const testsTotal = computeOrderPricing(selectedTests, packages, appliedPackageIds).total;
+
+  // CHANGED: sum of the individually listed tests, and the difference when a
+  // package price makes testsTotal differ from that sum.
+  const listedTotal = selectedTests.reduce((sum, t) => sum + testPrice(t), 0);
+  const packageAdjustment = testsTotal - listedTotal;
 
   const totals = calcBillTotals({
     testsTotal,
@@ -109,32 +85,35 @@ export default function PaymentStep({
 
   return (
     <div className="px-6 py-5 space-y-4">
-      {/* Payment method tabs */}
-      <div className="flex gap-3">
-        {paymentMethods.map(({ id, icon: Icon }) => {
-          const active = paymentMethod === id;
-          return (
-            <button
-              key={id}
-              type="button"
-              onClick={() => onPaymentMethodChange(id)}
-              className={`flex items-center gap-2.5 px-5 py-2.5 rounded-full text-sm font-semibold transition-colors cursor-pointer ${
-                active ? "bg-teal-600 text-white shadow-sm" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              <Icon size={18} />
-              {id}
-            </button>
-          );
-        })}
-      </div>
-
       {/* Price summary */}
       <div className="rounded-xl bg-teal-50/60 px-5 py-4 space-y-2.5 text-sm">
-        <div className="flex justify-between text-gray-600">
-          <span>Tests ({selectedTests.length})</span>
-          <span className="text-gray-800">{fmt(testsTotal)}</span>
+        {/* CHANGED: tests listed separately */}
+        <div className="space-y-1.5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+            Tests ({selectedTests.length})
+          </p>
+          {/* add max-h-40 overflow-y-auto here if the list can get long */}
+          {selectedTests.map((t, i) => (
+            <div key={t.id ?? i} className="flex justify-between gap-4 text-gray-600">
+              <span className="truncate">{testName(t)}</span>
+              <span className="text-gray-800 shrink-0">{fmt(testPrice(t))}</span>
+            </div>
+          ))}
+          {Math.abs(packageAdjustment) > 0.005 && (
+            <div className="flex justify-between text-gray-600">
+              <span>Package adjustment</span>
+              <span className="text-gray-800">
+                {packageAdjustment < 0 ? "− " : ""}
+                {fmt(Math.abs(packageAdjustment))}
+              </span>
+            </div>
+          )}
+          <div className="flex justify-between border-t border-teal-100 pt-1.5 text-gray-600">
+            <span>Tests total</span>
+            <span className="text-gray-800">{fmt(testsTotal)}</span>
+          </div>
         </div>
+
         <div className="flex justify-between text-gray-600">
           <span>Home visit fee</span>
           <span className="text-gray-800">{fmt(collectionCharge)}</span>
@@ -211,35 +190,6 @@ export default function PaymentStep({
           />
         </button>
       </div>
-
-      {/* Method-specific content */}
-      {paymentMethod === "UPI" && (
-        <div className="rounded-lg bg-gray-50 border border-gray-100 py-6 flex flex-col items-center gap-3">
-          <QrPattern seed={Math.round(total * 100) || 1} />
-          <p className="text-sm font-semibold text-gray-900">Scan to pay {fmt(total)}</p>
-          <p className="text-xs text-gray-400">souhruda@upi · auto-confirms via payment webhook in production</p>
-        </div>
-      )}
-      {/* {paymentMethod === "Cash" && (
-        <p className="text-sm text-gray-600">Collect {fmt(total)} in cash at the time of home visit.</p>
-      )} */}
-      {paymentMethod === "Card" && (
-        <p className="text-sm text-gray-600">Card payment will be collected via the phlebotomist's POS device on arrival.</p>
-      )}
-
-      {/* Payment already received */}
-      <label className="flex items-center gap-3 cursor-pointer select-none">
-        <input
-          type="checkbox"
-          checked={paymentReceived}
-          onChange={(e) => {
-            setPaymentReceived(e.target.checked);
-            onPaymentReceivedChange?.(e.target.checked);
-          }}
-          className="h-5 w-5 rounded border-teal-600 accent-teal-600 cursor-pointer"
-        />
-        <span className="text-sm font-medium text-gray-900">Payment already received</span>
-      </label>
 
       {showDiscountModal && (
         <EditBillModal

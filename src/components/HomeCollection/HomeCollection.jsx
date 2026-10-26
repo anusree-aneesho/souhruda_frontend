@@ -21,12 +21,13 @@ function formatStatus(status) {
     .join(" ");
 }
 
-// Backend payment_mode ("upi"/"cash"/"card") -> display label used by the badge styles
+// Backend payment_mode ("upi"/"cash"/"card") -> display label used by the badge styles.
+// CHANGED: when there is no payment mode (payment not received yet) show "Pending".
 function formatPayment(mode) {
   if (mode === "upi") return "UPI";
   if (mode === "cash") return "Cash";
   if (mode === "card") return "Card";
-  return mode;
+  return mode ? mode : "Pending";
 }
 
 function formatDate(dateStr) {

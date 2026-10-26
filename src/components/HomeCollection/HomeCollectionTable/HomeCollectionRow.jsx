@@ -13,6 +13,7 @@ export default function HomeCollectionRow({ requestId, patient, tests, distance,
     Card: "bg-amber-100 text-amber-700",
     Cash: "bg-orange-100 text-orange-700",
     UPI: "bg-blue-100 text-blue-700",
+    Pending: "bg-gray-100 text-gray-600", // ADDED: payment not received yet
   };
    const { open } = useHomeCollectionModal();
    const [isCancelling, setIsCancelling] = useState(false);
@@ -55,7 +56,7 @@ export default function HomeCollectionRow({ requestId, patient, tests, distance,
         <p className="text-xs text-gray-400">{slot}</p>
       </td>
       <td className="py-3">
-        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${paymentStyles[payment]}`}>
+        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${paymentStyles[payment] ?? "bg-gray-100 text-gray-600"}`}>
           {payment}
         </span>
       </td>

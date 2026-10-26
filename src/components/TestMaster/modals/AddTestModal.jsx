@@ -1,14 +1,19 @@
 // src/components/TestMaster/modals/AddTestModal.jsx
 import { useState, useEffect } from "react";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Globe, Users, Calendar } from "lucide-react";
 import ModalShell from "../../common/Modal/ModalShell";
 import ConfirmModal from "../../Patients/modals/ConfirmModal";
-import { DEMOGRAPHIC_GROUPS } from "../../../data/demographicGroups";
-
-const emptyDemographicRanges = DEMOGRAPHIC_GROUPS.reduce((acc, group) => {
-  acc[group] = "";
-  return acc;
-}, {});
+import { AGE_GROUP_PRESETS, AGE_UNITS, GENDERS } from "../../../data/demographicGroups";
+import {
+  buildRanges,
+  defaultAgeGroups,
+  emptyRangeState,
+  formatAgeRange,
+  groupFromPreset,
+  newCustomGroup,
+  rangeStateFromApi,
+  validateRanges,
+} from "../../../utils/rangeUtils";
 
 const emptyForm = {
   category: "",
@@ -25,33 +30,31 @@ const emptyForm = {
   parameterIds: [],
   isParameter: false,
   groupIds: [],
-  demographicRanges: { ...emptyDemographicRanges },
 };
 
-// A range entry must be one of: "70-100" (range), "<200" (max), ">40" (min),
-// or free text like "Negative" (qualitative) — matches how the backend's
-// range parser interprets range_raw.
-const RANGE_FORMAT_REGEX = /^(-?\d+(\.\d+)?\s*-\s*-?\d+(\.\d+)?|[<>]\s*-?\d+(\.\d+)?|[A-Za-z][A-Za-z\s]*)$/;
+const MODE_TABS = [
+  {
+    value: "general",
+    label: "General (All)",
+    icon: Globe,
+    help: "One range for all patients, regardless of age or gender.",
+  },
+  {
+    value: "gender",
+    label: "Gender Based",
+    icon: Users,
+    help: "A different range for each gender. Use this when the range varies by gender but not by age.",
+  },
+  {
+    value: "age_gender",
+    label: "Age & Gender Based",
+    icon: Calendar,
+    help: "Define age groups. Each group has one range, and you can optionally split it by gender.",
+  },
+];
 
-let customRowIdCounter = 0;
-function nextCustomRowId() {
-  customRowIdCounter += 1;
-  return customRowIdCounter;
-}
-
-// Any key in demographicRanges that isn't one of the fixed groups is a
-// custom one someone added — pull those out so they can be edited as their
-// own labeled rows instead of disappearing into the fixed list.
-function extractCustomRows(demographicRanges) {
-  return Object.entries(demographicRanges || {})
-    .filter(([key]) => !DEMOGRAPHIC_GROUPS.includes(key))
-    .map(([label, value]) => ({ id: nextCustomRowId(), label, value }));
-}
-
-function validate(form, customRows) {
+function validate(form) {
   const errors = {};
-  const demographicErrors = {};
-  const customRowErrors = {};
 
   // A group test (e.g. CBC) is made of other tests, so it has no unit, critical
   // values or ranges of its own — only its parameters.
@@ -114,40 +117,37 @@ function validate(form, customRows) {
     }
   }
 
-  const filledFixedRanges = isGroup ? [] : Object.entries(form.demographicRanges).filter(([, v]) => v.trim() !== "");
-  const filledCustomRows = isGroup ? [] : customRows.filter((row) => row.value.trim() !== "" || row.label.trim() !== "");
+  return errors;
+}
 
-  if (!isGroup && filledFixedRanges.length === 0 && filledCustomRows.length === 0) {
-    errors.demographicRanges = "Enter a range for at least one demographic group.";
-  }
-
-  filledFixedRanges.forEach(([group, value]) => {
-    if (!RANGE_FORMAT_REGEX.test(value.trim())) {
-      demographicErrors[group] = "Use a format like \"70-100\", \"<200\", \">40\", or \"Negative\".";
-    }
-  });
-
-  const seenCustomLabels = new Set();
-  filledCustomRows.forEach((row) => {
-    const label = row.label.trim();
-    const value = row.value.trim();
-    if (!label) {
-      customRowErrors[row.id] = "Give this group a name.";
-      return;
-    }
-    if (DEMOGRAPHIC_GROUPS.includes(label) || seenCustomLabels.has(label.toLowerCase())) {
-      customRowErrors[row.id] = "That group name is already used.";
-      return;
-    }
-    seenCustomLabels.add(label.toLowerCase());
-    if (!value) {
-      customRowErrors[row.id] = "Enter a range for this group.";
-    } else if (!RANGE_FORMAT_REGEX.test(value)) {
-      customRowErrors[row.id] = "Use a format like \"70-100\", \"<200\", \">40\", or \"Negative\".";
-    }
-  });
-
-  return { errors, demographicErrors, customRowErrors };
+// Number + unit pair used for the From / Up to age inputs of a custom group.
+function AgeBoundInput({ label, bound, onChange, hasError }) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      <div className="flex gap-2">
+        <input
+          type="number"
+          min="0"
+          value={bound.value}
+          onChange={(e) => onChange({ ...bound, value: e.target.value })}
+          placeholder="e.g. 18"
+          className={`w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1 ${
+            hasError ? "border-red-300 focus:border-red-400 focus:ring-red-400" : "border-gray-200 focus:border-teal-500 focus:ring-teal-500"
+          }`}
+        />
+        <select
+          value={bound.unit}
+          onChange={(e) => onChange({ ...bound, unit: e.target.value })}
+          className="rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+        >
+          {AGE_UNITS.map((u) => (
+            <option key={u} value={u}>{u}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
 }
 
 export default function AddTestModal({
@@ -160,21 +160,16 @@ export default function AddTestModal({
   groupIdsByTestId = {},    // { [testId]: [ids of the groups that include it] }
 }) {
   const [form, setForm] = useState(emptyForm);
-  const [customRows, setCustomRows] = useState([]);
+  const [rs, setRs] = useState(emptyRangeState()); // range mode + values for all three tabs
   const [errors, setErrors] = useState({});
-  const [demographicErrors, setDemographicErrors] = useState({});
-  const [customRowErrors, setCustomRowErrors] = useState({});
-  const [confirmingRow, setConfirmingRow] = useState(null); // custom row | null
+  const [rangeErrors, setRangeErrors] = useState({});
+  const [confirmingGroup, setConfirmingGroup] = useState(null); // age group | null
   const [parameterSearch, setParameterSearch] = useState("");
   const [groupSearch, setGroupSearch] = useState("");
   const isEditMode = Boolean(editingTest);
 
   useEffect(() => {
     if (editingTest) {
-      const ranges = editingTest.demographicRanges || {};
-      const fixedRanges = Object.fromEntries(
-        Object.entries(ranges).filter(([key]) => DEMOGRAPHIC_GROUPS.includes(key))
-      );
       setForm({
         category: editingTest.category,
         name: editingTest.name,
@@ -190,17 +185,16 @@ export default function AddTestModal({
         parameterIds: editingTest.parameterIds || [],
         isParameter: (groupIdsByTestId[editingTest.id] || []).length > 0,
         groupIds: groupIdsByTestId[editingTest.id] || [],
-        demographicRanges: { ...emptyDemographicRanges, ...fixedRanges },
       });
-      setCustomRows(extractCustomRows(ranges));
+      // editingTest.rangeMode / editingTest.ranges are the API values, as returned.
+      setRs(rangeStateFromApi(editingTest.rangeMode, editingTest.ranges || []));
     } else {
-      setForm({ ...emptyForm, category: defaultCategory || "", demographicRanges: { ...emptyDemographicRanges } });
-      setCustomRows([]);
+      setForm({ ...emptyForm, category: defaultCategory || "" });
+      setRs(emptyRangeState());
     }
     setErrors({});
-    setDemographicErrors({});
-    setCustomRowErrors({});
-    setConfirmingRow(null);
+    setRangeErrors({});
+    setConfirmingGroup(null);
     setParameterSearch("");
     setGroupSearch("");
   }, [editingTest, defaultCategory]);
@@ -232,69 +226,111 @@ export default function AddTestModal({
     setErrors((prev) => ({ ...prev, groups: undefined }));
   }
 
-  function handleDemographicRangeChange(group, value) {
-    setForm((prev) => ({
+  // ── Range handlers ────────────────────────────────────────────────────────
+
+  function changeRs(patch) {
+    setRs((prev) => ({ ...prev, ...patch }));
+    setRangeErrors({});
+  }
+
+  function handleSetMode(mode) {
+    setRs((prev) => ({ ...prev, mode }));
+    setRangeErrors({});
+  }
+
+  function handleGenderRangeChange(gender, value) {
+    setRs((prev) => ({ ...prev, genders: { ...prev.genders, [gender]: value } }));
+    setRangeErrors({});
+  }
+
+  function updateGroup(id, patch) {
+    setRs((prev) => ({
       ...prev,
-      demographicRanges: { ...prev.demographicRanges, [group]: value },
+      groups: prev.groups.map((g) => (g.id === id ? { ...g, ...patch } : g)),
     }));
-    setErrors((prev) => ({ ...prev, demographicRanges: undefined }));
-    setDemographicErrors((prev) => ({ ...prev, [group]: undefined }));
+    setRangeErrors({});
   }
 
-  function handleAddCustomRow() {
-    setCustomRows((prev) => [...prev, { id: nextCustomRowId(), label: "", value: "" }]);
+  function updateGroupGender(id, gender, value) {
+    setRs((prev) => ({
+      ...prev,
+      groups: prev.groups.map((g) =>
+        g.id === id ? { ...g, genders: { ...g.genders, [gender]: value } } : g
+      ),
+    }));
+    setRangeErrors({});
   }
 
-  function handleCustomRowChange(id, field, value) {
-    setCustomRows((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
-    setErrors((prev) => ({ ...prev, demographicRanges: undefined }));
-    setCustomRowErrors((prev) => ({ ...prev, [id]: undefined }));
+  // Splitting starts both genders off with the range already typed for the group.
+  function handleSplitGroup(g) {
+    updateGroup(g.id, {
+      split: true,
+      genders: {
+        ...g.genders,
+        male: g.genders.male || g.range,
+        female: g.genders.female || g.range,
+      },
+    });
   }
 
-  // Clicking the X only opens the styled confirm popup.
-  function handleRemoveCustomRow(id, label) {
-    setConfirmingRow({ id, label });
+  function handleUnsplitGroup(g) {
+    updateGroup(g.id, { split: false, range: g.range || g.genders.male || g.genders.female || "" });
   }
 
-  // Runs when the user clicks "Delete" in the popup.
-  function confirmRemoveCustomRow() {
-    const { id } = confirmingRow;
-    setConfirmingRow(null);
-    setCustomRows((prev) => prev.filter((row) => row.id !== id));
-    setCustomRowErrors((prev) => ({ ...prev, [id]: undefined }));
+  function handleAddGroup(value) {
+    if (!value) return;
+
+    const group =
+      value === "__custom"
+        ? newCustomGroup()
+        : groupFromPreset(AGE_GROUP_PRESETS.find((p) => p.label === value));
+
+    setRs((prev) => ({ ...prev, groups: [...prev.groups, group] }));
+    setRangeErrors({});
   }
+
+  function groupHasData(g) {
+    return g.range.trim() !== "" || GENDERS.some((x) => g.genders[x.value].trim() !== "");
+  }
+
+  function handleRemoveGroup(g) {
+    if (groupHasData(g)) {
+      setConfirmingGroup(g);
+      return;
+    }
+    removeGroup(g.id);
+  }
+
+  function removeGroup(id) {
+    setRs((prev) => ({ ...prev, groups: prev.groups.filter((g) => g.id !== id) }));
+    setRangeErrors({});
+  }
+
+  function confirmRemoveGroup() {
+    removeGroup(confirmingGroup.id);
+    setConfirmingGroup(null);
+  }
+
+  // ── Submit ────────────────────────────────────────────────────────────────
 
   function handleSubmit(e) {
     e.preventDefault();
 
-    const { errors: validationErrors, demographicErrors: validationDemographicErrors, customRowErrors: validationCustomRowErrors } =
-      validate(form, customRows);
+    const validationErrors = validate(form);
+    const validationRangeErrors = form.hasParameters ? {} : validateRanges(rs);
+
     setErrors(validationErrors);
-    setDemographicErrors(validationDemographicErrors);
-    setCustomRowErrors(validationCustomRowErrors);
-    if (
-      Object.keys(validationErrors).length > 0 ||
-      Object.keys(validationDemographicErrors).length > 0 ||
-      Object.keys(validationCustomRowErrors).length > 0
-    ) {
+    setRangeErrors(validationRangeErrors);
+
+    if (Object.keys(validationErrors).length > 0 || Object.keys(validationRangeErrors).length > 0) {
       return;
     }
 
-    // Merge fixed + custom groups into one flat object — the backend
-    // already stores this as a single key-value structure, so it doesn't
-    // need to know which keys are "built-in" vs custom.
-    const mergedDemographicRanges = { ...form.demographicRanges };
-    customRows.forEach((row) => {
-      const label = row.label.trim();
-      const value = row.value.trim();
-      if (label && value) {
-        mergedDemographicRanges[label] = value;
-      }
-    });
-
+    // Only the active tab's ranges are saved; the other tabs are ignored.
     onSave({
       ...form,
-      demographicRanges: form.hasParameters ? {} : mergedDemographicRanges,
+      rangeMode: form.hasParameters ? "general" : rs.mode,
+      ranges: form.hasParameters ? [] : buildRanges(rs),
       unit: form.hasParameters ? "" : form.unit,
       parameterIds: form.hasParameters ? form.parameterIds : [],
       groupIds: form.isParameter ? form.groupIds : [],
@@ -333,6 +369,9 @@ export default function AddTestModal({
       return t.name.toLowerCase().includes(groupSearchText);
     })
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  const activeTab = MODE_TABS.find((t) => t.value === rs.mode) || MODE_TABS[0];
+  const unusedPresets = AGE_GROUP_PRESETS.filter((p) => !rs.groups.some((g) => g.label === p.label));
 
   return (
     <>
@@ -585,66 +624,220 @@ export default function AddTestModal({
               </div>
             </div>
 
-            {/* Demographic ranges: two boxes per row */}
+            {/* Reference ranges: General / Gender / Age & Gender */}
             <div className={form.hasParameters ? "hidden" : "space-y-3 pt-1"}>
-              <label className="block text-sm font-semibold text-gray-900">
-                Range by Category / Demographic Group
-              </label>
-              {errors.demographicRanges && <p className="text-xs text-red-500">{errors.demographicRanges}</p>}
-
-              <div className="grid grid-cols-2 gap-4">
-                {DEMOGRAPHIC_GROUPS.map((group) => (
-                  <div key={group}>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">{group}</label>
-                    <input
-                      value={form.demographicRanges[group] || ""}
-                      onChange={(e) => handleDemographicRangeChange(group, e.target.value)}
-                      placeholder="e.g. 70-100, <200, or Negative"
-                      className={inputClass(demographicErrors[group])}
-                    />
-                    {demographicErrors[group] && <p className="text-xs text-red-500 mt-1">{demographicErrors[group]}</p>}
-                  </div>
-                ))}
-
-                {/* Custom, user-defined groups beyond the fixed list above.
-                    Stored in the same demographicRanges object as everything
-                    else — the backend doesn't need to distinguish them. */}
-                {customRows.map((row) => (
-                  <div key={row.id} className="border border-gray-100 rounded-lg p-3 space-y-2 bg-gray-50/50">
-                    <div className="flex items-center gap-2">
-                      <input
-                        value={row.label}
-                        onChange={(e) => handleCustomRowChange(row.id, "label", e.target.value)}
-                        placeholder="Group name, e.g. Pregnant Women"
-                        className={`${inputClass(customRowErrors[row.id])} text-xs font-medium`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveCustomRow(row.id, row.label)}
-                        className="shrink-0 text-gray-400 hover:text-red-500 p-1 cursor-pointer"
-                        aria-label="Remove this custom group"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                    <input
-                      value={row.value}
-                      onChange={(e) => handleCustomRowChange(row.id, "value", e.target.value)}
-                      placeholder="e.g. 70-100, <200, or Negative"
-                      className={inputClass(customRowErrors[row.id])}
-                    />
-                    {customRowErrors[row.id] && <p className="text-xs text-red-500">{customRowErrors[row.id]}</p>}
-                  </div>
-                ))}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900">Reference Ranges</label>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Set one range for everyone, or different ranges by gender and/or age. The unit is the one entered above.
+                </p>
               </div>
 
-              <button
-                type="button"
-                onClick={handleAddCustomRow}
-                className="flex items-center gap-1.5 text-sm font-medium text-teal-600 hover:text-teal-700 cursor-pointer"
-              >
-                <Plus size={16} /> Add custom group
-              </button>
+              <div className="grid grid-cols-3 gap-2">
+                {MODE_TABS.map((tab) => {
+                  const Icon = tab.icon;
+                  const selected = rs.mode === tab.value;
+                  return (
+                    <button
+                      key={tab.value}
+                      type="button"
+                      onClick={() => handleSetMode(tab.value)}
+                      className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium cursor-pointer ${
+                        selected
+                          ? "border-teal-500 bg-teal-50 text-teal-700"
+                          : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      <Icon size={16} />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <p className="rounded-lg bg-teal-50/60 px-3 py-2 text-xs text-teal-800">{activeTab.help}</p>
+
+              {rangeErrors.summary && <p className="text-xs text-red-500">{rangeErrors.summary}</p>}
+
+              {/* General */}
+              {rs.mode === "general" && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Range</label>
+                  <input
+                    value={rs.general}
+                    onChange={(e) => changeRs({ general: e.target.value })}
+                    placeholder="e.g. 70-100, <200, or Negative"
+                    className={inputClass(rangeErrors.general)}
+                  />
+                  {rangeErrors.general && <p className="text-xs text-red-500 mt-1">{rangeErrors.general}</p>}
+                </div>
+              )}
+
+              {/* Gender based */}
+              {rs.mode === "gender" && (
+                <div className="grid grid-cols-2 gap-4">
+                  {GENDERS.map((g) => (
+                    <div key={g.value}>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        {g.label}
+                        {g.optional && <span className="text-gray-400"> (optional)</span>}
+                      </label>
+                      <input
+                        value={rs.genders[g.value]}
+                        onChange={(e) => handleGenderRangeChange(g.value, e.target.value)}
+                        placeholder="e.g. 70-100, <200, or Negative"
+                        className={inputClass(rangeErrors[`gender.${g.value}`])}
+                      />
+                      {rangeErrors[`gender.${g.value}`] && (
+                        <p className="text-xs text-red-500 mt-1">{rangeErrors[`gender.${g.value}`]}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Age & gender based */}
+              {rs.mode === "age_gender" && (
+                <div className="space-y-3">
+                  {rs.groups.length === 0 && (
+                    <p className="text-xs text-gray-400 text-center py-3">No age groups yet. Add one below.</p>
+                  )}
+
+                  {rs.groups.map((g) => {
+                    const groupKey = `group.${g.id}`;
+                    const ageText = g.special ? "" : formatAgeRange(g.min, g.max);
+
+                    return (
+                      <div key={g.id} className="rounded-lg border border-gray-200 bg-white p-3 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          {g.custom ? (
+                            <div className="flex-1 space-y-2">
+                              <input
+                                value={g.label}
+                                onChange={(e) => updateGroup(g.id, { label: e.target.value })}
+                                placeholder="Group name, e.g. Toddlers"
+                                maxLength={30}
+                                className={`${inputClass(rangeErrors[groupKey])} font-medium`}
+                              />
+                              {!g.special && (
+                                <>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <AgeBoundInput
+                                      label="From age"
+                                      bound={g.min}
+                                      onChange={(min) => updateGroup(g.id, { min })}
+                                      hasError={Boolean(rangeErrors[groupKey])}
+                                    />
+                                    <AgeBoundInput
+                                      label="Up to age (not included, empty = no limit)"
+                                      bound={g.max}
+                                      onChange={(max) => updateGroup(g.id, { max })}
+                                      hasError={Boolean(rangeErrors[groupKey])}
+                                    />
+                                  </div>
+                                  {ageText && <p className="text-xs text-gray-500">Covers: {ageText}</p>}
+                                </>
+                              )}
+                            </div>
+                          ) : (
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900">{g.label}</p>
+                              {ageText && <p className="text-xs text-gray-500">{ageText}</p>}
+                            </div>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveGroup(g)}
+                            className="shrink-0 text-gray-400 hover:text-red-500 p-1 cursor-pointer"
+                            aria-label={`Remove ${g.label || "this age group"}`}
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+
+                        {rangeErrors[groupKey] && <p className="text-xs text-red-500">{rangeErrors[groupKey]}</p>}
+
+                        {!g.split ? (
+                          <div>
+                            <div className="flex items-center gap-3">
+                              <input
+                                value={g.range}
+                                onChange={(e) => updateGroup(g.id, { range: e.target.value })}
+                                placeholder="e.g. 70-100, <200, or Negative"
+                                className={inputClass(rangeErrors[`${groupKey}.range`])}
+                              />
+                              {!g.special && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSplitGroup(g)}
+                                  className="shrink-0 text-xs font-medium text-teal-600 hover:text-teal-700 cursor-pointer whitespace-nowrap"
+                                >
+                                  Split by gender
+                                </button>
+                              )}
+                            </div>
+                            {rangeErrors[`${groupKey}.range`] && (
+                              <p className="text-xs text-red-500 mt-1">{rangeErrors[`${groupKey}.range`]}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-3 gap-3">
+                              {GENDERS.map((x) => (
+                                <div key={x.value}>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                                    {x.label}
+                                    {x.optional && <span className="text-gray-400"> (optional)</span>}
+                                  </label>
+                                  <input
+                                    value={g.genders[x.value]}
+                                    onChange={(e) => updateGroupGender(g.id, x.value, e.target.value)}
+                                    placeholder="e.g. 70-100"
+                                    className={inputClass(rangeErrors[`${groupKey}.gender.${x.value}`])}
+                                  />
+                                  {rangeErrors[`${groupKey}.gender.${x.value}`] && (
+                                    <p className="text-xs text-red-500 mt-1">
+                                      {rangeErrors[`${groupKey}.gender.${x.value}`]}
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            {rangeErrors[`${groupKey}.range`] && (
+                              <p className="text-xs text-red-500">{rangeErrors[`${groupKey}.range`]}</p>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleUnsplitGroup(g)}
+                              className="text-xs font-medium text-gray-500 hover:text-gray-700 cursor-pointer"
+                            >
+                              Remove gender split
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  <div className="flex items-center gap-2">
+                    <Plus size={16} className="text-teal-600" />
+                    <select
+                      value=""
+                      onChange={(e) => handleAddGroup(e.target.value)}
+                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-teal-600 outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 cursor-pointer"
+                    >
+                      <option value="">Add age group</option>
+                      {unusedPresets.map((p) => (
+                        <option key={p.label} value={p.label}>
+                          {p.label}{p.hint ? ` (${p.hint})` : ""}
+                        </option>
+                      ))}
+                      <option value="__custom">Custom group…</option>
+                    </select>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -666,15 +859,15 @@ export default function AddTestModal({
         </form>
       </ModalShell>
 
-      {confirmingRow && (
+      {confirmingGroup && (
         <ConfirmModal
-          title="Delete Custom Group"
-          message={`Delete "${confirmingRow.label?.trim() || "this custom group"}"? This range will be permanently removed when you save.`}
-          confirmLabel="Delete"
+          title="Remove Age Group"
+          message={`Remove "${confirmingGroup.label?.trim() || "this age group"}"? Its range will be permanently removed when you save.`}
+          confirmLabel="Remove"
           cancelLabel="Cancel"
           danger
-          onConfirm={confirmRemoveCustomRow}
-          onClose={() => setConfirmingRow(null)}
+          onConfirm={confirmRemoveGroup}
+          onClose={() => setConfirmingGroup(null)}
         />
       )}
     </>

@@ -49,6 +49,7 @@ function mapOrder(o) {
         parentItemId: item.parent_item_id ?? null,
         isGroup: Boolean(item.is_group),
         demographicGroup: item.demographic_group ?? null,
+        rangeId: item.resolved_range_id ?? null,
         rangeRaw: range === "-" ? "" : range,
       };
     }),

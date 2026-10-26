@@ -4,15 +4,14 @@ import { X } from "lucide-react";
 import { getOrdersListForRangeApi } from "../../api/api";
 import { RANGES } from "../../utils/dateRange";
 
-const STATUS_STYLES = {
-  completed: "bg-green-100 text-green-700",
+const PAYMENT_STYLES = {
+  paid: "bg-green-100 text-green-700",
+  partial: "bg-blue-100 text-blue-700",
   pending: "bg-amber-100 text-amber-700",
-  sample_collected: "bg-blue-100 text-blue-700",
-  cancelled: "bg-red-100 text-red-700",
 };
 
-function statusLabel(s) {
-  return (s || "").split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+function paymentLabel(s) {
+  return (s || "pending").charAt(0).toUpperCase() + (s || "pending").slice(1);
 }
 
 const inr = (n) => `₹${Math.round(n).toLocaleString("en-IN")}`;
@@ -20,7 +19,7 @@ const inr = (n) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 export default function RevenueOverTimeModal({ initialRange = "Today", onClose }) {
   const navigate = useNavigate();
   const [range, setRange] = useState(initialRange);
-  const [filter, setFilter] = useState("all"); // "all" | "completed" | "pending"
+  const [filter, setFilter] = useState("all"); // "all" | "paid" | "unpaid"
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -42,26 +41,32 @@ export default function RevenueOverTimeModal({ initialRange = "Today", onClose }
     [rows]
   );
 
-  const sum = (list) => list.reduce((t, o) => t + Number(o.bill_total || 0), 0);
+  const billed = (o) => Number(o.bill_total || 0);
+  const paid = (o) => Number(o.paid_amount || 0);
+  const balance = (o) => Math.max(0, billed(o) - paid(o));
 
-  const completedOrders = orders.filter((o) => o.status === "completed");
-  // "Pending" revenue = everything not yet completed (pending + sample collected)
-  const pendingOrders = orders.filter((o) => o.status !== "completed");
+  const sumBy = (list, fn) => list.reduce((t, o) => t + fn(o), 0);
 
-  const totalRevenue = sum(orders);
-  const completedRevenue = sum(completedOrders);
-  const pendingRevenue = sum(pendingOrders);
+  const paidOrders = orders.filter((o) => o.payment_status === "paid");
+  // Unpaid = not fully paid (pending or partial). Paid orders are excluded even if
+  // paid < billed, because a discount can make the paid amount lower than the bill.
+  const unpaidOrders = orders.filter((o) => o.payment_status !== "paid");
+
+  // Total Revenue = money actually collected (paid_amount), same as the cards
+  const totalRevenue = sumBy(orders, paid);
+  const paidRevenue = sumBy(paidOrders, paid);
+  const unpaidAmount = sumBy(unpaidOrders, balance);
   const avgOrder = orders.length ? totalRevenue / orders.length : 0;
 
   // Rows shown in the table after applying the selected tile
   const visible =
-    filter === "completed" ? completedOrders : filter === "pending" ? pendingOrders : orders;
-  const visibleTotal = sum(visible);
+    filter === "paid" ? paidOrders : filter === "unpaid" ? unpaidOrders : orders;
+  const visibleCollected = sumBy(visible, paid);
 
   const tiles = [
     { key: "all", label: "Total Revenue", value: inr(totalRevenue), cls: "bg-gray-50 text-gray-900" },
-    { key: "completed", label: "Completed", value: inr(completedRevenue), cls: "bg-green-50 text-green-700" },
-    { key: "pending", label: "Pending", value: inr(pendingRevenue), cls: "bg-amber-50 text-amber-700" },
+    { key: "paid", label: "Fully Paid", value: inr(paidRevenue), cls: "bg-green-50 text-green-700" },
+    { key: "unpaid", label: "Unpaid", value: inr(unpaidAmount), cls: "bg-amber-50 text-amber-700" },
   ];
 
   return (
@@ -111,7 +116,7 @@ export default function RevenueOverTimeModal({ initialRange = "Today", onClose }
             </button>
           ))}
 
-          {/* Average isn't a status, so this tile is display-only */}
+          {/* Average isn't a filter, so this tile is display-only */}
           <div className="rounded-lg bg-purple-50 p-3 text-purple-700">
             <p className="text-xs opacity-80">Avg per Order</p>
             <p className="text-xl font-bold">{inr(avgOrder)}</p>
@@ -131,8 +136,9 @@ export default function RevenueOverTimeModal({ initialRange = "Today", onClose }
                   <th className="px-6 py-2 font-medium">Order</th>
                   <th className="py-2 font-medium">Patient</th>
                   <th className="py-2 font-medium">Date</th>
-                  <th className="py-2 font-medium">Status</th>
-                  <th className="px-6 py-2 text-right font-medium">Amount</th>
+                  <th className="py-2 font-medium">Payment</th>
+                  <th className="py-2 text-right font-medium">Billed</th>
+                  <th className="px-6 py-2 text-right font-medium">Paid</th>
                 </tr>
               </thead>
               <tbody>
@@ -157,13 +163,12 @@ export default function RevenueOverTimeModal({ initialRange = "Today", onClose }
                       })}
                     </td>
                     <td className="py-3">
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[o.status] || "bg-gray-100 text-gray-500"}`}>
-                        {statusLabel(o.status)}
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${PAYMENT_STYLES[o.payment_status] || PAYMENT_STYLES.pending}`}>
+                        {paymentLabel(o.payment_status)}
                       </span>
                     </td>
-                    <td className="px-6 py-3 text-right font-medium text-gray-900">
-                      {inr(Number(o.bill_total || 0))}
-                    </td>
+                    <td className="py-3 text-right text-gray-500">{inr(billed(o))}</td>
+                    <td className="px-6 py-3 text-right font-medium text-gray-900">{inr(paid(o))}</td>
                   </tr>
                 ))}
               </tbody>
@@ -174,7 +179,7 @@ export default function RevenueOverTimeModal({ initialRange = "Today", onClose }
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-gray-100 bg-gray-50 px-6 py-4 rounded-b-2xl">
           <p className="text-sm text-gray-500">
-            {visible.length} orders · Total: <span className="font-semibold text-gray-900">{inr(visibleTotal)}</span>
+            {visible.length} orders · Collected: <span className="font-semibold text-gray-900">{inr(visibleCollected)}</span>
           </p>
           <button onClick={onClose} className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
             Close

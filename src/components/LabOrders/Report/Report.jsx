@@ -313,16 +313,14 @@ export default function Report() {
                 </tr>`;
             }
             const t = row.test;
-            const flag = flags[t.id];
-            const isAbnormal = ["low", "high", "abnormal"].includes(flag);
-            const flagTag =
-              flag === "high" ? `<span class="flag-tag">High</span>` : flag === "low" ? `<span class="flag-tag">Low</span>` : "";
+            // calculateFlag() returns "High" / "Low" / "Normal" — compare in lowercase
+            const flag = String(flags[t.id] ?? "").toLowerCase();
+            const isAbnormal = ["low", "high", "abnormal", "critical"].includes(flag);
             return `
                 <tr>
                     <td class="${row.kind === "parameter" ? "param-name" : ""}">${t.name}</td>
                     <td class="result ${isAbnormal ? "abnormal" : ""}">
                         ${results[t.id] || "—"}
-                        ${flagTag}
                     </td>
                     <td class="range">${t.range || "—"}</td>
                     <td class="range">${t.unit || ""}</td>
@@ -467,9 +465,8 @@ export default function Report() {
     table.results tbody tr.group-row td { padding: 5px 8px; font-size: 10.5px; font-weight: 700; color: #0f766e; background: #f0fdfa; box-shadow: inset 3px 0 0 #0d9488; border-bottom: 1px solid #ccfbf1; letter-spacing: 0.01em; }
     table.results tbody td.param-name { padding-left: 16px; }
 
-    td.result { font-weight: 700; color: #111827; }
-    td.result.abnormal { color: #d97706; }
-    td.result .flag-tag { font-size: 8px; font-weight: 700; margin-left: 3px; }
+    td.result { font-weight: 400; color: #111827; }
+    td.result.abnormal { font-weight: 700; }
     td.range { color: #6b7280; }
 
     .end-line { text-align: center; font-size: 9px; color: #9ca3af; letter-spacing: 0.05em; margin: 2px 24px 4px 24px; flex-shrink: 0; }
@@ -928,8 +925,9 @@ export default function Report() {
                               );
                             }
                             const t = row.test;
-                            const flag = flags[t.id];
-                            const isAbnormal = ["low", "high", "abnormal"].includes(flag);
+                            // calculateFlag() returns "High" / "Low" / "Normal" — compare in lowercase
+                            const flag = String(flags[t.id] ?? "").toLowerCase();
+                            const isAbnormal = ["low", "high", "abnormal", "critical"].includes(flag);
                             return (
                               <tr key={t.id} className="break-inside-avoid">
                                 <td
@@ -939,13 +937,11 @@ export default function Report() {
                                   {t.name}
                                 </td>
                                 <td
-                                  className={`px-1 py-1 text-[10.5px] font-bold border-b border-gray-100 ${
-                                    isAbnormal ? "text-amber-600" : "text-gray-900"
+                                  className={`px-1 py-1 text-[10.5px] border-b border-gray-100 ${
+                                    isAbnormal ? "font-bold text-gray-900" : "font-normal text-gray-900"
                                   }`}
                                 >
                                   {results[t.id] || "—"}
-                                  {flag === "high" && <span className="text-[8px] font-bold ml-1">High</span>}
-                                  {flag === "low" && <span className="text-[8px] font-bold ml-1">Low</span>}
                                 </td>
                                 <td className="px-1 py-1 text-[10.5px] text-gray-500 border-b border-gray-100">{t.range || "—"}</td>
                                 <td className="px-1 py-1 text-[10.5px] text-gray-500 border-b border-gray-100">{t.unit || ""}</td>

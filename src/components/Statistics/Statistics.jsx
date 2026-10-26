@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { getOrdersForRangeApi, getNewPatientsForRangeApi } from "../../api/api";
-import CollectionReportModal from "./CollectionReportModal";
-import OrderStatusModal from "./OrderStatusModal";
 import {
+  getOrdersForRangeApi,
+  getNewPatientsForRangeApi,
+  getRevenueForRangeApi,
   getStatisticsSummaryApi,
   getStatisticsRankingsApi,
   getStatisticsCollectionTypesApi,
@@ -11,6 +11,9 @@ import {
   getStatisticsSampleProcessingApi,
   getStatisticsReportStatusApi,
 } from "../../api/api";
+import CollectionReportModal from "./CollectionReportModal";
+import OrderStatusModal from "./OrderStatusModal";
+import RevenueOverTimeModal from "./RevenueOverTimeModal";
 import {
   Briefcase,
   IndianRupee,
@@ -19,12 +22,10 @@ import {
   XCircle,
   Calendar,
   BadgeIndianRupee,
-  LineChart,
   AlertTriangle,
   Users,
   UserPlus,
-    FlaskConical,
-
+  FlaskConical,
 } from "lucide-react";
 
 import OrdersTrendSection from "./OrdersTrendSection";
@@ -49,6 +50,11 @@ function rangeLabel(range, noun) {
   }
 }
 
+const formatINR = (n) =>
+  `₹${Number(n ?? 0).toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 
 function StatCard({ label, value, icon: Icon, bg, color, onClick }) {
   return (
@@ -124,21 +130,6 @@ function HighlightCard({
   );
 }
 
-function TrendCard({ title }) {
-  return (
-    <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
-        <a href="#" className="text-xs text-teal-600 font-medium hover:underline">View Report</a>
-      </div>
-      <div className="h-40 rounded-lg bg-gray-50 flex items-center justify-center text-xs text-gray-400">
-        Chart placeholder
-      </div>
-      <RangeFilter />
-    </div>
-  );
-}
-
 function DonutCard({ title, total, segments, footerStat, range, onRangeChange, loading, onViewReport }) {
   let cumulative = 0;
   const gradientParts = segments.map((s) => {
@@ -172,28 +163,28 @@ function DonutCard({ title, total, segments, footerStat, range, onRangeChange, l
       {loading ? (
         <p className="text-xs text-gray-400 text-center py-6">Loading…</p>
       ) : (
-      <div className="flex items-center gap-6">
-        <div
-          className="relative w-28 h-28 rounded-full flex items-center justify-center shrink-0"
-          style={{ background: `conic-gradient(${gradientParts.join(", ")})` }}
-        >
-          <div className="w-16 h-16 rounded-full bg-white flex flex-col items-center justify-center">
-            <span className="text-[10px] text-gray-400">Total</span>
-            <span className="text-sm font-bold text-gray-900">{total}</span>
+        <div className="flex items-center gap-6">
+          <div
+            className="relative w-28 h-28 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: `conic-gradient(${gradientParts.join(", ")})` }}
+          >
+            <div className="w-16 h-16 rounded-full bg-white flex flex-col items-center justify-center">
+              <span className="text-[10px] text-gray-400">Total</span>
+              <span className="text-sm font-bold text-gray-900">{total}</span>
+            </div>
+          </div>
+          <div className="space-y-2 flex-1">
+            {segments.map((s) => (
+              <div key={s.label} className="flex items-center justify-between text-xs">
+                <span className="flex items-center gap-1.5 text-gray-600">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.colorHex }} />
+                  {s.label}
+                </span>
+                <span className="text-gray-900 font-medium">{s.pct}% ({s.count})</span>
+              </div>
+            ))}
           </div>
         </div>
-        <div className="space-y-2 flex-1">
-          {segments.map((s) => (
-            <div key={s.label} className="flex items-center justify-between text-xs">
-              <span className="flex items-center gap-1.5 text-gray-600">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.colorHex }} />
-                {s.label}
-              </span>
-              <span className="text-gray-900 font-medium">{s.pct}% ({s.count})</span>
-            </div>
-          ))}
-        </div>
-      </div>
       )}
       {onRangeChange && (
         <RangeFilter options={rangeOptions} active={range} onSelect={onRangeChange} />
@@ -444,7 +435,7 @@ function RankingsModal({ type, data, loading, onClose }) {
 
 // ─────────────────────────────────────────────────────────────
 // AttentionModal — "View All" popup for Attention Needed
-// Two tabs: Critical Results, Follow-ups Due
+// Tabs: Critical Results, Follow-ups Due, Samples Delayed
 // ─────────────────────────────────────────────────────────────
 function AttentionModal({ open, alerts, loading, initialTab = "critical", onClose }) {
   const [tab, setTab] = useState(initialTab);
@@ -601,7 +592,7 @@ function AttentionModal({ open, alerts, loading, initialTab = "critical", onClos
               key={t.key}
               type="button"
               onClick={() => setTab(t.key)}
-                    className={`px-3 py-2 text-sm font-medium rounded-t-lg transition whitespace-nowrap cursor-pointer ${
+              className={`px-3 py-2 text-sm font-medium rounded-t-lg transition whitespace-nowrap cursor-pointer ${
                 tab === t.key ? t.active : "text-gray-400 border-transparent hover:text-gray-600"
               }`}
             >
@@ -636,6 +627,7 @@ function AttentionModal({ open, alerts, loading, initialTab = "critical", onClos
     </div>
   );
 }
+
 export default function Statistics() {
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
@@ -651,7 +643,6 @@ export default function Statistics() {
   const [alerts, setAlerts] = useState(null);
   const [alertsLoading, setAlertsLoading] = useState(true);
   const [attentionModalOpen, setAttentionModalOpen] = useState(false);
-  const [attentionTab, setAttentionTab] = useState("critical"); 
 
   const [viewAllType, setViewAllType] = useState(null);
   const [allRankings, setAllRankings] = useState(null);
@@ -672,9 +663,19 @@ export default function Statistics() {
   const [reportModal, setReportModal] = useState(null); // "patient" | "samples" | "reports" | null
 
   const [collectionRange, setCollectionRange] = useState("Today");
-  const [hasSwitchedCollectionRange, setHasSwitchedCollectionRange] = useState(false);
   const [collectionReportOpen, setCollectionReportOpen] = useState(false);
-  const [orderStatusModal, setOrderStatusModal] = useState(null); 
+  const [orderStatusModal, setOrderStatusModal] = useState(null);
+  const [revenueOverTimeModal, setRevenueOverTimeModal] = useState(null);
+
+  // Maps the UI range label to the key the "-for-range" endpoints expect.
+  // Declared before the range effects below that use it.
+  const rangeKeyMap = {
+    Today: "today",
+    Yesterday: "yesterday",
+    "1 Week": "week",
+    "1 Month": "month",
+    "1 Year": "year",
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -693,48 +694,34 @@ export default function Statistics() {
       cancelled = true;
     };
   }, []);
-  // NEW
-const newPatientsRangeKeyMap = {
-  Today: "today",
-  Yesterday: "yesterday",
-  "1 Week": "week",
-  "1 Month": "month",
-  "1 Year": "year",
-};
 
-const [newPatientsRange, setNewPatientsRange] = useState(null);
-const [hasSwitchedNewPatientsRange, setHasSwitchedNewPatientsRange] = useState(false);
-const [newPatientsCount, setNewPatientsCount] = useState(null);
-const [newPatientsLoading, setNewPatientsLoading] = useState(true);
+  // ── New patients highlight card ──
+  const [newPatientsRange, setNewPatientsRange] = useState(null);
+  const [hasSwitchedNewPatientsRange, setHasSwitchedNewPatientsRange] = useState(false);
+  const [newPatientsCount, setNewPatientsCount] = useState(null);
+  const [newPatientsLoading, setNewPatientsLoading] = useState(true);
 
-useEffect(() => {
-  let cancelled = false;
-  setNewPatientsLoading(true);
-  (async () => {
-    try {
-      const res = await getNewPatientsForRangeApi(
-        newPatientsRangeKeyMap[newPatientsRange] ?? "today"
-      );
-      if (!cancelled) setNewPatientsCount(res.count);
-    } catch (err) {
-      console.error("Failed to load new patients for range:", err.message);
-    } finally {
-      if (!cancelled) setNewPatientsLoading(false);
-    }
-  })();
-  return () => {
-    cancelled = true;
-  };
-}, [newPatientsRange]);
+  useEffect(() => {
+    let cancelled = false;
+    setNewPatientsLoading(true);
+    (async () => {
+      try {
+        const res = await getNewPatientsForRangeApi(
+          rangeKeyMap[newPatientsRange] ?? "today"
+        );
+        if (!cancelled) setNewPatientsCount(res.count);
+      } catch (err) {
+        console.error("Failed to load new patients for range:", err.message);
+      } finally {
+        if (!cancelled) setNewPatientsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [newPatientsRange]);
 
-  const rangeKeyMap = {
-    Today: "today",
-    Yesterday: "yesterday",
-    "1 Week": "week",
-    "1 Month": "month",
-    "1 Year": "year",
-  };
-
+  // ── Orders highlight card ──
   const [ordersRange, setOrdersRange] = useState(null);
   const [hasSwitchedRange, setHasSwitchedRange] = useState(false);
   const [ordersRangeCount, setOrdersRangeCount] = useState(null);
@@ -745,7 +732,7 @@ useEffect(() => {
     setOrdersRangeLoading(true);
     (async () => {
       try {
-        const res = await getOrdersForRangeApi(rangeKeyMap[ordersRange]);
+        const res = await getOrdersForRangeApi(rangeKeyMap[ordersRange] ?? "today");
         if (!cancelled) setOrdersRangeCount(res.count);
       } catch (err) {
         console.error("Failed to load orders for range:", err.message);
@@ -757,6 +744,30 @@ useEffect(() => {
       cancelled = true;
     };
   }, [ordersRange]);
+
+  // ── Revenue highlight card ──
+  const [revenueRange, setRevenueRange] = useState(null);
+  const [hasSwitchedRevenueRange, setHasSwitchedRevenueRange] = useState(false);
+  const [revenueRangeTotal, setRevenueRangeTotal] = useState(null);
+  const [revenueRangeLoading, setRevenueRangeLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setRevenueRangeLoading(true);
+    (async () => {
+      try {
+        const res = await getRevenueForRangeApi(rangeKeyMap[revenueRange] ?? "today");
+        if (!cancelled) setRevenueRangeTotal(res.total);
+      } catch (err) {
+        console.error("Failed to load revenue for range:", err.message);
+      } finally {
+        if (!cancelled) setRevenueRangeLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [revenueRange]);
 
   useEffect(() => {
     let cancelled = false;
@@ -889,8 +900,7 @@ useEffect(() => {
     }
   };
 
-  // Row 1 — Total/Completed/Pending/Cancelled come from the API now.
-  // Total Revenue and Average Order Value stay hardcoded until wired up separately.
+  // Row 1 — all values come from the API now (Total Revenue from summary.totalRevenue).
   const statCards = [
     {
       label: "Total Orders",
@@ -900,7 +910,14 @@ useEffect(() => {
       color: "text-blue-600",
       onClick: () => setOrderStatusModal({ tab: "all" }),
     },
-    { label: "Total Revenue", value: "₹150000", icon: IndianRupee, bg: "bg-green-50", color: "text-green-600" },
+    {
+      label: "Total Revenue",
+      value: summaryLoading ? "…" : formatINR(summary?.totalRevenue),
+      icon: IndianRupee,
+      bg: "bg-green-50",
+      color: "text-green-600",
+      onClick: () => setRevenueOverTimeModal({ tab: "all" }),
+    },
     {
       label: "Total Patients",
       value: patientStatsLoading ? "…" : (patientStats?.totalPatients ?? 0).toLocaleString(),
@@ -941,7 +958,7 @@ useEffect(() => {
       color: "text-red-600",
       onClick: () => setOrderStatusModal({ tab: "cancelled" }),
     },
-];
+  ];
 
   const pct = (count, total) => (total > 0 ? Math.round((count / total) * 1000) / 10 : 0);
 
@@ -977,12 +994,6 @@ useEffect(() => {
   const topDoctors = rankings?.topDoctors ?? [];
   const topTests = rankings?.topTests ?? [];
   const topCategories = rankings?.topCategories ?? [];
-
-  const statusSegments = [
-    { label: "Completed", pct: 65.2, count: 478, colorHex: "#22C55E" },
-    { label: "Pending", pct: 12.6, count: 92, colorHex: "#FBBF24" },
-    { label: "Cancelled", pct: 22.2, count: 163, colorHex: "#F87171" },
-  ];
 
   // Walk-in vs Home Collection — sourced from /statistics/collection-types
   const collectionSegments = [
@@ -1026,28 +1037,35 @@ useEffect(() => {
       {/* Row 2 — highlight cards with their own range filters */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <HighlightCard
-                  label={rangeLabel(ordersRange, "Orders")}
-                  value={ordersRangeLoading ? "…" : (ordersRangeCount ?? 0).toLocaleString()}
-                  icon={Calendar}
-                  bg="bg-blue-50"
-                  color="text-blue-600"
-                  options={rangeOptions}
-                  active={ordersRange}
-                  onSelect={(r) => {
-                    setOrdersRange(r);
-                    setHasSwitchedRange(true);
-                  }}
-                  showToday={hasSwitchedRange}
-                />
+          label={rangeLabel(ordersRange, "Orders")}
+          value={ordersRangeLoading ? "…" : (ordersRangeCount ?? 0).toLocaleString()}
+          icon={Calendar}
+          bg="bg-blue-50"
+          color="text-blue-600"
+          options={rangeOptions}
+          active={ordersRange}
+          onSelect={(r) => {
+            setOrdersRange(r);
+            setHasSwitchedRange(true);
+          }}
+          showToday={hasSwitchedRange}
+        />
+
         <HighlightCard
-          label="Today's Revenue"
-          value="₹0.00"
+          label={rangeLabel(revenueRange, "Revenue")}
+          value={revenueRangeLoading ? "…" : formatINR(revenueRangeTotal)}
           icon={BadgeIndianRupee}
           bg="bg-green-50"
           color="text-green-600"
-          options={rangeOptions.slice(1)}
+          options={rangeOptions}
+          active={revenueRange}
+          onSelect={(r) => {
+            setRevenueRange(r);
+            setHasSwitchedRevenueRange(true);
+          }}
+          showToday={hasSwitchedRevenueRange}
         />
-      
+
         <HighlightCard
           label={rangeLabel(newPatientsRange, "New Patients")}
           value={newPatientsLoading ? "…" : (newPatientsCount ?? 0).toLocaleString()}
@@ -1135,18 +1153,15 @@ useEffect(() => {
 
       {/* Row 5 — collection type donut + attention-needed alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-<DonutCard
-  title="Lab Orders vs Home Collection"
-  total={collectionTypesLoading ? "…" : (collectionTypes?.total ?? 0)}
-  segments={collectionSegments}
-  range={collectionRange}
-  onRangeChange={(r) => {
-    setCollectionRange(r);
-    setHasSwitchedCollectionRange(true);
-  }}
-  loading={collectionTypesLoading}
-  onViewReport={() => setCollectionReportOpen(true)}
-/>
+        <DonutCard
+          title="Lab Orders vs Home Collection"
+          total={collectionTypesLoading ? "…" : (collectionTypes?.total ?? 0)}
+          segments={collectionSegments}
+          range={collectionRange}
+          onRangeChange={setCollectionRange}
+          loading={collectionTypesLoading}
+          onViewReport={() => setCollectionReportOpen(true)}
+        />
 
         <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-4">
           <div className="flex items-center justify-between">
@@ -1159,23 +1174,23 @@ useEffect(() => {
               View All
             </button>
           </div>
-<div className="space-y-3">
-  {[
-    { label: "Critical results flagged today", value: alerts?.criticalResultsToday, icon: AlertTriangle, bg: "bg-red-50", color: "text-red-500" },
-    { label: "Follow-ups due this week", value: alerts?.followUpsDueThisWeek, icon: Clock, bg: "bg-amber-50", color: "text-amber-500" },
-    { label: "Samples delayed", value: alerts?.samplesDelayed, icon: Clock, bg: "bg-orange-50", color: "text-orange-500" },
-  ].map(({ label, value, icon: Icon, bg, color }) => (
-    <div key={label} className="flex items-center gap-3 text-sm">
-      <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center shrink-0`}>
-        <Icon size={16} className={color} />
-      </div>
-      <span className="text-gray-600 flex-1">{label}</span>
-      <span className="font-semibold text-gray-900">
-        {alertsLoading ? "…" : (value ?? 0)}
-      </span>
-    </div>
-  ))}
-</div>
+          <div className="space-y-3">
+            {[
+              { label: "Critical results flagged today", value: alerts?.criticalResultsToday, icon: AlertTriangle, bg: "bg-red-50", color: "text-red-500" },
+              { label: "Follow-ups due this week", value: alerts?.followUpsDueThisWeek, icon: Clock, bg: "bg-amber-50", color: "text-amber-500" },
+              { label: "Samples delayed", value: alerts?.samplesDelayed, icon: Clock, bg: "bg-orange-50", color: "text-orange-500" },
+            ].map(({ label, value, icon: Icon, bg, color }) => (
+              <div key={label} className="flex items-center gap-3 text-sm">
+                <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center shrink-0`}>
+                  <Icon size={16} className={color} />
+                </div>
+                <span className="text-gray-600 flex-1">{label}</span>
+                <span className="font-semibold text-gray-900">
+                  {alertsLoading ? "…" : (value ?? 0)}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -1241,22 +1256,29 @@ useEffect(() => {
         }
         onClose={() => setReportModal(null)}
       />
+
       <CollectionReportModal
         open={collectionReportOpen}
         range={collectionRange}
-        onRangeChange={(r) => {
-          setCollectionRange(r);
-          setHasSwitchedCollectionRange(true);
-        }}
+        onRangeChange={setCollectionRange}
         onClose={() => setCollectionReportOpen(false)}
       />
-        {orderStatusModal && (
-          <OrderStatusModal
-            initialRange="1 Year"
-            initialTab={orderStatusModal.tab}
-            onClose={() => setOrderStatusModal(null)}
-          />
-        )}
+
+      {orderStatusModal && (
+        <OrderStatusModal
+          initialRange="1 Year"
+          initialTab={orderStatusModal.tab}
+          onClose={() => setOrderStatusModal(null)}
+        />
+      )}
+
+      {revenueOverTimeModal && (
+        <RevenueOverTimeModal
+          initialRange="1 Year"
+          initialTab={revenueOverTimeModal.tab}
+          onClose={() => setRevenueOverTimeModal(null)}
+        />
+      )}
     </div>
   );
 }

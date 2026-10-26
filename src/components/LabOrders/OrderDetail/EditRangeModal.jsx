@@ -25,8 +25,8 @@ export default function EditRangeModal({ test, onClose, onSaved }) {
       setError("Enter a normal range, for example 13.5-24.0, <10 or Negative.");
       return;
     }
-    if (!test.demographicGroup) {
-      setError("Couldn't work out which patient group this range belongs to.");
+    if (!test.rangeId) {
+      setError("No range is defined for this patient in Test Master. Add one there first.");
       return;
     }
 
@@ -35,7 +35,7 @@ export default function EditRangeModal({ test, onClose, onSaved }) {
 
     try {
       await updateTestRangeApi(test.labTestId, {
-        demographic_group: test.demographicGroup,
+        range_id: test.rangeId,
         range_raw: trimmed,
         unit: unit.trim() || null,
       });
@@ -103,9 +103,7 @@ export default function EditRangeModal({ test, onClose, onSaved }) {
         />
 
         <p className="text-xs text-gray-400 mt-2">
-          This changes the range and unit used for new results of this test. Results already
-          entered are not converted, and reports that are already completed keep the range
-          and unit they were issued with.
+          This changes the range for every patient in this group (shown above), and the unit for all groups of this test. Results already entered are not converted, and completed reports keep the range and unit they were issued with.
         </p>
 
         {error && <p className="text-xs text-red-500 mt-3">{error}</p>}

@@ -36,9 +36,11 @@ function mapTest(t) {
     isActive: t.is_active,
     parameters: (t.parameters || []).map((p) => ({ id: p.id, name: p.name })),
     parameterIds: (t.parameters || []).map((p) => p.id),
-    demographicRanges: Object.fromEntries(
-      (t.ranges || []).map((r) => [r.demographic_group, r.range_raw])
-    ),
+    // CHANGED: ranges are kept exactly as the API returns them (age_label,
+    // age_min_value, ..., gender, range_raw) plus the test's range mode.
+    // This replaces the old demographicRanges object.
+    rangeMode: t.range_mode || "general",
+    ranges: t.ranges || [],
   };
 }
 
@@ -195,14 +197,10 @@ export default function TestMaster() {
       return;
     }
 
-    const ranges = Object.entries(testData.demographicRanges || {})
-      .filter(([, range_raw]) => range_raw.trim() !== "")
-      .map(([demographic_group, range_raw]) => ({ demographic_group, range_raw }));
-
     const payload = {
       category_id: category.id,
       name: testData.name.trim(),
-      
+
       unit: testData.unit || null,
       price: testData.price,
       critical_low: testData.criticalLow,
@@ -210,8 +208,14 @@ export default function TestMaster() {
       followup_weeks: testData.followupWeeks,
       criteria: testData.criteria || null,
       note: testData.note || null,
-      is_active: testData.isActive, 
-      ranges,
+      is_active: testData.isActive,
+      // CHANGED: the modal now supplies the range mode and the finished range
+      // rows. They are only sent when the modal supplies them, so a save that
+      // doesn't know about ranges can never wipe them.
+      ...(testData.ranges !== undefined && {
+        range_mode: testData.rangeMode,
+        ranges: testData.ranges,
+      }),
       // Only sent when the modal supplies it, so editing never clears a group by accident.
       ...(testData.parameterIds !== undefined && { parameter_ids: testData.parameterIds }),
       ...(testData.groupIds !== undefined && { group_ids: testData.groupIds }),

@@ -21,6 +21,7 @@ export default function TestDetailView({
   reportDate,
   referredBy,
   paymentDone,
+  paymentMode,
   onMarkPaid,
   letterheadOn,
   onLetterheadChange,
@@ -136,6 +137,10 @@ export default function TestDetailView({
                 >
                   {paymentDone ? "Paid" : "Unpaid"}
                 </button>
+                {/* How it was paid — below the badge, same as the main report screen */}
+                {paymentDone && paymentMode && (
+                  <p className="text-xs text-gray-500 mt-1">via {paymentMode}</p>
+                )}
               </div>
             </div>
           </div>

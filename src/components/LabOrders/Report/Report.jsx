@@ -572,23 +572,26 @@ export default function Report() {
       {viewTest ? (
         /* ── Single-test detail view (replaces the old popup) ───────── */
         <TestDetailView
-          patient={patient}
-          orderId={orderId}
-          test={viewTest}
-          flag={flags[viewTest.id]}
-          parameters={testsWithResults.filter((p) => p.parentItemId === viewTest.id)}
-          flags={flags}
-          ageText={ageText}
-          registered={registered}
-          reportDate={reportDate}
-          referredBy={order?.referredBy || "Self"}
-          letterheadOn={letterheadOn}
-          onLetterheadChange={setLetterheadOn}
-          onBack={() => setViewTest(null)}
-          onBill={() => setBillOpen(true)}
-          onWhatsApp={() => setWhatsAppOpen(true)}
-          onPrint={handlePrint}
-        />
+            patient={patient}
+            orderId={orderId}
+            test={viewTest}
+            flag={flags[viewTest.id]}
+            parameters={testsWithResults.filter((p) => p.parentItemId === viewTest.id)}
+            flags={flags}
+            ageText={ageText}
+            registered={registered}
+            reportDate={reportDate}
+            referredBy={order?.referredBy || "Self"}
+            letterheadOn={letterheadOn}
+            onLetterheadChange={setLetterheadOn}
+            onBack={() => setViewTest(null)}
+            onBill={() => setBillOpen(true)}
+            onWhatsApp={() => setWhatsAppOpen(true)}
+            onPrint={handlePrint}
+            paymentDone={paymentDone}
+            paymentMode={formatPaymentMode(savedPaymentMode)}
+            onMarkPaid={openPaymentPopup}
+          />
       ) : (
         <>
           {/* ── Top action bar ───────────────────────────────────────── */}

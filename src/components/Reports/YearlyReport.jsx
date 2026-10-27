@@ -8,8 +8,11 @@ import { formatCurrency } from "./shared/format";
 import { exportToCsv, exportToPdf } from "../../utils/reportExport";
 import { getYearlyReportApi } from "../../api/api";
 
+const CURRENT_YEAR = new Date().getFullYear();
+const MIN_YEAR = 2000;
+
 export default function YearlyReport({ onBack }) {
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [year, setYear] = useState(CURRENT_YEAR);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -43,10 +46,14 @@ export default function YearlyReport({ onBack }) {
           {
             label: "Year",
             value: year,
-            onChange: (v) => setYear(Number(v)),
+            onChange: (v) => {
+              const n = Number(v);
+              // Ignore empty, partial (e.g. "20") and future years.
+              if (v && n >= MIN_YEAR && n <= CURRENT_YEAR) setYear(n);
+            },
             type: "number",
-            min: 2000,
-            max: 2100,
+            min: MIN_YEAR,
+            max: CURRENT_YEAR,
           },
         ]}
         onExportCsv={() => exportToCsv("yearly-report", headers, csvRows)}

@@ -44,7 +44,7 @@ export default function TATReport({ onBack }) {
   }, [load]);
 
   useEffect(() => {
-  setPage(1);
+    setPage(1);
   }, [dateFrom, dateTo]);
 
   const rows = data?.by_test || [];
@@ -61,8 +61,19 @@ export default function TATReport({ onBack }) {
       <ReportToolbar
         onBack={onBack}
         fields={[
-          { label: "Date From", value: dateFrom, onChange: setDateFrom, max: dateTo },
-          { label: "Date To", value: dateTo, onChange: setDateTo, min: dateFrom },
+          {
+            label: "Date From",
+            value: dateFrom,
+            onChange: (v) => v && setDateFrom(v),
+            max: dateTo,
+          },
+          {
+            label: "Date To",
+            value: dateTo,
+            onChange: (v) => v && v <= todayIso() && setDateTo(v),
+            min: dateFrom,
+            max: todayIso(),
+          },
         ]}
         onExportCsv={() => exportToCsv("tat-report", headers, csvRows)}
         onExportPdf={() => exportToPdf("TAT Report", headers, csvRows)}

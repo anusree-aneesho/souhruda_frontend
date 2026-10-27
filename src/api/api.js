@@ -1,4 +1,19 @@
+import { getSelectedBranch } from "../utils/selectedBranch";
+
 const API_BASE_URL = "http://localhost:8000/api/v1";
+
+// A super admin works "inside" the branch picked in Settings; tell the backend
+// which one on every call. (The backend ignores this header for everyone else.)
+function activeBranchHeader() {
+  try {
+    const user = JSON.parse(localStorage.getItem("souhruda_auth_user") || "null");
+    if (user?.role !== "super_admin") return {};
+  } catch {
+    return {};
+  }
+  const id = getSelectedBranch()?.id;
+  return id ? { "X-Branch-Id": String(id) } : {};
+}
 
 async function request(endpoint, options = {}) {
   const token = localStorage.getItem("souhruda_auth_token");
@@ -12,6 +27,7 @@ async function request(endpoint, options = {}) {
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
       Accept: "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...activeBranchHeader(),
       ...options.headers,
     },
   });

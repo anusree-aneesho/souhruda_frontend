@@ -4,6 +4,7 @@ import {
   getMeApi,
   logoutApi,
 } from "../api/api";
+import { getSelectedBranch, clearSelectedBranch } from "../utils/selectedBranch";
 
 const AuthContext = createContext(null);
 
@@ -58,6 +59,15 @@ export function AuthProvider({ children }) {
           STORAGE_KEY,
           JSON.stringify(sessionUser)
         );
+
+        // The branch remembered in this browser may have been deleted since —
+        // the backend reports what it actually resolved; drop a stale selection.
+        if (
+          getSelectedBranch() &&
+          (backendUser.role !== "super_admin" || !data.active_branch_id)
+        ) {
+          clearSelectedBranch();
+        }
       } catch (error) {
         console.error("Failed to restore authentication:", error);
 
@@ -132,6 +142,8 @@ export function AuthProvider({ children }) {
       setUser(null);
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(TOKEN_KEY);
+      // Next person to log in on this browser starts with no branch picked.
+      clearSelectedBranch();
     }
   }
 

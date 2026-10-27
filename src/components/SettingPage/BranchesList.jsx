@@ -59,12 +59,15 @@ const BranchesList = forwardRef(function BranchesList(
     }
   }
 
-  // Highlight the branch whose settings are on screen. With nothing picked yet,
-  // that is the user's own branch, or the first active branch (same as the backend).
+  // Highlight the branch in effect. A super admin has no branch of their own, so
+  // only their explicit pick counts (nothing is highlighted until they choose).
+  // Everyone else works in their own branch.
   const firstActiveId = [...(branches || [])]
     .filter((b) => b.is_active !== false)
     .sort((a, b) => a.id - b.id)[0]?.id;
-  const activeBranchId = selectedBranchId ?? user?.branchId ?? firstActiveId ?? null;
+  const activeBranchId = canManageBranches
+    ? selectedBranchId ?? null
+    : user?.branchId ?? firstActiveId ?? null;
 
   return (
     <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] flex flex-col self-start">
@@ -91,7 +94,7 @@ const BranchesList = forwardRef(function BranchesList(
                   <button
                     type="button"
                     onClick={() => onSelectBranch?.(b)}
-                    title={b.address || "View this branch's settings"}
+                    title={b.address || "Work in this branch"}
                     className="flex items-center gap-2 flex-1 min-w-0 text-left cursor-pointer"
                   >
                     <span className={`h-2 w-2 shrink-0 rounded-full ${isActive ? "bg-teal-500" : "bg-gray-300"}`} />

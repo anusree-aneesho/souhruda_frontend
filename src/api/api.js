@@ -1027,3 +1027,12 @@ export async function getPendingOutstandingReportApi({ type, q, dateFrom, dateTo
   const qs = params.toString();
   return request(`/reports/finance/pending-outstanding${qs ? `?${qs}` : ""}`);
 }
+
+export async function getTestWiseRevenueReportApi({ dateFrom, dateTo, q } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  if (q) params.append("q", q);
+  const qs = params.toString();
+  return request(`/reports/tests/revenue${qs ? `?${qs}` : ""}`);
+}

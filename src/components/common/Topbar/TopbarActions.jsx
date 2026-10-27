@@ -5,6 +5,7 @@ import { useAuth } from "../../../Context/AuthContext";
 import { Bell, LogOut, KeyRound } from "lucide-react";
 import { requestProfilePasswordResetApi } from "../../../api/api";
 import ConfirmModal from "../../Patients/modals/ConfirmModal";
+import ActiveBranchBadge from "./ActiveBranchBadge";
 
 function useLiveClock() {
   const [now, setNow] = useState(new Date());
@@ -62,6 +63,8 @@ export default function TopbarActions() {
 
   return (
     <div className="flex items-center gap-4">
+      <ActiveBranchBadge />
+
       <p className="text-sm text-gray-500">
         {date} <span className="ml-1">{time}</span>
       </p>

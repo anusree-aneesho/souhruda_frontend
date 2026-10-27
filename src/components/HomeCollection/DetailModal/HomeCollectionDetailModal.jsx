@@ -456,7 +456,7 @@ export default function HomeCollectionDetailModal() {
             {view === "payment" && needsPayment ? (
               <>
                 {/* Payment page */}
-                <div className="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto overflow-x-hidden w-full max-w-xl mx-auto">
+                <div className="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto overflow-x-hidden w-full">
                   <PaymentModeTabs
                     value={paymentMethod}
                     onChange={(mode) => {
@@ -465,6 +465,9 @@ export default function HomeCollectionDetailModal() {
                     }}
                   />
 
+                  {/* Two columns: bill + confirmation on the left, UPI QR on the right */}
+                  <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_300px] gap-5 items-start">
+                    <div className="min-w-0 space-y-4">
                   <div className="rounded-xl bg-teal-50/60 px-5 py-4 space-y-2.5 text-sm">
                     <div className="space-y-1.5">
                       <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -517,9 +520,6 @@ export default function HomeCollectionDetailModal() {
                     </div>
                   </div>
 
-                  {/* Demo QR only for UPI */}
-                  {paymentMethod === "UPI" && <UpiPanel amount={hc.grandTotal} />}
-
                   {/* Shown for UPI, Cash and Card */}
                   <label className="flex items-center gap-3 text-sm font-medium text-gray-900 cursor-pointer">
                     <input
@@ -530,6 +530,11 @@ export default function HomeCollectionDetailModal() {
                     />
                     Payment already received
                   </label>
+                    </div>
+
+                    {/* RIGHT: UPI QR (only for UPI) */}
+                    {paymentMethod === "UPI" && <UpiPanel amount={hc.grandTotal} />}
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">

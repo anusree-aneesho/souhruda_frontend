@@ -1,9 +1,10 @@
+// src/components/Reports/PendingOutstandingReport.jsx
 import { useState, useEffect, useCallback, Fragment } from "react";
 import { Search, ChevronRight, ChevronDown, IndianRupee, Users, ClipboardList } from "lucide-react";
 import StatCard from "../common/StatCard";
 import ReportToolbar from "./shared/ReportToolbar";
 import Pagination from "./shared/Pagination";
-import { formatCurrency, todayIso } from "./shared/format";
+import { formatCurrency, todayIso, daysAgoIso } from "./shared/format";
 import { exportToCsv, exportToPdf } from "../../utils/reportExport";
 import { getPendingOutstandingReportApi } from "../../api/api";
 
@@ -29,8 +30,8 @@ function TypeBadge({ o }) {
 
 export default function PendingOutstandingReport({ onBack }) {
   const [type, setType] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateFrom, setDateFrom] = useState(daysAgoIso(30));
+  const [dateTo, setDateTo] = useState(todayIso());
   const [search, setSearch] = useState("");
   const [q, setQ] = useState("");
   const [data, setData] = useState(null);
@@ -92,16 +93,27 @@ export default function PendingOutstandingReport({ onBack }) {
     ])
   );
 
-  const rangeLabel =
-    dateFrom || dateTo ? ` (${dateFrom || "start"} to ${dateTo || "today"})` : "";
+  const rangeLabel = ` (${dateFrom} to ${dateTo})`;
+  const isDefaultRange = dateFrom === daysAgoIso(30) && dateTo === todayIso();
 
   return (
     <div className="space-y-6">
       <ReportToolbar
         onBack={onBack}
         fields={[
-          { label: "Order date from", value: dateFrom, onChange: setDateFrom, max: dateTo || todayIso() },
-          { label: "To", value: dateTo, onChange: setDateTo, min: dateFrom, max: todayIso() },
+          {
+            label: "Order date from",
+            value: dateFrom,
+            onChange: (v) => v && setDateFrom(v),
+            max: dateTo || todayIso(),
+          },
+          {
+            label: "To",
+            value: dateTo,
+            onChange: (v) => v && v <= todayIso() && setDateTo(v),
+            min: dateFrom,
+            max: todayIso(),
+          },
         ]}
         onExportCsv={() => exportToCsv("pending-outstanding", headers, csvRows)}
         onExportPdf={() => exportToPdf(`Pending / Outstanding${rangeLabel}`, headers, csvRows)}
@@ -123,16 +135,16 @@ export default function PendingOutstandingReport({ onBack }) {
               {opt.label}
             </button>
           ))}
-          {(dateFrom || dateTo) && (
+          {!isDefaultRange && (
             <button
               type="button"
               onClick={() => {
-                setDateFrom("");
-                setDateTo("");
+                setDateFrom(daysAgoIso(30));
+                setDateTo(todayIso());
               }}
               className="px-4 py-1.5 rounded-full text-sm border border-teal-600 text-teal-700 hover:bg-teal-50"
             >
-              Clear dates
+              Last 30 days
             </button>
           )}
         </div>

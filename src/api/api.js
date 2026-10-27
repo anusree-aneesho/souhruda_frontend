@@ -270,6 +270,10 @@ export async function getHomeCollectionRequestApi(hcCode) {
   return request(`/home-collection-requests/${hcCode}`);
 }
 
+export async function getSampleScanApi(code) {
+  return request(`/sample-scan/${encodeURIComponent(code)}`);
+}
+
 export async function getNearbyTechniciansApi(hcCode) {
   return request(`/home-collection-requests/${hcCode}/nearby-technicians`);
 }

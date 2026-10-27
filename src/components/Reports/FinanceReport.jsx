@@ -16,6 +16,11 @@ const TYPE_OPTIONS = [
   { value: "home_collection", label: "Home collection" },
 ];
 
+const FILTER_TITLES = {
+  paid: "Paid orders",
+  pending: "Pending orders",
+};
+
 function TypeBreakdownCard({ title, icon: Icon, totals, loading }) {
   return (
     <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
@@ -37,10 +42,28 @@ function TypeBreakdownCard({ title, icon: Icon, totals, loading }) {
   );
 }
 
+// Makes a stat card clickable, with a ring when it is the active filter.
+function ClickableCard({ active, onClick, children }) {
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
+      className={`cursor-pointer rounded-xl transition-shadow ${
+        active ? "ring-2 ring-teal-500" : "hover:ring-1 hover:ring-teal-300"
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
 export default function FinanceReport({ onBack }) {
   const [dateFrom, setDateFrom] = useState(daysAgoIso(30));
   const [dateTo, setDateTo] = useState(todayIso());
   const [type, setType] = useState("");
+  const [filter, setFilter] = useState(""); // "" | "paid" | "pending"
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -64,15 +87,36 @@ export default function FinanceReport({ onBack }) {
     load();
   }, [load]);
 
+  function selectFilter(f) {
+    setFilter((prev) => (prev === f ? "" : f)); // click again to clear
+    setPage(1);
+  }
+
   const rows = data?.rows || [];
+  const allOrders = data?.orders || [];
   const byType = data?.summary?.by_type;
 
-  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const pagedRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  // Orders view: an order is either paid (nothing left) or pending (balance left).
+  const filteredOrders =
+    filter === "paid"
+      ? allOrders.filter((o) => o.pending <= 0)
+      : filter === "pending"
+      ? allOrders.filter((o) => o.pending > 0)
+      : [];
 
-  // Exports use ALL rows, not just the visible page.
-  const headers = ["Date", "Orders", "Lab Revenue", "Home Collection Revenue", "Revenue", "Paid", "Pending"];
-  const csvRows = rows.map((r) => [
+  const showOrders = filter !== "";
+  const list = showOrders ? filteredOrders : rows;
+
+  const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+  const pagedList = list.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Hide the column that is always ₹0 in the selected view.
+  const showPaidCol = filter !== "pending"; // hidden in the Pending view
+  const showPendingCol = filter !== "paid"; // hidden in the Paid view
+
+  // Exports use ALL rows of the current view, not just the visible page.
+  const dayHeaders = ["Date", "Orders", "Lab Revenue", "Home Collection Revenue", "Revenue", "Paid", "Pending"];
+  const dayCsvRows = rows.map((r) => [
     r.date,
     r.orders,
     r.lab_revenue,
@@ -82,6 +126,31 @@ export default function FinanceReport({ onBack }) {
     r.pending,
   ]);
 
+  const orderHeaders = [
+    "Order No",
+    "Patient",
+    "Type",
+    "Date",
+    "Revenue",
+    ...(showPaidCol ? ["Paid"] : []),
+    ...(showPendingCol ? ["Pending"] : []),
+  ];
+  const orderCsvRows = filteredOrders.map((o) => [
+    o.order_no,
+    o.patient_name,
+    o.type === "home_collection" ? "Home Collection" : "Lab",
+    o.date,
+    o.revenue,
+    ...(showPaidCol ? [o.paid] : []),
+    ...(showPendingCol ? [o.pending] : []),
+  ]);
+
+  const headers = showOrders ? orderHeaders : dayHeaders;
+  const csvRows = showOrders ? orderCsvRows : dayCsvRows;
+  const fileName = showOrders ? `finance-${filter}-orders` : "finance-report";
+  const pdfTitle = showOrders ? `Finance Report — ${FILTER_TITLES[filter]}` : "Finance Report";
+  const colCount = showOrders ? 5 + (showPaidCol ? 1 : 0) + (showPendingCol ? 1 : 0) : 7;
+
   return (
     <div className="space-y-6">
       <ReportToolbar
@@ -90,8 +159,8 @@ export default function FinanceReport({ onBack }) {
           { label: "Date From", value: dateFrom, onChange: setDateFrom, max: dateTo },
           { label: "Date To", value: dateTo, onChange: setDateTo, min: dateFrom },
         ]}
-        onExportCsv={() => exportToCsv("finance-report", headers, csvRows)}
-        onExportPdf={() => exportToPdf("Finance Report", headers, csvRows)}
+        onExportCsv={() => exportToCsv(fileName, headers, csvRows)}
+        onExportPdf={() => exportToPdf(pdfTitle, headers, csvRows)}
       />
 
       <div className="flex flex-wrap gap-2">
@@ -100,7 +169,7 @@ export default function FinanceReport({ onBack }) {
             key={opt.value}
             type="button"
             onClick={() => setType(opt.value)}
-            className={`px-4 py-1.5 rounded-full text-sm border transition-colors ${
+            className={`px-4 py-1.5 rounded-full text-sm border transition-colors cursor-pointer ${
               type === opt.value
                 ? "bg-teal-600 text-white border-teal-600"
                 : "bg-white text-gray-600 border-gray-200 hover:border-teal-400"
@@ -121,9 +190,15 @@ export default function FinanceReport({ onBack }) {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label="Total Revenue" value={formatCurrency(data?.summary?.total_revenue)} icon={IndianRupee} color="teal" />
-        <StatCard label="Paid" value={formatCurrency(data?.summary?.paid)} icon={CheckCircle2} color="green" />
-        <StatCard label="Pending" value={formatCurrency(data?.summary?.pending)} icon={Clock} color="amber" />
+        <ClickableCard active={filter === ""} onClick={() => selectFilter("")}>
+          <StatCard label="Total Revenue" value={formatCurrency(data?.summary?.total_revenue)} icon={IndianRupee} color="teal" />
+        </ClickableCard>
+        <ClickableCard active={filter === "paid"} onClick={() => selectFilter("paid")}>
+          <StatCard label="Paid" value={formatCurrency(data?.summary?.paid)} icon={CheckCircle2} color="green" />
+        </ClickableCard>
+        <ClickableCard active={filter === "pending"} onClick={() => selectFilter("pending")}>
+          <StatCard label="Pending" value={formatCurrency(data?.summary?.pending)} icon={Clock} color="amber" />
+        </ClickableCard>
       </div>
 
       {(type === "" || type === "lab" || type === "home_collection") && (
@@ -139,37 +214,79 @@ export default function FinanceReport({ onBack }) {
 
       <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900">Revenue by day</h3>
+          <h3 className="text-sm font-semibold text-gray-900">
+            {showOrders ? FILTER_TITLES[filter] : "Revenue by day"}
+          </h3>
           <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 text-left text-xs text-gray-500">
-                <th className="px-4 py-3 font-medium">Date</th>
-                <th className="px-4 py-3 font-medium">Orders</th>
-                <th className="px-4 py-3 font-medium">Lab</th>
-                <th className="px-4 py-3 font-medium">Home Collection</th>
-                <th className="px-4 py-3 font-medium">Revenue</th>
-                <th className="px-4 py-3 font-medium">Paid</th>
-                <th className="px-4 py-3 font-medium">Pending</th>
+                {showOrders ? (
+                  <>
+                    <th className="px-4 py-3 font-medium">Order</th>
+                    <th className="px-4 py-3 font-medium">Patient</th>
+                    <th className="px-4 py-3 font-medium">Type</th>
+                    <th className="px-4 py-3 font-medium">Date</th>
+                    <th className="px-4 py-3 font-medium">Revenue</th>
+                    {showPaidCol && <th className="px-4 py-3 font-medium">Paid</th>}
+                    {showPendingCol && <th className="px-4 py-3 font-medium">Pending</th>}
+                  </>
+                ) : (
+                  <>
+                    <th className="px-4 py-3 font-medium">Date</th>
+                    <th className="px-4 py-3 font-medium">Orders</th>
+                    <th className="px-4 py-3 font-medium">Lab</th>
+                    <th className="px-4 py-3 font-medium">Home Collection</th>
+                    <th className="px-4 py-3 font-medium">Revenue</th>
+                    <th className="px-4 py-3 font-medium">Paid</th>
+                    <th className="px-4 py-3 font-medium">Pending</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={colCount} className="px-4 py-8 text-center text-gray-400">
                     Loading...
                   </td>
                 </tr>
-              ) : rows.length === 0 ? (
+              ) : list.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
-                    No orders in this range.
+                  <td colSpan={colCount} className="px-4 py-8 text-center text-gray-400">
+                    {showOrders ? `No ${filter} orders in this range.` : "No orders in this range."}
                   </td>
                 </tr>
+              ) : showOrders ? (
+                pagedList.map((o) => (
+                  <tr key={o.order_no} className="border-b border-gray-50 last:border-0">
+                    <td className="px-4 py-3 text-gray-900">{o.order_no}</td>
+                    <td className="px-4 py-3 text-gray-900">{o.patient_name}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          o.type === "home_collection"
+                            ? "bg-purple-50 text-purple-700"
+                            : "bg-teal-50 text-teal-700"
+                        }`}
+                      >
+                        {o.type === "home_collection" ? o.hc_code || "Home Collection" : "Lab"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500">{o.date}</td>
+                    <td className="px-4 py-3 text-gray-900">{formatCurrency(o.revenue)}</td>
+                    {showPaidCol && (
+                      <td className="px-4 py-3 text-green-700">{formatCurrency(o.paid)}</td>
+                    )}
+                    {showPendingCol && (
+                      <td className="px-4 py-3 text-amber-700">{formatCurrency(o.pending)}</td>
+                    )}
+                  </tr>
+                ))
               ) : (
-                pagedRows.map((r) => (
+                pagedList.map((r) => (
                   <tr key={r.date} className="border-b border-gray-50 last:border-0">
                     <td className="px-4 py-3 text-gray-900">{r.date}</td>
                     <td className="px-4 py-3 text-gray-500">{r.orders}</td>

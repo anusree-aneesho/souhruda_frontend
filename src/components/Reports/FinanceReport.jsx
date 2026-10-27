@@ -159,10 +159,21 @@ export default function FinanceReport({ onBack }) {
     <div className="space-y-6">
       <ReportToolbar
         onBack={onBack}
-        fields={[
-          { label: "Date From", value: dateFrom, onChange: setDateFrom, max: dateTo },
-          { label: "Date To", value: dateTo, onChange: setDateTo, min: dateFrom },
-        ]}
+      fields={[
+        {
+          label: "Date From",
+          value: dateFrom,
+          onChange: (v) => v && setDateFrom(v),
+          max: dateTo,
+        },
+        {
+          label: "Date To",
+          value: dateTo,
+          onChange: (v) => v && v <= todayIso() && setDateTo(v),
+          min: dateFrom,
+          max: todayIso(),
+        },
+      ]}
         onExportCsv={() => exportToCsv(fileName, headers, csvRows)}
         onExportPdf={() => exportToPdf(pdfTitle, headers, csvRows)}
       />

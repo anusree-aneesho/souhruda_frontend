@@ -771,6 +771,16 @@ export async function getFinanceReportApi({ dateFrom, dateTo, type } = {}) {
   return request(`/reports/finance${qs ? `?${qs}` : ""}`);
 }
 
+export async function getGstReportApi({ dateFrom, dateTo, type, branchId } = {}) {
+  const params = new URLSearchParams();
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  if (type) params.append("type", type);
+  if (branchId) params.append("branch_id", branchId);
+  const qs = params.toString();
+  return request(`/reports/finance/gst${qs ? `?${qs}` : ""}`);
+}
+
 export async function getDailyRevenueReportApi({ date, type } = {}) {
   const params = new URLSearchParams();
   if (date) params.append("date", date);

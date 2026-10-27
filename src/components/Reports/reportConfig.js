@@ -64,6 +64,7 @@ import TestsQuickTable from "./TestsQuickTable";
 import DailyRevenueReport from "./DailyRevenueReport";
 import DiscountsReport from "./DiscountsReport";
 import FinanceQuickView from "./FinanceQuickView";
+import GstReport from "./GstReport";
 import PaymentCollectionReport from "./PaymentCollectionReport";
 import PendingOutstandingReport from "./PendingOutstandingReport"; 
 
@@ -228,7 +229,7 @@ export const REPORT_CATEGORIES = [
         title: "GST / Tax Report",
         description: "Tax collected, ready for filing.",
         icon: Receipt,
-        component: null,
+        component: GstReport,
       },
     ],
   },

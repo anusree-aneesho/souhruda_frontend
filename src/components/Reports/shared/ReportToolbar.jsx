@@ -6,6 +6,7 @@ const inputClass =
 
 export default function ReportToolbar({
   onBack,
+  backLabel = "Back to Reports",
   fields = [], // [{ label, type: 'date'|'month'|'number', value, onChange, min, max, ...props }]
   search,
   onSearchChange,
@@ -23,7 +24,7 @@ export default function ReportToolbar({
           className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 w-fit cursor-pointer"
         >
           <ArrowLeft size={16} />
-          Back to Reports
+          {backLabel}
         </button>
       )}
 

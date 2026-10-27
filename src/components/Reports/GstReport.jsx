@@ -94,9 +94,9 @@ export default function GstReport({ onBack, viewMode = "super_admin", fixedBranc
         onBack={showOrders && !isAdmin ? () => setBranchId("") : onBack}
         backLabel={showOrders && !isAdmin ? "Back to Branch Report" : "Back to Reports"}
         fields={[
-          { label: "Date From", value: dateFrom, onChange: setDateFrom, max: dateTo },
-          { label: "Date To", value: dateTo, onChange: setDateTo, min: dateFrom },
-        ]}
+            { label: "Date From", value: dateFrom, onChange: setDateFrom, max: dateTo },
+            { label: "Date To", value: dateTo, onChange: setDateTo, min: dateFrom, max: todayIso() },
+            ]}
         // Branch dropdown (super admin only) — reuses the toolbar's select slot.
         {...(!isAdmin && {
           search: branchId,

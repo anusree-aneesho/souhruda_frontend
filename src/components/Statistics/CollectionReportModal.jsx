@@ -57,11 +57,18 @@ export default function CollectionReportModal({ open, range, onRangeChange, onCl
 
   const allRows = report?.rows ?? [];
   const rows = tab === "all" ? allRows : allRows.filter((r) => r.type === tab);
-  // Use the server total for "All", otherwise sum the filtered rows
+
+  // Footer totals come from the server (summed straight from the orders table),
+  // so they stay exact even when the table is limited to 500 rows.
   const totalBill =
-    tab === "all" && report?.totalBill != null
-      ? report.totalBill
-      : rows.reduce((s, r) => s + Number(r.bill_total || 0), 0);
+    tab === "lab" ? report?.labBill
+    : tab === "home" ? report?.homeBill
+    : report?.totalBill;
+
+  const totalPaid =
+    tab === "lab" ? report?.labPaid
+    : tab === "home" ? report?.homePaid
+    : report?.totalPaid;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -163,7 +170,8 @@ export default function CollectionReportModal({ open, range, onRangeChange, onCl
                   <th className="text-left font-medium px-2 py-2.5">Type</th>
                   <th className="text-left font-medium px-2 py-2.5">Date</th>
                   <th className="text-left font-medium px-2 py-2.5">Status</th>
-                  <th className="text-right font-medium px-6 py-2.5">Bill</th>
+                  <th className="text-right font-medium px-2 py-2.5">Bill</th>
+                  <th className="text-right font-medium px-6 py-2.5">Paid</th>
                 </tr>
               </thead>
               <tbody>
@@ -195,7 +203,14 @@ export default function CollectionReportModal({ open, range, onRangeChange, onCl
                         {statusLabels[r.status] ?? r.status}
                       </span>
                     </td>
-                    <td className="px-6 py-3 text-right font-medium text-gray-900">{formatMoney(r.bill_total)}</td>
+                    <td className="px-2 py-3 text-right text-gray-500">{formatMoney(r.bill_total)}</td>
+                    <td
+                      className={`px-6 py-3 text-right font-medium ${
+                        Number(r.paid_amount) > 0 ? "text-gray-900" : "text-gray-400"
+                      }`}
+                    >
+                      {formatMoney(r.paid_amount)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -207,6 +222,8 @@ export default function CollectionReportModal({ open, range, onRangeChange, onCl
         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50">
           <span className="text-sm text-gray-600">
             Total bill: <span className="font-semibold text-gray-900">{loading ? "…" : formatMoney(totalBill)}</span>
+            <span className="mx-2 text-gray-300">|</span>
+            Total paid: <span className="font-semibold text-gray-900">{loading ? "…" : formatMoney(totalPaid)}</span>
           </span>
           <button
             type="button"

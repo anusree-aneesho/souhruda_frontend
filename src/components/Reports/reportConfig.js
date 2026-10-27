@@ -223,13 +223,6 @@ export const REPORT_CATEGORIES = [
         component: DiscountsReport,
       },
       {
-        key: "refunds",
-        title: "Refunds",
-        description: "Refunds issued and the reason for each.",
-        icon: RotateCcw,
-        component: null,
-      },
-      {
         key: "gst-tax",
         title: "GST / Tax Report",
         description: "Tax collected, ready for filing.",

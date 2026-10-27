@@ -986,3 +986,13 @@ export async function getTestVolumeReportApi({ dateFrom, dateTo, q } = {}) {
 export async function getOrdersListForRangeApi(range = "Today") {
   return request(`/statistics/orders-list?range=${encodeURIComponent(range)}`);
 }
+
+export async function getPendingOutstandingReportApi({ type, q, dateFrom, dateTo } = {}) {
+  const params = new URLSearchParams();
+  if (type) params.append("type", type);
+  if (q) params.append("q", q);
+  if (dateFrom) params.append("date_from", dateFrom);
+  if (dateTo) params.append("date_to", dateTo);
+  const qs = params.toString();
+  return request(`/reports/finance/pending-outstanding${qs ? `?${qs}` : ""}`);
+}

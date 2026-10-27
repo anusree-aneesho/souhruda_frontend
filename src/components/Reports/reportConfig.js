@@ -65,6 +65,7 @@ import DailyRevenueReport from "./DailyRevenueReport";
 import DiscountsReport from "./DiscountsReport";
 import FinanceQuickView from "./FinanceQuickView";
 import PaymentCollectionReport from "./PaymentCollectionReport";
+import PendingOutstandingReport from "./PendingOutstandingReport"; 
 
 
 export const REPORT_CATEGORIES = [
@@ -211,9 +212,9 @@ export const REPORT_CATEGORIES = [
       {
         key: "pending-outstanding",
         title: "Pending / Outstanding",
-        description: "Unpaid and partially paid balances by patient.",
+         description: "Unpaid balances by patient.",
         icon: AlertCircle,
-        component: null,
+        component: PendingOutstandingReport,
       },
       {
         key: "discounts",

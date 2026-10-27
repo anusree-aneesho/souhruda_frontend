@@ -47,10 +47,28 @@ function SummaryTable({ title, labelHeader, rows, labelKey, loading }) {
   );
 }
 
+// Makes a stat card clickable, with a ring when it is the active filter.
+function ClickableCard({ active, onClick, children }) {
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
+      className={`cursor-pointer rounded-xl transition-shadow ${
+        active ? "ring-2 ring-teal-500" : "hover:ring-1 hover:ring-teal-300"
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
 export default function PaymentCollectionReport({ onBack }) {
   const [dateFrom, setDateFrom] = useState(daysAgoIso(30));
   const [dateTo, setDateTo] = useState(todayIso());
   const [type, setType] = useState("");
+  const [mode, setMode] = useState(""); // "" | "Cash" | "UPI" | "Card"
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -73,8 +91,14 @@ export default function PaymentCollectionReport({ onBack }) {
     load();
   }, [load]);
 
+  function selectMode(m) {
+    setMode((prev) => (prev === m ? "" : m)); // click again to clear
+    setPage(1);
+  }
+
   const s = data?.summary;
-  const orders = data?.orders || [];
+  const allOrders = data?.orders || [];
+  const orders = mode ? allOrders.filter((o) => o.mode_label === mode) : allOrders;
   const byMode = data?.by_mode || [];
   // When a type filter is active, only show that type's row.
   const byType = (data?.by_type || []).filter((r) => !type || r.key === type);
@@ -83,7 +107,7 @@ export default function PaymentCollectionReport({ onBack }) {
   const totalPages = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
   const pagedOrders = orders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // Exports use ALL orders, not just the visible page.
+  // Exports use ALL orders of the selected mode, not just the visible page.
   const headers = ["Order No", "Patient", "Type", "Mode", "Date", "Amount"];
   const csvRows = orders.map((o) => [
     o.order_no,
@@ -93,6 +117,7 @@ export default function PaymentCollectionReport({ onBack }) {
     o.date,
     o.amount,
   ]);
+  const modeSuffix = mode ? ` (${mode})` : "";
 
   return (
     <div className="space-y-6">
@@ -102,8 +127,8 @@ export default function PaymentCollectionReport({ onBack }) {
           { label: "From", value: dateFrom, onChange: (v) => v && setDateFrom(v), max: dateTo },
           { label: "To", value: dateTo, onChange: (v) => v && setDateTo(v), max: todayIso() },
         ]}
-        onExportCsv={() => exportToCsv(`payment-collection-${dateFrom}-to-${dateTo}`, headers, csvRows)}
-        onExportPdf={() => exportToPdf(`Payment Collection — ${dateFrom} to ${dateTo}`, headers, csvRows)}
+        onExportCsv={() => exportToCsv(`payment-collection-${dateFrom}-to-${dateTo}${mode ? `-${mode.toLowerCase()}` : ""}`, headers, csvRows)}
+        onExportPdf={() => exportToPdf(`Payment Collection${modeSuffix} — ${dateFrom} to ${dateTo}`, headers, csvRows)}
       />
 
       <div className="flex flex-wrap gap-2">
@@ -126,10 +151,18 @@ export default function PaymentCollectionReport({ onBack }) {
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Collected" value={loading ? "—" : formatCurrency(s?.total_collected)} icon={Wallet} color="teal" />
-        <StatCard label="Cash" value={loading ? "—" : formatCurrency(s?.cash)} icon={Banknote} color="green" />
-        <StatCard label="UPI" value={loading ? "—" : formatCurrency(s?.upi)} icon={Smartphone} color="blue" />
-        <StatCard label="Card" value={loading ? "—" : formatCurrency(s?.card)} icon={CreditCard} color="amber" />
+        <ClickableCard active={mode === ""} onClick={() => selectMode("")}>
+          <StatCard label="Total Collected" value={loading ? "—" : formatCurrency(s?.total_collected)} icon={Wallet} color="teal" />
+        </ClickableCard>
+        <ClickableCard active={mode === "Cash"} onClick={() => selectMode("Cash")}>
+          <StatCard label="Cash" value={loading ? "—" : formatCurrency(s?.cash)} icon={Banknote} color="green" />
+        </ClickableCard>
+        <ClickableCard active={mode === "UPI"} onClick={() => selectMode("UPI")}>
+          <StatCard label="UPI" value={loading ? "—" : formatCurrency(s?.upi)} icon={Smartphone} color="blue" />
+        </ClickableCard>
+        <ClickableCard active={mode === "Card"} onClick={() => selectMode("Card")}>
+          <StatCard label="Card" value={loading ? "—" : formatCurrency(s?.card)} icon={CreditCard} color="amber" />
+        </ClickableCard>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -139,7 +172,9 @@ export default function PaymentCollectionReport({ onBack }) {
 
       <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900">Payments collected</h3>
+          <h3 className="text-sm font-semibold text-gray-900">
+            Payments collected{mode ? ` — ${mode} only` : ""}
+          </h3>
           <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
         <div className="overflow-x-auto">

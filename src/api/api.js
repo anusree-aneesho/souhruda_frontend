@@ -789,10 +789,11 @@ export async function getDailyRevenueReportApi({ date, type } = {}) {
   return request(`/reports/finance/daily-revenue${qs ? `?${qs}` : ""}`);
 }
 
-export async function getDiscountsReportApi({ dateFrom, dateTo } = {}) {
+export async function getDiscountsReportApi({ dateFrom, dateTo, type } = {}) {
   const params = new URLSearchParams();
   if (dateFrom) params.append("date_from", dateFrom);
   if (dateTo) params.append("date_to", dateTo);
+  if (type) params.append("type", type);
   const qs = params.toString();
   return request(`/reports/finance/discounts${qs ? `?${qs}` : ""}`);
 }

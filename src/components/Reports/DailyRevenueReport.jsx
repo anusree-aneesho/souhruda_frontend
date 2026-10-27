@@ -22,6 +22,11 @@ const STATUS_LABEL = {
   completed: "Completed",
 };
 
+const FILTER_TITLES = {
+  paid: "Paid orders on this day",
+  pending: "Pending orders on this day",
+};
+
 function formatLongDate(iso) {
   if (!iso) return "";
   const d = new Date(`${iso}T00:00:00`);
@@ -54,9 +59,27 @@ function TypeCard({ title, icon: Icon, totals, loading }) {
   );
 }
 
+// Makes a stat card clickable, with a ring when it is the active filter.
+function ClickableCard({ active, onClick, children }) {
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
+      className={`cursor-pointer rounded-xl transition-shadow ${
+        active ? "ring-2 ring-teal-500" : "hover:ring-1 hover:ring-teal-300"
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
 export default function DailyRevenueReport({ onBack }) {
   const [date, setDate] = useState(todayIso());
   const [type, setType] = useState("");
+  const [filter, setFilter] = useState(""); // "" | "paid" | "pending"
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -80,16 +103,43 @@ export default function DailyRevenueReport({ onBack }) {
     load();
   }, [load]);
 
+  function selectFilter(f) {
+    setFilter((prev) => (prev === f ? "" : f)); // click again to clear
+    setPage(1);
+  }
+
   const summary = data?.summary;
   const byType = summary?.by_type;
-  const orders = data?.orders || [];
+  const allOrders = data?.orders || [];
   const isToday = date === todayIso();
+
+  // An order is either paid (nothing left) or pending (balance left).
+  const orders =
+    filter === "paid"
+      ? allOrders.filter((o) => o.pending <= 0)
+      : filter === "pending"
+      ? allOrders.filter((o) => o.pending > 0)
+      : allOrders;
+
+  // Hide the column that is always ₹0 in the selected view.
+  const showPaidCol = filter !== "pending";
+  const showPendingCol = filter !== "paid";
+  const colCount = 6 + (showPaidCol ? 1 : 0) + (showPendingCol ? 1 : 0);
 
   const totalPages = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
   const pagedOrders = orders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // Exports use ALL orders, not just the visible page.
-  const headers = ["Order No", "Patient", "Type", "Time", "Status", "Revenue", "Paid", "Pending"];
+  // Exports use ALL orders of the current view, not just the visible page.
+  const headers = [
+    "Order No",
+    "Patient",
+    "Type",
+    "Time",
+    "Status",
+    "Revenue",
+    ...(showPaidCol ? ["Paid"] : []),
+    ...(showPendingCol ? ["Pending"] : []),
+  ];
   const csvRows = orders.map((o) => [
     o.order_no,
     o.patient_name,
@@ -97,17 +147,19 @@ export default function DailyRevenueReport({ onBack }) {
     o.time,
     STATUS_LABEL[o.status] || o.status,
     o.revenue,
-    o.paid,
-    o.pending,
+    ...(showPaidCol ? [o.paid] : []),
+    ...(showPendingCol ? [o.pending] : []),
   ]);
+  const fileName = `daily-revenue-${date}${filter ? `-${filter}` : ""}`;
+  const pdfTitle = `Daily Revenue${filter ? ` (${filter})` : ""} — ${date}`;
 
   return (
     <div className="space-y-6">
       <ReportToolbar
         onBack={onBack}
         fields={[{ label: "Date", value: date, onChange: (v) => v && setDate(v), max: todayIso() }]}
-        onExportCsv={() => exportToCsv(`daily-revenue-${date}`, headers, csvRows)}
-        onExportPdf={() => exportToPdf(`Daily Revenue — ${date}`, headers, csvRows)}
+        onExportCsv={() => exportToCsv(fileName, headers, csvRows)}
+        onExportPdf={() => exportToPdf(pdfTitle, headers, csvRows)}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -123,7 +175,7 @@ export default function DailyRevenueReport({ onBack }) {
             <button
               type="button"
               onClick={() => setDate(todayIso())}
-              className="px-4 py-1.5 rounded-full text-sm border border-teal-600 text-teal-700 hover:bg-teal-50"
+              className="px-4 py-1.5 rounded-full text-sm border border-teal-600 text-teal-700 hover:bg-teal-50 cursor-pointer"
             >
               Back to today
             </button>
@@ -133,7 +185,7 @@ export default function DailyRevenueReport({ onBack }) {
               key={opt.value}
               type="button"
               onClick={() => setType(opt.value)}
-              className={`px-4 py-1.5 rounded-full text-sm border transition-colors ${
+              className={`px-4 py-1.5 rounded-full text-sm border transition-colors cursor-pointer ${
                 type === opt.value
                   ? "bg-teal-600 text-white border-teal-600"
                   : "bg-white text-gray-600 border-gray-200 hover:border-teal-400"
@@ -154,24 +206,31 @@ export default function DailyRevenueReport({ onBack }) {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Revenue" value={loading ? "—" : formatCurrency(summary?.total_revenue)} icon={IndianRupee} color="teal" />
-        <StatCard label="Paid" value={loading ? "—" : formatCurrency(summary?.paid)} icon={CheckCircle2} color="green" />
-        <StatCard label="Pending" value={loading ? "—" : formatCurrency(summary?.pending)} icon={Clock} color="amber" />
+        <ClickableCard active={filter === ""} onClick={() => selectFilter("")}>
+          <StatCard label="Revenue" value={loading ? "—" : formatCurrency(summary?.total_revenue)} icon={IndianRupee} color="teal" />
+        </ClickableCard>
+        <ClickableCard active={filter === "paid"} onClick={() => selectFilter("paid")}>
+          <StatCard label="Paid" value={loading ? "—" : formatCurrency(summary?.paid)} icon={CheckCircle2} color="green" />
+        </ClickableCard>
+        <ClickableCard active={filter === "pending"} onClick={() => selectFilter("pending")}>
+          <StatCard label="Pending" value={loading ? "—" : formatCurrency(summary?.pending)} icon={Clock} color="amber" />
+        </ClickableCard>
         <StatCard label="Orders" value={loading ? "—" : summary?.orders ?? 0} icon={ClipboardList} color="blue" />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {type !== "home_collection" && (
+      {/* Lab / Home Collection breakdown: only shown for "All orders" */}
+      {type === "" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <TypeCard title="Lab Orders" icon={FlaskConical} totals={byType?.lab} loading={loading} />
-        )}
-        {type !== "lab" && (
           <TypeCard title="Home Collection" icon={Home} totals={byType?.home_collection} loading={loading} />
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900">Orders on this day</h3>
+          <h3 className="text-sm font-semibold text-gray-900">
+            {filter ? FILTER_TITLES[filter] : "Orders on this day"}
+          </h3>
           <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
         <div className="overflow-x-auto">
@@ -184,21 +243,21 @@ export default function DailyRevenueReport({ onBack }) {
                 <th className="px-4 py-3 font-medium">Time</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Revenue</th>
-                <th className="px-4 py-3 font-medium">Paid</th>
-                <th className="px-4 py-3 font-medium">Pending</th>
+                {showPaidCol && <th className="px-4 py-3 font-medium">Paid</th>}
+                {showPendingCol && <th className="px-4 py-3 font-medium">Pending</th>}
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={colCount} className="px-4 py-8 text-center text-gray-400">
                     Loading...
                   </td>
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
-                    No orders on this date.
+                  <td colSpan={colCount} className="px-4 py-8 text-center text-gray-400">
+                    {filter ? `No ${filter} orders on this date.` : "No orders on this date."}
                   </td>
                 </tr>
               ) : (
@@ -220,8 +279,12 @@ export default function DailyRevenueReport({ onBack }) {
                     <td className="px-4 py-3 text-gray-500">{o.time}</td>
                     <td className="px-4 py-3 text-gray-500">{STATUS_LABEL[o.status] || o.status}</td>
                     <td className="px-4 py-3 text-gray-900">{formatCurrency(o.revenue)}</td>
-                    <td className="px-4 py-3 text-green-700">{formatCurrency(o.paid)}</td>
-                    <td className="px-4 py-3 text-amber-700">{formatCurrency(o.pending)}</td>
+                    {showPaidCol && (
+                      <td className="px-4 py-3 text-green-700">{formatCurrency(o.paid)}</td>
+                    )}
+                    {showPendingCol && (
+                      <td className="px-4 py-3 text-amber-700">{formatCurrency(o.pending)}</td>
+                    )}
                   </tr>
                 ))
               )}

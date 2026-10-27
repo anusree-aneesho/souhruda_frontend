@@ -11,10 +11,12 @@ import AlertModal from "../../common/Modal/AlertModal";
 import { getOrderApi, saveOrderResultsApi, completeOrderApi, deleteOrderApi } from "../../../api/api";
 import { calculateFlag } from "../../../utils/calculateFlag";
 import ConfirmCompleteOrderModal from "./ConfirmCompleteOrderModal";
+import PrintOrderLabelModal from "./PrintOrderLabelModal";
 import EditRangeModal from "./EditRangeModal";
 
 function mapOrder(o) {
   return {
+    barcode: o.barcode ?? null,
     patient: {
       name: o.patient?.display_name || [o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" ") || "Unknown",
       age: o.patient?.age ?? "-",
@@ -82,6 +84,7 @@ export default function OrderDetail() {
   const [savingAction, setSavingAction] = useState(null);
   const [saveError, setSaveError] = useState(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [labelOpen, setLabelOpen] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
 
   const [confirmingComplete, setConfirmingComplete] = useState(false);
@@ -276,6 +279,8 @@ export default function OrderDetail() {
         isHomeCollection={Boolean(order?.isHomeCollection)}
         // Once the sample is collected the order can no longer be cancelled from here.
         canCancel={order?.status === "pending"}
+        barcode={order?.barcode}
+        onPrintLabel={() => setLabelOpen(true)}
       />
       <ResultsTable
         tests={tests}
@@ -339,6 +344,17 @@ export default function OrderDetail() {
             setEditingRange(null);
             showToast(`Normal range updated for ${name}`);
           }}
+        />
+      )}
+
+      {labelOpen && (
+        <PrintOrderLabelModal
+          orderNo={orderId}
+          barcode={order?.barcode}
+          patient={patient}
+          testNames={tests.map((t) => t.name).filter(Boolean)}
+          orderedAt={formattedOrderedAt}
+          onClose={() => setLabelOpen(false)}
         />
       )}
 

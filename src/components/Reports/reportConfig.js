@@ -67,6 +67,7 @@ import FinanceQuickView from "./FinanceQuickView";
 import GstReport from "./GstReport";
 import PaymentCollectionReport from "./PaymentCollectionReport";
 import PendingOutstandingReport from "./PendingOutstandingReport"; 
+import TestWiseRevenueReport from "./TestWiseRevenueReport";
 
 
 export const REPORT_CATEGORIES = [
@@ -123,7 +124,7 @@ export const REPORT_CATEGORIES = [
         title: "Test-wise Revenue",
         description: "Revenue contribution broken down by test.",
         icon: IndianRupee,
-        component: null,
+        component: TestWiseRevenueReport,
       },
       {
         key: "test-volume",

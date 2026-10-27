@@ -1,6 +1,6 @@
 // src/components/Reports/FinanceReport.jsx
 import { useState, useEffect, useCallback } from "react";
-import { IndianRupee, CheckCircle2, Clock, FlaskConical, Home } from "lucide-react";
+import { IndianRupee, CheckCircle2, Clock, ClipboardList, FlaskConical, Home } from "lucide-react";
 import StatCard from "../common/StatCard";
 import ReportToolbar from "./shared/ReportToolbar";
 import Pagination from "./shared/Pagination";
@@ -96,6 +96,10 @@ export default function FinanceReport({ onBack }) {
   const allOrders = data?.orders || [];
   const byType = data?.summary?.by_type;
 
+  // Uses the API's order count if present, otherwise sums the per-day rows.
+  const totalOrders =
+    data?.summary?.orders ?? rows.reduce((sum, r) => sum + (r.orders || 0), 0);
+
   // Orders view: an order is either paid (nothing left) or pending (balance left).
   const filteredOrders =
     filter === "paid"
@@ -189,7 +193,7 @@ export default function FinanceReport({ onBack }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <ClickableCard active={filter === ""} onClick={() => selectFilter("")}>
           <StatCard label="Total Revenue" value={formatCurrency(data?.summary?.total_revenue)} icon={IndianRupee} color="teal" />
         </ClickableCard>
@@ -199,16 +203,14 @@ export default function FinanceReport({ onBack }) {
         <ClickableCard active={filter === "pending"} onClick={() => selectFilter("pending")}>
           <StatCard label="Pending" value={formatCurrency(data?.summary?.pending)} icon={Clock} color="amber" />
         </ClickableCard>
+        <StatCard label="Total Orders" value={loading ? "—" : totalOrders} icon={ClipboardList} color="blue" />
       </div>
 
-      {(type === "" || type === "lab" || type === "home_collection") && (
+      {/* Lab / Home Collection breakdown: only shown for "All orders" */}
+      {type === "" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {type !== "home_collection" && (
-            <TypeBreakdownCard title="Lab Orders" icon={FlaskConical} totals={byType?.lab} loading={loading} />
-          )}
-          {type !== "lab" && (
-            <TypeBreakdownCard title="Home Collection" icon={Home} totals={byType?.home_collection} loading={loading} />
-          )}
+          <TypeBreakdownCard title="Lab Orders" icon={FlaskConical} totals={byType?.lab} loading={loading} />
+          <TypeBreakdownCard title="Home Collection" icon={Home} totals={byType?.home_collection} loading={loading} />
         </div>
       )}
 

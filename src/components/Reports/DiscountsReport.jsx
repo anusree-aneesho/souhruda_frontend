@@ -1,3 +1,4 @@
+// src/components/Reports/DiscountsReport.jsx
 import { useState, useEffect, useCallback } from "react";
 import { Percent, IndianRupee, ClipboardList, TrendingDown } from "lucide-react";
 import StatCard from "../common/StatCard";
@@ -8,6 +9,12 @@ import { exportToCsv, exportToPdf } from "../../utils/reportExport";
 import { getDiscountsReportApi } from "../../api/api";
 
 const PAGE_SIZE = 10;
+
+const TYPE_OPTIONS = [
+  { value: "", label: "All orders" },
+  { value: "lab", label: "Lab orders" },
+  { value: "home_collection", label: "Home collection" },
+];
 
 function daysAgoIso(n) {
   const d = new Date();
@@ -52,6 +59,7 @@ function SummaryTable({ title, labelHeader, rows, labelKey, loading }) {
 export default function DiscountsReport({ onBack }) {
   const [dateFrom, setDateFrom] = useState(daysAgoIso(30));
   const [dateTo, setDateTo] = useState(todayIso());
+  const [type, setType] = useState(""); // "" | "lab" | "home_collection"
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -60,15 +68,15 @@ export default function DiscountsReport({ onBack }) {
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
-    setPage(1); // back to the first page whenever the range changes
+    setPage(1); // back to the first page whenever the filters change
     try {
-      setData(await getDiscountsReportApi({ dateFrom, dateTo }));
+      setData(await getDiscountsReportApi({ dateFrom, dateTo, type }));
     } catch (err) {
       setError(err.message || "Failed to load report.");
     } finally {
       setLoading(false);
     }
-  }, [dateFrom, dateTo]);
+  }, [dateFrom, dateTo, type]);
 
   useEffect(() => {
     load();
@@ -96,6 +104,9 @@ export default function DiscountsReport({ onBack }) {
     o.percent,
   ]);
 
+  const typeSuffix = type ? `-${type}` : "";
+  const typeLabel = TYPE_OPTIONS.find((t) => t.value === type)?.label;
+
   return (
     <div className="space-y-6">
       <ReportToolbar
@@ -104,9 +115,32 @@ export default function DiscountsReport({ onBack }) {
           { label: "From", value: dateFrom, onChange: (v) => v && setDateFrom(v), max: dateTo },
           { label: "To", value: dateTo, onChange: (v) => v && setDateTo(v), max: todayIso() },
         ]}
-        onExportCsv={() => exportToCsv(`discounts-${dateFrom}-to-${dateTo}`, headers, csvRows)}
-        onExportPdf={() => exportToPdf(`Discounts — ${dateFrom} to ${dateTo}`, headers, csvRows)}
+        onExportCsv={() => exportToCsv(`discounts-${dateFrom}-to-${dateTo}${typeSuffix}`, headers, csvRows)}
+        onExportPdf={() =>
+          exportToPdf(
+            `Discounts${type ? ` (${typeLabel})` : ""} — ${dateFrom} to ${dateTo}`,
+            headers,
+            csvRows
+          )
+        }
       />
+
+      <div className="flex flex-wrap gap-2">
+        {TYPE_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => setType(opt.value)}
+            className={`px-4 py-1.5 rounded-full text-sm border transition-colors cursor-pointer ${
+              type === opt.value
+                ? "bg-teal-600 text-white border-teal-600"
+                : "bg-white text-gray-600 border-gray-200 hover:border-teal-400"
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
@@ -117,9 +151,12 @@ export default function DiscountsReport({ onBack }) {
         <StatCard label="Avg Discount" value={loading ? "—" : `${s?.avg_percent ?? 0}%`} icon={Percent} color="green" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* "By order type" only makes sense for All orders */}
+      <div className={`grid grid-cols-1 gap-4 ${type === "" ? "lg:grid-cols-2" : ""}`}>
         <SummaryTable title="By staff" labelHeader="Staff" rows={byStaff} labelKey="staff" loading={loading} />
-        <SummaryTable title="By order type" labelHeader="Type" rows={byType} labelKey="type" loading={loading} />
+        {type === "" && (
+          <SummaryTable title="By order type" labelHeader="Type" rows={byType} labelKey="type" loading={loading} />
+        )}
       </div>
 
       <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">

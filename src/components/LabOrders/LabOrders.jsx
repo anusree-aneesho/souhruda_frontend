@@ -34,13 +34,14 @@ function tabToStatus(tab) {
 }
 
 // gstRate is passed in so the BILL column shows the real payable total
-// (tests − discount + GST) — the same figure the dashboard revenue uses.
+// (tests − discount + home visit fee + GST) — the same figure the bill shows.
 function mapOrder(o, gstRate = 0) {
   const { grandTotal } = calcBillTotals({
     testsTotal: Number(o.bill_total) || 0,
     discountType: o.discount_type || "percentage",
     discountValue: Number(o.discount_value) || 0,
-    homeVisitFee: 0,
+    // CHANGED: home collection orders also carry the home visit fee (0 for normal lab orders)
+    homeVisitFee: Number(o.home_visit_fee) || 0,
     gstRate,
   });
 

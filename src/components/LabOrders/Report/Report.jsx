@@ -202,7 +202,11 @@ export default function Report() {
     discount.type === "percentage"
       ? (subtotal * Number(discount.value || 0)) / 100
       : Number(discount.value || 0);
-  const payableAmount = Math.max(0, subtotal + homeVisitFee - discountAmount);
+  // ADDED: GST, only when the branch is GST registered
+  const gstRate = gstInfo?.is_gst_registered ? Number(gstInfo.gst_rate || 0) : 0;
+  const taxableAmount = Math.max(0, subtotal + homeVisitFee - discountAmount);
+  const gstAmount = Math.round(subtotal * gstRate) / 100;
+  const payableAmount = taxableAmount + gstAmount;
 
   const ageText =
     patient.age !== undefined && patient.age !== null && patient.age !== "-" && patient.age !== ""
@@ -1070,6 +1074,13 @@ export default function Report() {
                     Discount{discount.type === "percentage" ? ` (${discount.value}%)` : ""}
                   </span>
                   <span>− ₹{discountAmount.toFixed(2)}</span>
+                </div>
+              )}
+              {/* ADDED: GST row */}
+              {gstAmount > 0 && (
+                <div className="flex justify-between text-gray-600">
+                  <span>GST ({gstRate}%)</span>
+                  <span>₹{gstAmount.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between border-t border-gray-200 pt-2 font-semibold text-gray-900">

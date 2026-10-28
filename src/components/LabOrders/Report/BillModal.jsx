@@ -274,16 +274,19 @@ export default function BillModal({
   .totals { width: 100%; margin-top: 6px; border-collapse: collapse; }
   .totals td { padding: 5px 12px; font-size: 12px; }
   .totals .label { color: #6b7280; text-align: right; }
-  .totals .value { color: #374151; text-align: right; width: 110px; font-weight: 500; }
+  /* nowrap keeps "Rs. 2500.00" on a single line */
+  .totals .value { color: #374151; text-align: right; width: 110px; font-weight: 500; white-space: nowrap; }
   .totals .discount-row .label, .totals .discount-row .value { color: #15803d; }
-  .totals .grand-row td { border-top: 2px solid #0d9488; padding-top: 12px; font-size: 15px; font-weight: 700; }
+  .totals .grand-row td { border-top: 2px solid #0d9488; padding-top: 12px; font-size: 15px; font-weight: 700; white-space: nowrap; }
   .totals .grand-row .label { color: #0f766e; }
   .totals .grand-row .value { color: #0f766e; }
 
-  /* Paid state: green box, same look as the on-screen modal */
-  .totals .grand-row.paid td { background: #f0fdf4; border-top: none; padding: 12px 16px; }
+  /* Paid state: green box, same look as the on-screen modal.
+     The value cell shrinks to fit its content (width: 1% + nowrap) so the
+     amount never wraps; the "Paid" label takes the remaining space. */
+  .totals .grand-row.paid td { background: #f0fdf4; border-top: none; padding: 12px 16px; white-space: nowrap; }
   .totals .grand-row.paid td:first-child { border-radius: 8px 0 0 8px; text-align: right; }
-  .totals .grand-row.paid td:last-child { border-radius: 0 8px 8px 0; }
+  .totals .grand-row.paid td:last-child { border-radius: 0 8px 8px 0; width: 1%; }
   .totals .grand-row.paid .label,
   .totals .grand-row.paid .value { color: #15803d; }
 
@@ -512,7 +515,7 @@ export default function BillModal({
                   <span className="text-sm text-gray-900">
                     {pkg.name} <span className="text-xs text-gray-400">(package)</span>
                   </span>
-                  <span className="text-sm text-gray-700">Rs. {pkg.price.toFixed(2)}</span>
+                  <span className="text-sm text-gray-700 whitespace-nowrap">Rs. {pkg.price.toFixed(2)}</span>
                 </div>
                 <p className="text-xs text-gray-400 mt-0.5">
                   {pkg.tests.map((t) => t.name).join(", ")}
@@ -525,7 +528,7 @@ export default function BillModal({
                 className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
               >
                 <span className="text-sm text-gray-900">{test.name}</span>
-                <span className="text-sm text-gray-700">Rs. {test.price.toFixed(2)}</span>
+                <span className="text-sm text-gray-700 whitespace-nowrap">Rs. {test.price.toFixed(2)}</span>
               </div>
             ))}
 
@@ -549,18 +552,18 @@ export default function BillModal({
               <div className="mt-3 space-y-1">
                 <div className="flex items-center justify-between text-sm text-gray-600">
                   <span>Tests total</span>
-                  <span>Rs. {testsSubtotal.toFixed(2)}</span>
+                  <span className="whitespace-nowrap">Rs. {testsSubtotal.toFixed(2)}</span>
                 </div>
                 {discountNum > 0 && (
                   <div className="flex items-center justify-between text-sm text-green-700">
                     <span>Discount{isPercentage ? ` (${discountNum}%)` : ""}</span>
-                    <span>− Rs. {discountAmount.toFixed(2)}</span>
+                    <span className="whitespace-nowrap">− Rs. {discountAmount.toFixed(2)}</span>
                   </div>
                 )}
                 {homeVisitFee > 0 && (
                   <div className="flex items-center justify-between text-sm text-gray-600">
                     <span>Home visit fee</span>
-                    <span>Rs. {Number(homeVisitFee).toFixed(2)}</span>
+                    <span className="whitespace-nowrap">Rs. {Number(homeVisitFee).toFixed(2)}</span>
                   </div>
                 )}
               </div>
@@ -570,11 +573,11 @@ export default function BillModal({
               <div className="mt-3 space-y-1">
                 <div className="flex items-center justify-between text-sm text-gray-600">
                   <span>Subtotal</span>
-                  <span>Rs. {subtotal.toFixed(2)}</span>
+                  <span className="whitespace-nowrap">Rs. {subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm text-gray-600">
                   <span>GST ({gstRate}%)</span>
-                  <span>Rs. {gstAmount.toFixed(2)}</span>
+                  <span className="whitespace-nowrap">Rs. {gstAmount.toFixed(2)}</span>
                 </div>
               </div>
             )}
@@ -585,14 +588,14 @@ export default function BillModal({
               }`}
             >
               <span
-                className={`text-sm font-medium ${
+                className={`text-sm font-medium whitespace-nowrap ${
                   paymentDone ? "text-green-700" : "text-teal-700"
                 }`}
               >
                 {paymentDone ? "Paid" : "Total payable"}
               </span>
               <span
-                className={`text-lg font-bold ${
+                className={`text-lg font-bold whitespace-nowrap ${
                   paymentDone ? "text-green-700" : "text-teal-700"
                 }`}
               >

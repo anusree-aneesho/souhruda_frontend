@@ -69,11 +69,11 @@ const settingsSubItems = [
     path: "/settings/test-configuration",
     icon: SlidersHorizontal,
   },
-  {
-    label: "Stock",
-    path: "/settings/stock",
-    icon: Package,
-  },
+  // {
+  //   label: "Stock",
+  //   path: "/settings/stock",
+  //   icon: Package,
+  // },
 ];
 
 export default function Sidebar() {

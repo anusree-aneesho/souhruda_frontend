@@ -12,20 +12,14 @@ import {
 
 import StatCard from "../common/StatCard";
 import ReportToolbar from "./shared/ReportToolbar";
-import {
-  formatCurrency,
-  todayIso,
-  daysAgoIso,
-} from "./shared/format";
+import { formatCurrency, todayIso, daysAgoIso } from "./shared/format";
 
-import {
-  exportToCsv,
-  exportToPdf,
-} from "../../utils/reportExport";
+import { exportToCsv, exportToPdf } from "../../utils/reportExport";
 
 import { getPatientsReportApi } from "../../api/api";
 
-const ROWS_PER_PAGE = 15;
+// Must match PER_PAGE in PatientReportService.php
+const ROWS_PER_PAGE = 10;
 
 const AVATAR_COLORS = [
   "bg-teal-50 text-teal-700",
@@ -41,9 +35,7 @@ function getInitials(name) {
   const parts = name.trim().split(/\s+/);
 
   const initials =
-    parts.length > 1
-      ? parts[0][0] + parts[1][0]
-      : parts[0].slice(0, 2);
+    parts.length > 1 ? parts[0][0] + parts[1][0] : parts[0].slice(0, 2);
 
   return initials.toUpperCase();
 }
@@ -51,14 +43,9 @@ function getInitials(name) {
 function avatarColor(name) {
   const code = (name || "")
     .split("")
-    .reduce(
-      (sum, ch) => sum + ch.charCodeAt(0),
-      0
-    );
+    .reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
 
-  return AVATAR_COLORS[
-    code % AVATAR_COLORS.length
-  ];
+  return AVATAR_COLORS[code % AVATAR_COLORS.length];
 }
 
 function formatDate(value) {
@@ -78,27 +65,14 @@ function formatDate(value) {
 }
 
 export default function PatientsReport({ onBack }) {
-  const [dateFrom, setDateFrom] = useState(
-    daysAgoIso(30)
-  );
-
-  const [dateTo, setDateTo] = useState(
-    todayIso()
-  );
-
+  const [dateFrom, setDateFrom] = useState(daysAgoIso(30));
+  const [dateTo, setDateTo] = useState(todayIso());
   const [search, setSearch] = useState("");
-
   const [data, setData] = useState(null);
-
   const [loading, setLoading] = useState(true);
-
   const [error, setError] = useState("");
-
-  const [selectedCard, setSelectedCard] =
-    useState(null);
-
-  const [currentPage, setCurrentPage] =
-    useState(1);
+  const [selectedCard, setSelectedCard] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   /*
    * ---------------------------------------------------------
@@ -110,38 +84,26 @@ export default function PatientsReport({ onBack }) {
     setError("");
 
     try {
-      const res =
-        await getPatientsReportApi({
-          dateFrom,
-          dateTo,
-          q: search || undefined,
-          page: currentPage,
-        });
+      const res = await getPatientsReportApi({
+        dateFrom,
+        dateTo,
+        q: search || undefined,
+        page: currentPage,
+      });
 
       setData(res);
     } catch (err) {
-      setError(
-        err.message ||
-          "Failed to load report."
-      );
+      setError(err.message || "Failed to load report.");
     } finally {
       setLoading(false);
     }
-  }, [
-    dateFrom,
-    dateTo,
-    search,
-    currentPage,
-  ]);
+  }, [dateFrom, dateTo, search, currentPage]);
 
   /*
    * Load whenever page/date/search changes.
    */
   useEffect(() => {
-    const timer = setTimeout(
-      load,
-      search ? 350 : 0
-    );
+    const timer = setTimeout(load, search ? 350 : 0);
 
     return () => clearTimeout(timer);
   }, [load, search]);
@@ -151,11 +113,7 @@ export default function PatientsReport({ onBack }) {
    */
   useEffect(() => {
     setCurrentPage(1);
-  }, [
-    dateFrom,
-    dateTo,
-    search,
-  ]);
+  }, [dateFrom, dateTo, search]);
 
   /*
    * Reset page when changing card.
@@ -168,56 +126,30 @@ export default function PatientsReport({ onBack }) {
    * ---------------------------------------------------------
    * SELECT CORRECT DATASET
    * ---------------------------------------------------------
-   *
-   * No card:
-   *     data.rows
-   *
-   * Total:
-   *     data.patient_rows
-   *
-   * New:
-   *     data.new_rows
-   *
-   * Returning:
-   *     data.returning_rows
-   * ---------------------------------------------------------
    */
-  const displayRows =
-    !selectedCard
-      ? data?.rows || []
-      : selectedCard === "total"
-      ? data?.patient_rows || []
-      : selectedCard === "new"
-      ? data?.new_rows || []
-      : selectedCard === "returning"
-      ? data?.returning_rows || []
-      : [];
+  const displayRows = !selectedCard
+    ? data?.rows || []
+    : selectedCard === "total"
+    ? data?.patient_rows || []
+    : selectedCard === "new"
+    ? data?.new_rows || []
+    : selectedCard === "returning"
+    ? data?.returning_rows || []
+    : [];
 
-  /*
-   * ---------------------------------------------------------
-   * GET PAGINATION FOR CURRENT VIEW
-   * ---------------------------------------------------------
-   */
-  const pagination =
-    !selectedCard
-      ? data?.pagination?.normal
-      : selectedCard === "total"
-      ? data?.pagination?.total
-      : selectedCard === "new"
-      ? data?.pagination?.new
-      : selectedCard === "returning"
-      ? data?.pagination?.returning
-      : null;
+  const pagination = !selectedCard
+    ? data?.pagination?.normal
+    : selectedCard === "total"
+    ? data?.pagination?.total
+    : selectedCard === "new"
+    ? data?.pagination?.new
+    : selectedCard === "returning"
+    ? data?.pagination?.returning
+    : null;
 
-  const totalRows =
-    pagination?.total || 0;
-
-  const totalPages =
-    pagination?.last_page || 1;
-
-  const safeCurrentPage =
-    pagination?.current_page ||
-    currentPage;
+  const totalRows = pagination?.total || 0;
+  const totalPages = pagination?.last_page || 1;
+  const safeCurrentPage = pagination?.current_page || currentPage;
 
   /*
    * ---------------------------------------------------------
@@ -225,44 +157,16 @@ export default function PatientsReport({ onBack }) {
    * ---------------------------------------------------------
    */
   const headers = selectedCard
-    ? [
-        "Patient ID",
-        "Patient Name",
-        "Phone",
-        "Total Tests",
-        "Total Amount",
-      ]
-    : [
-        "Patient ID",
-        "Patient Name",
-        "Phone",
-        "Tests",
-        "Amount",
-        "Date",
-      ];
+    ? ["Patient ID", "Patient Name", "Phone", "Total Tests", "Total Amount"]
+    : ["Patient ID", "Patient Name", "Phone", "Tests", "Amount", "Date"];
 
-  const csvRows = displayRows.map(
-    (r) => {
-      if (selectedCard) {
-        return [
-          r.patient_id,
-          r.patient_name,
-          r.phone,
-          r.tests,
-          r.amount,
-        ];
-      }
-
-      return [
-        r.patient_id,
-        r.patient_name,
-        r.phone,
-        r.tests,
-        r.amount,
-        r.date,
-      ];
+  const csvRows = displayRows.map((r) => {
+    if (selectedCard) {
+      return [r.patient_id, r.patient_name, r.phone, r.tests, r.amount];
     }
-  );
+
+    return [r.patient_id, r.patient_name, r.phone, r.tests, r.amount, r.date];
+  });
 
   /*
    * ---------------------------------------------------------
@@ -271,7 +175,6 @@ export default function PatientsReport({ onBack }) {
    */
   const goToPage = (page) => {
     if (page < 1) return;
-
     if (page > totalPages) return;
 
     setCurrentPage(page);
@@ -279,7 +182,6 @@ export default function PatientsReport({ onBack }) {
 
   return (
     <div className="space-y-6">
-
       {/* TOOLBAR */}
 
       <ReportToolbar
@@ -288,33 +190,25 @@ export default function PatientsReport({ onBack }) {
           {
             label: "Date From",
             value: dateFrom,
-            onChange: setDateFrom,
+            // ignore empty values and anything after "Date To"
+            onChange: (v) => v && v <= dateTo && setDateFrom(v),
             max: dateTo,
           },
           {
             label: "Date To",
             value: dateTo,
-            onChange: setDateTo,
+            // ignore empty values, future dates and anything before "Date From"
+            onChange: (v) =>
+              v && v <= todayIso() && v >= dateFrom && setDateTo(v),
             min: dateFrom,
+            max: todayIso(),
           },
         ]}
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search patient..."
-        onExportCsv={() =>
-          exportToCsv(
-            "patients-report",
-            headers,
-            csvRows
-          )
-        }
-        onExportPdf={() =>
-          exportToPdf(
-            "Patients Report",
-            headers,
-            csvRows
-          )
-        }
+        onExportCsv={() => exportToCsv("patients-report", headers, csvRows)}
+        onExportPdf={() => exportToPdf("Patients Report", headers, csvRows)}
       />
 
       {/* ERROR */}
@@ -328,366 +222,206 @@ export default function PatientsReport({ onBack }) {
       {/* STAT CARDS */}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-
         <StatCard
           label="Total Patients"
-          value={
-            data?.summary?.total_patients ??
-            "—"
-          }
+          value={data?.summary?.total_patients ?? "—"}
           sublabel="In selected range"
           icon={Users}
           color="teal"
           onClick={() =>
-            setSelectedCard(
-              (current) =>
-                current === "total"
-                  ? null
-                  : "total"
-            )
+            setSelectedCard((current) => (current === "total" ? null : "total"))
           }
-          active={
-            selectedCard === "total"
-          }
+          active={selectedCard === "total"}
         />
 
         <StatCard
           label="New Patients"
-          value={
-            data?.summary?.new_patients ??
-            "—"
-          }
+          value={data?.summary?.new_patients ?? "—"}
           sublabel="First visit in range"
           icon={UserPlus}
           color="blue"
           onClick={() =>
-            setSelectedCard(
-              (current) =>
-                current === "new"
-                  ? null
-                  : "new"
-            )
+            setSelectedCard((current) => (current === "new" ? null : "new"))
           }
-          active={
-            selectedCard === "new"
-          }
+          active={selectedCard === "new"}
         />
 
         <StatCard
           label="Returning"
-          value={
-            data?.summary
-              ?.returning_patients ??
-            "—"
-          }
+          value={data?.summary?.returning_patients ?? "—"}
           sublabel="Repeat visits in range"
           icon={UserCheck}
           color="purple"
           onClick={() =>
-            setSelectedCard(
-              (current) =>
-                current === "returning"
-                  ? null
-                  : "returning"
+            setSelectedCard((current) =>
+              current === "returning" ? null : "returning"
             )
           }
-          active={
-            selectedCard === "returning"
-          }
+          active={selectedCard === "returning"}
         />
-
       </div>
 
       {/* TABLE */}
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
-
         <div className="overflow-x-auto">
-
           <table className="w-full text-sm">
-
             <thead>
               <tr className="bg-gray-50/80 border-b border-gray-100 text-left text-xs font-semibold text-gray-500">
-
-                <th className="px-4 py-3">
-                  Patient ID
-                </th>
-
-                <th className="px-4 py-3">
-                  Patient Name
-                </th>
-
-                <th className="px-4 py-3">
-                  Phone
-                </th>
-
+                <th className="px-4 py-3">Patient ID</th>
+                <th className="px-4 py-3">Patient Name</th>
+                <th className="px-4 py-3">Phone</th>
                 <th className="px-4 py-3 text-center">
-                  {selectedCard
-                    ? "Total Tests"
-                    : "Tests"}
+                  {selectedCard ? "Total Tests" : "Tests"}
                 </th>
-
                 <th className="px-4 py-3 text-right">
-                  {selectedCard
-                    ? "Total Amount"
-                    : "Amount"}
+                  {selectedCard ? "Total Amount" : "Amount"}
                 </th>
-
-                {!selectedCard && (
-                  <th className="px-4 py-3">
-                    Date
-                  </th>
-                )}
-
+                {!selectedCard && <th className="px-4 py-3">Date</th>}
               </tr>
             </thead>
 
             <tbody>
-
               {loading ? (
-
                 <tr>
                   <td
-                    colSpan={
-                      selectedCard ? 5 : 6
-                    }
+                    colSpan={selectedCard ? 5 : 6}
                     className="px-4 py-14 text-center text-gray-400"
                   >
                     <div className="flex flex-col items-center gap-2">
-
                       <span className="h-6 w-6 rounded-full border-2 border-gray-200 border-t-teal-600 animate-spin" />
-
-                      <span className="text-sm">
-                        Loading patients…
-                      </span>
-
+                      <span className="text-sm">Loading patients…</span>
                     </div>
                   </td>
                 </tr>
-
               ) : displayRows.length === 0 ? (
-
                 <tr>
                   <td
-                    colSpan={
-                      selectedCard ? 5 : 6
-                    }
+                    colSpan={selectedCard ? 5 : 6}
                     className="px-4 py-14 text-center text-gray-400"
                   >
                     <div className="flex flex-col items-center gap-2">
-
-                      <ClipboardList
-                        size={28}
-                        className="text-gray-300"
-                      />
-
+                      <ClipboardList size={28} className="text-gray-300" />
                       <span className="text-sm font-medium text-gray-500">
                         No patients in this range
                       </span>
-
                       <span className="text-xs text-gray-400">
                         Try widening the dates or clearing your search.
                       </span>
-
                     </div>
                   </td>
                 </tr>
-
               ) : (
+                displayRows.map((r, i) => (
+                  <tr
+                    key={`${r.patient_id}-${i}`}
+                    className="border-b border-gray-50 last:border-0 odd:bg-white even:bg-gray-50/40 hover:bg-teal-50/40 transition-colors"
+                  >
+                    <td className="px-4 py-3 text-gray-500 font-mono text-xs">
+                      {r.patient_id ?? "—"}
+                    </td>
 
-                displayRows.map(
-                  (r, i) => (
-
-                    <tr
-                      key={`${r.patient_id}-${i}`}
-                      className="border-b border-gray-50 last:border-0 odd:bg-white even:bg-gray-50/40 hover:bg-teal-50/40 transition-colors"
-                    >
-
-                      <td className="px-4 py-3 text-gray-500 font-mono text-xs">
-                        {r.patient_id ??
-                          "—"}
-                      </td>
-
-                      <td className="px-4 py-3">
-
-                        <div className="flex items-center gap-2.5">
-
-                          <span
-                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${avatarColor(
-                              r.patient_name
-                            )}`}
-                          >
-                            {getInitials(
-                              r.patient_name
-                            )}
-                          </span>
-
-                          <span className="font-medium text-gray-900">
-                            {r.patient_name}
-                          </span>
-
-                        </div>
-
-                      </td>
-
-                      <td className="px-4 py-3 text-gray-500">
-                        {r.phone ?? "—"}
-                      </td>
-
-                      <td className="px-4 py-3 text-center">
-
-                        <span className="inline-flex min-w-[1.75rem] justify-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-                          {r.tests}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${avatarColor(
+                            r.patient_name
+                          )}`}
+                        >
+                          {getInitials(r.patient_name)}
                         </span>
 
+                        <span className="font-medium text-gray-900">
+                          {r.patient_name}
+                        </span>
+                      </div>
+                    </td>
+
+                    <td className="px-4 py-3 text-gray-500">{r.phone ?? "—"}</td>
+
+                    <td className="px-4 py-3 text-center">
+                      <span className="inline-flex min-w-[1.75rem] justify-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                        {r.tests}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-3 text-right font-semibold text-gray-900 tabular-nums">
+                      {formatCurrency(r.amount)}
+                    </td>
+
+                    {!selectedCard && (
+                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                        {formatDate(r.date)}
                       </td>
-
-                      <td className="px-4 py-3 text-right font-semibold text-gray-900 tabular-nums">
-                        {formatCurrency(
-                          r.amount
-                        )}
-                      </td>
-
-                      {!selectedCard && (
-                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                          {formatDate(
-                            r.date
-                          )}
-                        </td>
-                      )}
-
-                    </tr>
-
-                  )
-                )
-
+                    )}
+                  </tr>
+                ))
               )}
-
             </tbody>
-
           </table>
-
         </div>
 
         {/* PAGINATION */}
 
-        {!loading &&
-          totalRows > 0 && (
+        {!loading && totalRows > 0 && (
+          <div className="border-t border-gray-100 bg-gray-50/60 px-4 py-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              {/* RECORD COUNT */}
 
-            <div className="border-t border-gray-100 bg-gray-50/60 px-4 py-3">
-
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-
-                {/* RECORD COUNT */}
-
-                <div className="text-xs text-gray-400">
-
-                  Showing{" "}
-
-                  <span className="font-medium text-gray-600">
-                    {(
-                      safeCurrentPage -
-                      1
-                    ) *
-                      ROWS_PER_PAGE +
-                      1}
-                  </span>
-
-                  {" – "}
-
-                  <span className="font-medium text-gray-600">
-                    {Math.min(
-                      safeCurrentPage *
-                        ROWS_PER_PAGE,
-                      totalRows
-                    )}
-                  </span>
-
-                  {" of "}
-
-                  <span className="font-medium text-gray-600">
-                    {totalRows}
-                  </span>
-
-                  {" records"}
-
-                </div>
-
-                {/* PREVIOUS / NEXT */}
-
-                {totalPages > 1 && (
-
-                  <div className="flex items-center gap-1">
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        goToPage(
-                          safeCurrentPage -
-                            1
-                        )
-                      }
-                      disabled={
-                        safeCurrentPage ===
-                        1
-                      }
-                      className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 cursor-pointer disabled:opacity-40"
-                    >
-                      <ChevronLeft
-                        size={16}
-                      />
-
-                      <span className="ml-1">
-                        Previous
-                      </span>
-                    </button>
-
-                    <span className="px-3 text-xs text-gray-500">
-                      Page{" "}
-                      <span className="font-semibold text-gray-700">
-                        {safeCurrentPage}
-                      </span>{" "}
-                      of{" "}
-                      <span className="font-semibold text-gray-700">
-                        {totalPages}
-                      </span>
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        goToPage(
-                          safeCurrentPage +
-                            1
-                        )
-                      }
-                      disabled={
-                        safeCurrentPage ===
-                        totalPages
-                      }
-                      className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 cursor-pointer disabled:opacity-40"
-                    >
-                      <span className="mr-1">
-                        Next
-                      </span>
-
-                      <ChevronRight
-                        size={16}
-                      />
-                    </button>
-
-                  </div>
-
-                )}
-
+              <div className="text-xs text-gray-400">
+                Showing{" "}
+                <span className="font-medium text-gray-600">
+                  {(safeCurrentPage - 1) * ROWS_PER_PAGE + 1}
+                </span>
+                {" – "}
+                <span className="font-medium text-gray-600">
+                  {Math.min(safeCurrentPage * ROWS_PER_PAGE, totalRows)}
+                </span>
+                {" of "}
+                <span className="font-medium text-gray-600">{totalRows}</span>
+                {" records"}
               </div>
 
+              {/* PREVIOUS / NEXT */}
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => goToPage(safeCurrentPage - 1)}
+                    disabled={safeCurrentPage === 1}
+                    className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 cursor-pointer disabled:opacity-40"
+                  >
+                    <ChevronLeft size={16} />
+                    <span className="ml-1">Previous</span>
+                  </button>
+
+                  <span className="px-3 text-xs text-gray-500">
+                    Page{" "}
+                    <span className="font-semibold text-gray-700">
+                      {safeCurrentPage}
+                    </span>{" "}
+                    of{" "}
+                    <span className="font-semibold text-gray-700">
+                      {totalPages}
+                    </span>
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => goToPage(safeCurrentPage + 1)}
+                    disabled={safeCurrentPage === totalPages}
+                    className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 cursor-pointer disabled:opacity-40"
+                  >
+                    <span className="mr-1">Next</span>
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              )}
             </div>
-
-          )}
-
+          </div>
+        )}
       </div>
-
     </div>
   );
 }

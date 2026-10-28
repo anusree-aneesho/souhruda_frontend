@@ -61,7 +61,7 @@ function isAbnormal(flag) {
 
 export default function PatientTestHistoryReport({ onBack }) {
   // History defaults to the last year so older visits aren't hidden.
-  const [dateFrom, setDateFrom] = useState(daysAgoIso(365));
+  const [dateFrom, setDateFrom] = useState(daysAgoIso(30));
   const [dateTo, setDateTo] = useState(todayIso());
 
   const [search, setSearch] = useState("");
@@ -209,8 +209,22 @@ export default function PatientTestHistoryReport({ onBack }) {
       <ReportToolbar
         onBack={onBack}
         fields={[
-          { label: "Date From", value: dateFrom, max: dateTo, onChange: setDateFrom },
-          { label: "Date To", value: dateTo, min: dateFrom, onChange: setDateTo },
+          {
+            label: "Date From",
+            value: dateFrom,
+            // ignore empty values and anything after "Date To"
+            onChange: (v) => v && v <= dateTo && setDateFrom(v),
+            max: dateTo,
+          },
+          {
+            label: "Date To",
+            value: dateTo,
+            // ignore empty values, future dates and anything before "Date From"
+            onChange: (v) =>
+              v && v <= todayIso() && v >= dateFrom && setDateTo(v),
+            min: dateFrom,
+            max: todayIso(),
+          },
         ]}
         onExportPdf={() => canExport && exportToPdf(exportTitle, headers, csvRows)}
         onExportCsv={() =>

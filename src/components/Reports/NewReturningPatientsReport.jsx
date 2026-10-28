@@ -277,8 +277,22 @@ export default function NewReturningPatientsReport({ onBack }) {
       <ReportToolbar
         onBack={onBack}
         fields={[
-          { label: "Date From", value: dateFrom, max: dateTo, onChange: setDateFrom },
-          { label: "Date To", value: dateTo, min: dateFrom, onChange: setDateTo },
+          {
+            label: "Date From",
+            value: dateFrom,
+            // ignore empty values and anything after "Date To"
+            onChange: (v) => v && v <= dateTo && setDateFrom(v),
+            max: dateTo,
+          },
+          {
+            label: "Date To",
+            value: dateTo,
+            // ignore empty values, future dates and anything before "Date From"
+            onChange: (v) =>
+              v && v <= todayIso() && v >= dateFrom && setDateTo(v),
+            min: dateFrom,
+            max: todayIso(),
+          },
         ]}
         onExportPdf={() => exportToPdf(exportTitle, headers, csvRows)}
         onExportCsv={() => exportToCsv("new-returning-patients", headers, csvRows)}

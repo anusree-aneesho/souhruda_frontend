@@ -9,9 +9,10 @@ import { exportToCsv, exportToPdf } from "../../utils/reportExport";
 import { getMonthlyReportApi } from "../../api/api";
 
 const now = new Date();
+const CURRENT_MONTH = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
 export default function MonthlyReport({ onBack }) {
-  const [month, setMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+  const [month, setMonth] = useState(CURRENT_MONTH);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -42,7 +43,15 @@ export default function MonthlyReport({ onBack }) {
     <div className="space-y-6">
       <ReportToolbar
         onBack={onBack}
-        fields={[{ label: "Month", value: month, onChange: setMonth, type: "month" }]}
+        fields={[
+          {
+            label: "Month",
+            value: month,
+            onChange: (v) => v && v <= CURRENT_MONTH && setMonth(v),
+            type: "month",
+            max: CURRENT_MONTH,
+          },
+        ]}
         onExportCsv={() => exportToCsv("monthly-report", headers, csvRows)}
         onExportPdf={() => exportToPdf("Monthly Report", headers, csvRows)}
       />

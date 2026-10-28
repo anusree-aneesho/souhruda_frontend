@@ -39,7 +39,14 @@ export default function WeeklyReport({ onBack }) {
     <div className="space-y-6">
       <ReportToolbar
         onBack={onBack}
-        fields={[{ label: "Any day in the week", value: weekOf, onChange: setWeekOf }]}
+        fields={[
+          {
+            label: "Any day in the week",
+            value: weekOf,
+            onChange: (v) => v && v <= todayIso() && setWeekOf(v),
+            max: todayIso(),
+          },
+        ]}
         onExportCsv={() => exportToCsv("weekly-report", headers, csvRows)}
         onExportPdf={() => exportToPdf("Weekly Report", headers, csvRows)}
       />

@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
-import { getOrdersApi } from "../../api/api";
-import { RANGES, getRangeBounds } from "../../utils/dateRange";
+import { getOrdersListForRangeApi } from "../../api/api";
+import { RANGES } from "../../utils/dateRange";
 
 const STATUS_STYLES = {
   completed: "bg-green-100 text-green-700",
@@ -21,41 +21,30 @@ export default function OrderStatusModal({ initialRange = "Today", initialTab = 
   const navigate = useNavigate();
   const [range, setRange] = useState(initialRange);
   const [tab, setTab] = useState(initialTab);
-  const [allOrders, setAllOrders] = useState([]);
+  const [inRange, setInRange] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // The statistics endpoint already filters by range and includes cancelled
+  // (soft-deleted) orders, with status = "cancelled" for those.
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
 
-    getOrdersApi({ per_page: 500 })
+    getOrdersListForRangeApi(range)
       .then((res) => {
-        if (!cancelled) setAllOrders(res.data || []);
+        if (!cancelled) setInRange(Array.isArray(res) ? res : res.data || []);
       })
       .catch(() => {
-        if (!cancelled) setAllOrders([]);
+        if (!cancelled) setInRange([]);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
 
     return () => { cancelled = true; };
-  }, []);
+  }, [range]);
 
-  // Orders in the selected range
-  const inRange = useMemo(() => {
-    const [start, end] = getRangeBounds(range);
-    return allOrders.filter((o) => {
-      const d = new Date(o.ordered_at);
-      return d >= start && d < end;
-    });
-  }, [allOrders, range]);
-
-  const count = (status) => {
-    if (status === "cancelled") {
-      return inRange.filter((o) => o.is_cancelled).length;
-    }
-    return inRange.filter((o) => o.status === status && !o.is_cancelled).length;
-  };
+  const count = (status) => inRange.filter((o) => o.status === status).length;
 
   const total = inRange.length;
   const pct = (n) => (total ? `${((n / total) * 100).toFixed(1)}%` : "0%");
@@ -68,12 +57,7 @@ export default function OrderStatusModal({ initialRange = "Today", initialTab = 
     { key: "cancelled", label: "Cancelled", value: count("cancelled"), sub: pct(count("cancelled")), cls: "bg-red-50 text-red-700" },
   ];
 
-  const visible =
-    tab === "all"
-      ? inRange
-      : tab === "cancelled"
-      ? inRange.filter((o) => o.is_cancelled)
-      : inRange.filter((o) => o.status === tab && !o.is_cancelled);
+  const visible = tab === "all" ? inRange : inRange.filter((o) => o.status === tab);
 
   const totalBill = visible.reduce((sum, o) => sum + Number(o.bill_total || 0), 0);
 
@@ -121,8 +105,8 @@ export default function OrderStatusModal({ initialRange = "Today", initialTab = 
             >
               <p className="text-xs opacity-80">{t.label}</p>
               <p className="text-xl font-bold">
-                {t.value}
-                {t.sub && <span className="ml-1.5 text-xs font-normal opacity-70">({t.sub})</span>}
+                {loading ? "…" : t.value}
+                {!loading && t.sub && <span className="ml-1.5 text-xs font-normal opacity-70">({t.sub})</span>}
               </p>
             </button>
           ))}
@@ -167,10 +151,8 @@ export default function OrderStatusModal({ initialRange = "Today", initialTab = 
                       })}
                     </td>
                     <td className="py-3">
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        o.is_cancelled ? STATUS_STYLES.cancelled : (STATUS_STYLES[o.status] || "bg-gray-100 text-gray-500")
-                      }`}>
-                        {o.is_cancelled ? "Cancelled" : statusLabel(o.status)}
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[o.status] || "bg-gray-100 text-gray-500"}`}>
+                        {statusLabel(o.status)}
                       </span>
                     </td>
                     <td className="px-6 py-3 text-right font-medium text-gray-900">
@@ -186,7 +168,7 @@ export default function OrderStatusModal({ initialRange = "Today", initialTab = 
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-gray-100 bg-gray-50 px-6 py-4 rounded-b-2xl">
           <p className="text-sm text-gray-500">
-            Total bill: <span className="font-semibold text-gray-900">{inr(totalBill)}</span>
+            Total bill: <span className="font-semibold text-gray-900">{loading ? "…" : inr(totalBill)}</span>
           </p>
           <button onClick={onClose} className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
             Close

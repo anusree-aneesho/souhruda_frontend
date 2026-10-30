@@ -49,7 +49,7 @@ export default function Settings() {
           className={`flex items-start gap-3 rounded-xl px-4 py-3 text-sm ${
             selectedBranch
               ? "bg-teal-50 text-teal-800"
-              : "bg-amber-50 text-amber-800"
+              : "bg-gray-100 text-gray-700"
           }`}
         >
           <Building2 size={18} className="mt-0.5 shrink-0" />
@@ -61,8 +61,10 @@ export default function Settings() {
             </p>
           ) : (
             <p>
-              No branch selected. Pick a branch below — you need one before you can
-              create patients, lab orders or home collections.
+              Showing <span className="font-semibold">all branches</span>. Patients,
+              lab orders and home collections from every branch are listed. Pick a
+              branch below to work in it — you need one selected to create new
+              patients, lab orders or home collections.
             </p>
           )}
         </div>
@@ -74,12 +76,20 @@ export default function Settings() {
           onSelectBranch={handleSelectBranch}
           onBranchUpdated={handleBranchUpdated}
         />
-        <SettingsForm
-          key={`${selectedBranch?.id ?? "default"}-${formVersion}`}
-          branchId={selectedBranch?.id ?? null}
-          branchName={selectedBranch?.name ?? ""}
-          onSaved={handleSettingsSaved}
-        />
+        {isSuperAdmin && !selectedBranch ? (
+          // Lab settings belong to one branch, so there's nothing to edit while
+          // "All branches" is chosen.
+          <div className="bg-white rounded-xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.06)] flex items-center justify-center text-center text-sm text-gray-500 min-h-[200px]">
+            Select a branch from the list to view and edit its settings.
+          </div>
+        ) : (
+          <SettingsForm
+            key={`${selectedBranch?.id ?? "default"}-${formVersion}`}
+            branchId={selectedBranch?.id ?? null}
+            branchName={selectedBranch?.name ?? ""}
+            onSaved={handleSettingsSaved}
+          />
+        )}
       </div>
 
       {showAddBranch && (

@@ -1,9 +1,10 @@
 // src/components/LabOrders/Report/TestDetailView.jsx
 import {
-  Receipt, MessageCircle, Printer, Download,
+  Receipt, MessageCircle, Printer, Download, Pencil, // CHANGED: added Pencil
   User, Phone, Stethoscope, CalendarDays, FileCheck2, Wallet,
 } from "lucide-react";
 import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
+import QrCode from "../../common/QrCode"; // ADDED: report QR
 
 const actionBtn =
   "flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer";
@@ -19,6 +20,7 @@ export default function TestDetailView({
   registered,
   collectionDate,
   reportDate,
+  qrText, // ADDED: text encoded in the report QR
   referredBy,
   paymentDone,
   paymentMode,
@@ -27,6 +29,7 @@ export default function TestDetailView({
   onLetterheadChange,
   onBack,
   onBill,
+  onEditBill, // ADDED: opens the Payment / discount popup
   onWhatsApp,
   onPrint,
   onDownload,
@@ -60,6 +63,12 @@ export default function TestDetailView({
           <button type="button" onClick={onBill} className={actionBtn}>
             <Receipt size={16} /> Bill
           </button>
+          {/* ADDED: Payment button (hidden once the order is paid) */}
+          {!paymentDone && (
+            <button type="button" onClick={onEditBill} className={actionBtn}>
+              <Pencil size={16} /> Payment
+            </button>
+          )}
           <button type="button" onClick={onWhatsApp} className={actionBtn}>
             <MessageCircle size={16} /> WhatsApp
           </button>
@@ -144,6 +153,14 @@ export default function TestDetailView({
               </div>
             </div>
           </div>
+
+          {/* ADDED: Report QR — same as the main report screen */}
+          {qrText && (
+            <div className="shrink-0 flex flex-col items-center gap-1 lg:border-l lg:border-gray-100 lg:pl-6">
+              <QrCode value={qrText} size={96} />
+              <p className="text-[10px] uppercase tracking-wide text-gray-400">Scan for details</p>
+            </div>
+          )}
         </div>
       </div>
 

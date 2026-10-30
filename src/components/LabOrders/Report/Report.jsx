@@ -1,6 +1,6 @@
 // src/components/LabOrders/Report/Report.jsx
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useParams, useLocation, useNavigate } from "react-router-dom";
+import { useParams, useLocation, useNavigate, useSearchParams } from "react-router-dom"; // CHANGED: added useSearchParams
 import {
   Download, Printer, MessageCircle, Receipt, X, Pencil,  
   User, Phone, Stethoscope, CalendarDays, FileCheck2, Wallet,
@@ -19,6 +19,9 @@ import QrCode from "../../common/QrCode"; // ADDED: QR for UPI payments
 import { findOrderById } from "../../../data/labOrders";
 import { calculateFlag } from "../../../utils/calculateFlag";
 import { buildReportRowsByCategory } from "../../../utils/reportRows";
+import { buildQrText } from "../../../utils/qrDetails";
+import { orderBarcodeValue } from "../../../utils/sampleBarcode";
+import { qrSvgString } from "../../../utils/qrSvg";
 import { getOrderReportUrlApi, getOrderApi, getSettingsApi, getGstSettingsApi, markOrderPaidApi } from "../../../api/api";
 
 // ADDED: payment mode options for the Confirm Payment popup
@@ -89,6 +92,64 @@ function resolveImg(src) {
   return /^(data:|https?:)/.test(src) ? src : new URL(src, window.location.origin).href;
 }
 
+// ADDED (refresh fix): turns the API order into the same shape the page already uses,
+// so the page still has patient + tests after a browser refresh.
+function mapApiOrder(data) {
+  if (!data) return null;
+  const p = data.patient || {};
+  return {
+    orderId: data.order_no,
+    barcode: data.barcode, // used for the report QR
+    patient: {
+      name: p.display_name,
+      age: p.age,
+      gender: p.gender ? p.gender.charAt(0).toUpperCase() + p.gender.slice(1) : "",
+      regNo: p.patient_number,
+      phone: p.phone,
+    },
+    referredBy: data.referred_by,
+    orderedAt: data.ordered_at,
+    completedAt: data.completed_at,
+    sampleCollectedAt: data.sample_collected_at,
+    homeVisitFee: data.home_visit_fee,
+    billTotal: data.bill_total,
+    paymentDone: data.payment_status === "paid",
+    tests: (data.items || []).map((it) => ({
+      id: it.id,
+      name: it.lab_test?.name || "",
+      category: it.lab_test?.category?.name || "",
+      price: Number(it.price_at_order || 0),
+      range: it.ref_range_display ?? "",
+      unit: it.resolved_unit ?? it.lab_test?.unit ?? "",
+      parentItemId: it.parent_item_id,
+      isGroup: Boolean(it.is_group),
+      packageId: it.test_package_id,
+      result: it.result_value ?? "",
+    })),
+  };
+}
+// Converts the SVG QR into a PNG data URI so the PDF engine can draw it.
+function svgToPngDataUri(svg, size = 240) {
+  return new Promise((resolve, reject) => {
+    if (!svg.includes("xmlns=")) {
+      svg = svg.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(img, 0, 0, size, size);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = reject;
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  });
+}
+
 export default function Report() {
   const { orderId } = useParams();
   const location = useLocation();
@@ -102,7 +163,7 @@ export default function Report() {
   const [orderDates, setOrderDates] = useState({ collected: null, reported: null });
   const [isWhatsAppOpen, setWhatsAppOpen] = useState(false);
   const [isPreviewOpen, setPreviewOpen] = useState(false);
-  const [viewTest, setViewTest] = useState(null);
+  // REMOVED: const [viewTest, setViewTest] = useState(null);  (now read from the URL, see below)
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadError, setDownloadError] = useState("");
   const [labInfo, setLabInfo] = useState(null);
@@ -110,8 +171,9 @@ export default function Report() {
   const [signatories, setSignatories] = useState([]);
   const iframeRef = useRef(null);
 
+  const [apiOrder, setApiOrder] = useState(null); // ADDED (refresh fix): order loaded from the server
   const existingOrder = findOrderById(orderId);
-  const order = existingOrder || (state ? { orderId, ...state } : null);
+  const order = existingOrder || (state ? { orderId, ...state } : apiOrder); // CHANGED: falls back to apiOrder
 
   const [paymentDone, setPaymentDone] = useState(Boolean(order?.paymentDone));
   const [confirmingPayment, setConfirmingPayment] = useState(false);
@@ -134,6 +196,7 @@ export default function Report() {
     getOrderApi(orderId)
       .then((res) => {
         if (cancelled) return;
+        setApiOrder(mapApiOrder(res.data)); // ADDED (refresh fix)
         setDiscount({
           type: res.data?.discount_type || "percentage",
           value: Number(res.data?.discount_value) || 0,
@@ -192,6 +255,21 @@ export default function Report() {
   const resultTests = tests.filter((t) => !t.isGroup);
   const billTests = tests.filter((t) => t.parentItemId == null);
 
+  // ADDED (refresh fix): the opened test lives in the URL (?test=620), so a refresh keeps it
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedTestId = searchParams.get("test");
+  const viewTest = selectedTestId
+    ? billTests.find((t) => String(t.id) === selectedTestId) || null
+    : null;
+
+  function openTest(t) {
+    setSearchParams({ test: String(t.id) });
+  }
+
+  function closeTest() {
+    setSearchParams({});
+  }
+
   // ADDED: payment details shown in the Confirm Payment popup (also used for the UPI QR)
   const subtotal = billTests.reduce(
     (sum, t) => sum + (t.packageId != null ? 0 : Number(t.price || 0)),
@@ -202,11 +280,7 @@ export default function Report() {
     discount.type === "percentage"
       ? (subtotal * Number(discount.value || 0)) / 100
       : Number(discount.value || 0);
-  // ADDED: GST, only when the branch is GST registered
-  const gstRate = gstInfo?.is_gst_registered ? Number(gstInfo.gst_rate || 0) : 0;
-  const taxableAmount = Math.max(0, subtotal + homeVisitFee - discountAmount);
-  const gstAmount = Math.round(subtotal * gstRate) / 100;
-  const payableAmount = taxableAmount + gstAmount;
+  const payableAmount = Math.max(0, subtotal + homeVisitFee - discountAmount);
 
   const ageText =
     patient.age !== undefined && patient.age !== null && patient.age !== "-" && patient.age !== ""
@@ -276,23 +350,36 @@ export default function Report() {
   // Printed report / preview rows: a group (CBC) is a heading, its parameters follow.
   const reportRowsByCategory = buildReportRowsByCategory(tests, results);
 
+  // QR on the report: patient, register no, tests, report date (plain text when
+  // scanned) + a link to the live scan page.
+  const qrText = buildQrText({
+    code: order?.barcode || orderBarcodeValue(orderId, patient.regNo),
+    patient,
+    testNames: tests.map((t) => t.name).filter(Boolean),
+    results: testsWithResults.map((t) => ({ name: t.name, value: t.result, unit: t.unit, flag: flags[t.id] })),
+    when: reportDate && reportDate !== "—" ? `Reported: ${reportDate}` : "",
+    status: "Report ready",
+    url: `${window.location.origin}/scan/${encodeURIComponent(orderId)}`,
+  });
+
   function handleScheduleReminder(test) {
     console.log("Schedule reminder for", test.name);
   }
 
-  async function handleDownloadPdf() {
-    setDownloadingPdf(true);
-    setDownloadError("");
-    try {
-      const data = await getOrderReportUrlApi(orderId, letterheadOn);
-      window.open(data.url, "_blank");
-    } catch (err) {
-      console.error("Download PDF failed:", err.message);
-      setDownloadError(err.message || "Couldn't prepare the report. Please try again.");
-    } finally {
-      setDownloadingPdf(false);
-    }
+async function handleDownloadPdf() {
+  setDownloadingPdf(true);
+  setDownloadError("");
+  try {
+    const qrImage = await svgToPngDataUri(qrSvgString(qrText, 240), 240);
+    const data = await getOrderReportUrlApi(orderId, letterheadOn, qrImage);
+    window.open(data.url, "_blank");
+  } catch (err) {
+    console.error("Download PDF failed:", err.message);
+    setDownloadError(err.message || "Couldn't prepare the report. Please try again.");
+  } finally {
+    setDownloadingPdf(false);
   }
+}
 
   // Print Function — mirrors the Blade PDF-download template exactly.
   // Kept as a self-contained HTML document (written into a hidden iframe)
@@ -449,7 +536,8 @@ export default function Report() {
     .info-block .col { flex: 1; }
     .info-block .patient-name { font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 2px; }
     .info-block .patient-meta { font-size: 10px; color: #4b5563; line-height: 1.5; }
-    .info-block .code-box { width: 62px; height: 62px; border: 1.5px dashed #d1d5db; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 8px; color: #9ca3af; margin: 0 18px; flex-shrink: 0; }
+    .info-block .code-box { width: 62px; height: 62px; display: flex; align-items: center; justify-content: center; margin: 0 18px; flex-shrink: 0; }
+    .info-block .code-box svg { width: 62px; height: 62px; display: block; }
     .info-block .right-col { text-align: right; font-size: 10px; color: #4b5563; line-height: 1.5; }
     .info-block .right-col strong { color: #111827; }
 
@@ -507,7 +595,7 @@ export default function Report() {
             </div>
         </div>
 
-        <div class="code-box">QR</div>
+        <div class="code-box">${qrSvgString(qrText, 62)}</div>
 
         <div class="col right-col">
             <div><strong>Order No:</strong> ${orderId}</div>
@@ -576,26 +664,30 @@ export default function Report() {
       {viewTest ? (
         /* ── Single-test detail view (replaces the old popup) ───────── */
         <TestDetailView
-            patient={patient}
-            orderId={orderId}
-            test={viewTest}
-            flag={flags[viewTest.id]}
-            parameters={testsWithResults.filter((p) => p.parentItemId === viewTest.id)}
-            flags={flags}
-            ageText={ageText}
-            registered={registered}
-            reportDate={reportDate}
-            referredBy={order?.referredBy || "Self"}
-            letterheadOn={letterheadOn}
-            onLetterheadChange={setLetterheadOn}
-            onBack={() => setViewTest(null)}
-            onBill={() => setBillOpen(true)}
-            onWhatsApp={() => setWhatsAppOpen(true)}
-            onPrint={handlePrint}
-            paymentDone={paymentDone}
-            paymentMode={formatPaymentMode(savedPaymentMode)}
-            onMarkPaid={openPaymentPopup}
-          />
+          patient={patient}
+          orderId={orderId}
+          test={viewTest}
+          flag={flags[viewTest.id]}
+          parameters={testsWithResults.filter((p) => p.parentItemId === viewTest.id)}
+          flags={flags}
+          ageText={ageText}
+          registered={registered}
+          collectionDate={collectionDate}
+          reportDate={reportDate}
+          qrText={qrText}
+          referredBy={order?.referredBy || "Self"}
+          letterheadOn={letterheadOn}
+          onLetterheadChange={setLetterheadOn}
+          onBack={closeTest}
+          onBill={() => setBillOpen(true)}
+          onEditBill={() => setEditBillOpen(true)}
+          onWhatsApp={() => setWhatsAppOpen(true)}
+          onPrint={handlePrint}
+          onDownload={() => { setDownloadError(""); setPreviewOpen(true); }}
+          paymentDone={paymentDone}
+          paymentMode={formatPaymentMode(savedPaymentMode)}
+          onMarkPaid={openPaymentPopup}
+        />
       ) : (
         <>
           {/* ── Top action bar ───────────────────────────────────────── */}
@@ -704,6 +796,12 @@ export default function Report() {
                 </div>
 
               </div>
+
+              {/* Report QR — scan for patient, test and report details */}
+              <div className="shrink-0 flex flex-col items-center gap-1 lg:border-l lg:border-gray-100 lg:pl-6">
+                <QrCode value={qrText} size={96} />
+                <p className="text-[10px] uppercase tracking-wide text-gray-400">Scan for details</p>
+              </div>
             </div>
           </div>
 
@@ -721,7 +819,7 @@ export default function Report() {
                   <tr className="bg-gray-50 text-left">
                     <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide">No.</th>
                     <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">TEST</th>
-                    <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">TEST AMOUNT</th>
+                    <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">BILL AMOUNT</th>
                     <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide text-right">ACTION</th>
                   </tr>
                 </thead>
@@ -743,7 +841,7 @@ export default function Report() {
                       <td className="px-6 py-3.5 text-right">
                         <button
                           type="button"
-                          onClick={() => setViewTest(t)}
+                          onClick={() => openTest(t)}
                           className="px-4 py-1.5 rounded-lg border border-teal-200 bg-teal-50 text-xs font-semibold text-teal-700 hover:bg-teal-100 cursor-pointer"
                         >
                           View
@@ -887,8 +985,8 @@ export default function Report() {
                     </div>
                   </div>
 
-                  <div className="w-[62px] h-[62px] border-[1.5px] border-dashed border-gray-300 rounded-md flex items-center justify-center text-[8px] text-gray-400 mx-[18px] shrink-0">
-                    QR
+                  <div className="w-[62px] h-[62px] mx-[18px] shrink-0">
+                    <QrCode value={qrText} size={62} />
                   </div>
 
                   <div className="flex-1 text-right text-[10px] text-gray-600 leading-snug">
@@ -1074,13 +1172,6 @@ export default function Report() {
                     Discount{discount.type === "percentage" ? ` (${discount.value}%)` : ""}
                   </span>
                   <span>− ₹{discountAmount.toFixed(2)}</span>
-                </div>
-              )}
-              {/* ADDED: GST row */}
-              {gstAmount > 0 && (
-                <div className="flex justify-between text-gray-600">
-                  <span>GST ({gstRate}%)</span>
-                  <span>₹{gstAmount.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between border-t border-gray-200 pt-2 font-semibold text-gray-900">

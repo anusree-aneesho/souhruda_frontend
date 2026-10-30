@@ -530,10 +530,11 @@ export async function updateOrderDiscountApi(orderId, payload) {
 
 // ── Order Reports ──────────────────────────────────────
 
-export async function getOrderReportUrlApi(orderId, letterhead = true) {
-  return request(
-    `/orders/${orderId}/report.pdf?letterhead=${letterhead ? 1 : 0}`
-  );
+export async function getOrderReportUrlApi(orderId, letterhead = true, qrImage = null) {
+  return request(`/orders/${orderId}/report.pdf`, {
+    method: "POST",
+    body: JSON.stringify({ letterhead: letterhead ? 1 : 0, qr_image: qrImage }),
+  });
 }
 
 export async function getOrderBillUrlApi(orderId) {

@@ -1,5 +1,5 @@
 import { useEffect, useImperativeHandle, forwardRef, useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Layers } from "lucide-react";
 import { getBranchesApi, deleteBranchApi } from "../../api/api";
 import { useAuth } from "../../Context/AuthContext";
 import EditBranchModal from "./modals/EditBranchModal";
@@ -60,7 +60,7 @@ const BranchesList = forwardRef(function BranchesList(
   }
 
   // Highlight the branch in effect. A super admin has no branch of their own, so
-  // only their explicit pick counts (nothing is highlighted until they choose).
+  // only their explicit pick counts; with no pick, "All branches" is highlighted.
   // Everyone else works in their own branch.
   const firstActiveId = [...(branches || [])]
     .filter((b) => b.is_active !== false)
@@ -81,6 +81,21 @@ const BranchesList = forwardRef(function BranchesList(
         <p className="text-sm text-gray-500 px-3 py-2">No branches added yet.</p>
       ) : (
         <div className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible">
+          {canManageBranches && (
+            <button
+              type="button"
+              onClick={() => onSelectBranch?.(null)}
+              title="Don't pick a branch — show data from every branch"
+              className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-left transition-colors cursor-pointer ${
+                activeBranchId === null
+                  ? "bg-teal-50 text-teal-700"
+                  : "text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <Layers size={14} className="shrink-0" />
+              <span className="truncate">All branches</span>
+            </button>
+          )}
           {branches.map((b) => {
             const isActive = b.id === activeBranchId;
             return (

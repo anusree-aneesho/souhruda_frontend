@@ -335,6 +335,7 @@ export default function Report() {
     code: order?.barcode || orderBarcodeValue(orderId, patient.regNo),
     patient,
     testNames: tests.map((t) => t.name).filter(Boolean),
+    results: testsWithResults.map((t) => ({ name: t.name, value: t.result, unit: t.unit, flag: flags[t.id] })),
     when: reportDate && reportDate !== "—" ? `Reported: ${reportDate}` : "",
     status: "Report ready",
     url: `${window.location.origin}/scan/${encodeURIComponent(orderId)}`,

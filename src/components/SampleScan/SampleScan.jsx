@@ -147,12 +147,35 @@ export default function SampleScan() {
             </div>
           </Section>
 
-          <Section title="2. Test information">
+          <Section title="2. Tests & results">
             <div className="divide-y divide-gray-100 mb-5">
               {data.tests.map((t, i) => (
-                <p key={i} className="py-2 text-sm font-medium text-gray-900">
-                  {t.name}
-                </p>
+                <div key={i} className="flex items-start justify-between gap-4 py-2.5">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900">{t.name}</p>
+                    {t.range && <p className="text-xs text-gray-400">Normal: {t.range}</p>}
+                  </div>
+                  {t.result != null ? (
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-semibold text-gray-900">
+                        {t.result} {t.unit}
+                      </p>
+                      {t.flag && (
+                        <span
+                          className={`inline-block mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                            String(t.flag).toLowerCase() === "normal"
+                              ? "bg-green-50 text-green-700"
+                              : "bg-red-50 text-red-700"
+                          }`}
+                        >
+                          {t.flag}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-400 shrink-0">Result pending</span>
+                  )}
+                </div>
               ))}
             </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-4">

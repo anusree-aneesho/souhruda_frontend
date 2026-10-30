@@ -47,7 +47,26 @@ function fitTests(names, room) {
   return `Tests: ${names.length}`;
 }
 
-export function buildQrText({ code, patient, testNames = [], when, staff, status, url }) {
+const FLAG_LABEL = { high: "High", low: "Low", abnormal: "Abnormal", critical: "Critical" };
+
+function resultLine(r) {
+  const flag = FLAG_LABEL[String(r.flag ?? "").toLowerCase()];
+  return `${clean(r.name)}: ${clean(r.value)}${r.unit ? ` ${clean(r.unit)}` : ""}${flag ? ` (${flag})` : ""}`;
+}
+
+// As many result lines as fit in `room` bytes, then "+N more results".
+function fitResults(rows, room) {
+  const lines = rows.map(resultLine);
+  for (let n = lines.length; n > 0; n--) {
+    const more = lines.length - n;
+    const out = lines.slice(0, n);
+    if (more) out.push(`+${more} more results`);
+    if (byteLen(out.join("\n")) <= room) return out;
+  }
+  return [];
+}
+
+export function buildQrText({ code, patient, testNames = [], results = [], when, staff, status, url }) {
   const name = clean(patient?.name).slice(0, 30);
   const lines = [
     clean(code),
@@ -59,6 +78,17 @@ export function buildQrText({ code, patient, testNames = [], when, staff, status
   const tryAdd = (line) => {
     if (line && used() + 1 + byteLen(line) <= MAX_BYTES) lines.push(line);
   };
+
+  // Entered results come first (the link is kept so the rest can be opened)
+  const resultRows = results.filter((r) => r && String(r.value ?? "").trim() !== "");
+  if (resultRows.length) {
+    const room = MAX_BYTES - used() - 1 - (url ? byteLen(url) + 1 : 0);
+    fitResults(resultRows, room).forEach((l) => lines.push(l));
+    tryAdd(url || "");
+    tryAdd(clean(when));
+    tryAdd(status ? `Status: ${clean(status)}` : "");
+    return lines.join("\n");
+  }
 
   const names = testNames.map(clean).filter(Boolean);
   if (names.length) {

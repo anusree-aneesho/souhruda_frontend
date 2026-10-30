@@ -4,12 +4,8 @@
 //
 //  • Barcode (Code128) -> the request code + register number (HC1037|20010003). Scan it into the
 //    "Sample scan" page box with a normal barcode scanner.
-//  • QR code -> the details as plain text (patient, register no, tests, slot,
-//    technician, status) plus a link to /scan/<code> for the live status.
 import Barcode from "../../common/Barcode";
-import QrCode from "../../common/QrCode";
 import { barcodeValue } from "../../../utils/sampleBarcode";
-import { buildQrText } from "../../../utils/qrDetails";
 
 function formatAgeGender(patient) {
   const age =
@@ -27,17 +23,6 @@ export default function SampleLabel({ hc }) {
 
   const ageGender = formatAgeGender(hc.patient);
   const testNames = (hc.tests || []).map((t) => t.name).filter(Boolean);
-  const scanUrl = `${window.location.origin}/scan/${encodeURIComponent(hc.id)}`;
-  // QR shows the details as plain text when scanned (link to live status last)
-  const qrText = buildQrText({
-    code: barcodeValue(hc),
-    patient: hc.patient,
-    testNames,
-    when: hc.slot ? `Slot: ${hc.slot}` : "",
-    staff: hc.technician?.name,
-    status: hc.status,
-    url: scanUrl,
-  });
 
   return (
     <div className="print-target">
@@ -59,12 +44,6 @@ export default function SampleLabel({ hc }) {
 
         <div className="mt-2 overflow-hidden [&_svg]:w-full [&_svg]:h-auto">
           <Barcode value={barcodeValue(hc)} height={44} />
-        </div>
-        <div className="flex items-center gap-3 mt-2">
-          <QrCode value={qrText} size={72} className="shrink-0" />
-          <p className="text-[10px] text-gray-400 leading-snug">
-            Scan QR for patient, test and status details
-          </p>
         </div>
       </div>
     </div>

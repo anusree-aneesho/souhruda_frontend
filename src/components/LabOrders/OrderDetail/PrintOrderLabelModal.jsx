@@ -1,28 +1,15 @@
 // src/components/LabOrders/OrderDetail/PrintOrderLabelModal.jsx
 //
 // Sample label for a lab order (walk-in). Same layout as the home collection
-// label: barcode text is "<order no>|<register no>", and the QR shows the
-// details as plain text plus a link to the live scan page (/scan/<order no>).
+// label: barcode text is "<order no>|<register no>".
 import ModalShell from "../../common/Modal/ModalShell";
 import Barcode from "../../common/Barcode";
-import QrCode from "../../common/QrCode";
 import { orderBarcodeValue } from "../../../utils/sampleBarcode";
-import { buildQrText } from "../../../utils/qrDetails";
 
-export default function PrintOrderLabelModal({ orderNo, barcode, status, patient, testNames = [], orderedAt, onClose }) {
+export default function PrintOrderLabelModal({ orderNo, barcode, patient, testNames = [], orderedAt, onClose }) {
   const ageGender = [patient?.age && patient.age !== "-" ? `${patient.age}Y` : "", patient?.gender?.[0]?.toUpperCase()]
     .filter(Boolean)
     .join("/");
-  const scanUrl = `${window.location.origin}/scan/${encodeURIComponent(orderNo)}`;
-  // QR shows the details as plain text when scanned (link to live status last)
-  const qrText = buildQrText({
-    code: barcode || orderBarcodeValue(orderNo, patient?.regNo),
-    patient,
-    testNames,
-    when: orderedAt ? `Ordered: ${orderedAt}` : "",
-    status: status ? String(status).replace(/_/g, " ") : "",
-    url: scanUrl,
-  });
 
   return (
     <ModalShell title={`Sample Label — #${orderNo}`} onClose={onClose} maxWidth="max-w-md">
@@ -46,12 +33,6 @@ export default function PrintOrderLabelModal({ orderNo, barcode, status, patient
 
             <div className="mt-2 overflow-hidden [&_svg]:w-full [&_svg]:h-auto">
               <Barcode value={barcode || orderBarcodeValue(orderNo, patient?.regNo)} height={44} />
-            </div>
-            <div className="flex items-center gap-3 mt-2">
-              <QrCode value={qrText} size={72} className="shrink-0" />
-              <p className="text-[10px] text-gray-400 leading-snug">
-                Scan QR for patient, test and status details
-              </p>
             </div>
           </div>
         </div>

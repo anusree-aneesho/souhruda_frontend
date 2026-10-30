@@ -19,6 +19,9 @@ import QrCode from "../../common/QrCode"; // ADDED: QR for UPI payments
 import { findOrderById } from "../../../data/labOrders";
 import { calculateFlag } from "../../../utils/calculateFlag";
 import { buildReportRowsByCategory } from "../../../utils/reportRows";
+import { buildQrText } from "../../../utils/qrDetails";
+import { orderBarcodeValue } from "../../../utils/sampleBarcode";
+import { qrSvgString } from "../../../utils/qrSvg";
 import { getOrderReportUrlApi, getOrderApi, getSettingsApi, getGstSettingsApi, markOrderPaidApi } from "../../../api/api";
 
 // ADDED: payment mode options for the Confirm Payment popup
@@ -202,11 +205,7 @@ export default function Report() {
     discount.type === "percentage"
       ? (subtotal * Number(discount.value || 0)) / 100
       : Number(discount.value || 0);
-  // ADDED: GST, only when the branch is GST registered
-  const gstRate = gstInfo?.is_gst_registered ? Number(gstInfo.gst_rate || 0) : 0;
-  const taxableAmount = Math.max(0, subtotal + homeVisitFee - discountAmount);
-  const gstAmount = Math.round(subtotal * gstRate) / 100;
-  const payableAmount = taxableAmount + gstAmount;
+  const payableAmount = Math.max(0, subtotal + homeVisitFee - discountAmount);
 
   const ageText =
     patient.age !== undefined && patient.age !== null && patient.age !== "-" && patient.age !== ""
@@ -275,6 +274,17 @@ export default function Report() {
   ).length;
   // Printed report / preview rows: a group (CBC) is a heading, its parameters follow.
   const reportRowsByCategory = buildReportRowsByCategory(tests, results);
+
+  // QR on the report: patient, register no, tests, report date (plain text when
+  // scanned) + a link to the live scan page.
+  const qrText = buildQrText({
+    code: order?.barcode || orderBarcodeValue(orderId, patient.regNo),
+    patient,
+    testNames: tests.map((t) => t.name).filter(Boolean),
+    when: reportDate && reportDate !== "—" ? `Reported: ${reportDate}` : "",
+    status: "Report ready",
+    url: `${window.location.origin}/scan/${encodeURIComponent(orderId)}`,
+  });
 
   function handleScheduleReminder(test) {
     console.log("Schedule reminder for", test.name);
@@ -449,7 +459,8 @@ export default function Report() {
     .info-block .col { flex: 1; }
     .info-block .patient-name { font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 2px; }
     .info-block .patient-meta { font-size: 10px; color: #4b5563; line-height: 1.5; }
-    .info-block .code-box { width: 62px; height: 62px; border: 1.5px dashed #d1d5db; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 8px; color: #9ca3af; margin: 0 18px; flex-shrink: 0; }
+    .info-block .code-box { width: 62px; height: 62px; display: flex; align-items: center; justify-content: center; margin: 0 18px; flex-shrink: 0; }
+    .info-block .code-box svg { width: 62px; height: 62px; display: block; }
     .info-block .right-col { text-align: right; font-size: 10px; color: #4b5563; line-height: 1.5; }
     .info-block .right-col strong { color: #111827; }
 
@@ -507,7 +518,7 @@ export default function Report() {
             </div>
         </div>
 
-        <div class="code-box">QR</div>
+        <div class="code-box">${qrSvgString(qrText, 62)}</div>
 
         <div class="col right-col">
             <div><strong>Order No:</strong> ${orderId}</div>
@@ -576,26 +587,23 @@ export default function Report() {
       {viewTest ? (
         /* ── Single-test detail view (replaces the old popup) ───────── */
         <TestDetailView
-            patient={patient}
-            orderId={orderId}
-            test={viewTest}
-            flag={flags[viewTest.id]}
-            parameters={testsWithResults.filter((p) => p.parentItemId === viewTest.id)}
-            flags={flags}
-            ageText={ageText}
-            registered={registered}
-            reportDate={reportDate}
-            referredBy={order?.referredBy || "Self"}
-            letterheadOn={letterheadOn}
-            onLetterheadChange={setLetterheadOn}
-            onBack={() => setViewTest(null)}
-            onBill={() => setBillOpen(true)}
-            onWhatsApp={() => setWhatsAppOpen(true)}
-            onPrint={handlePrint}
-            paymentDone={paymentDone}
-            paymentMode={formatPaymentMode(savedPaymentMode)}
-            onMarkPaid={openPaymentPopup}
-          />
+          patient={patient}
+          orderId={orderId}
+          test={viewTest}
+          flag={flags[viewTest.id]}
+          parameters={testsWithResults.filter((p) => p.parentItemId === viewTest.id)}
+          flags={flags}
+          ageText={ageText}
+          registered={registered}
+          reportDate={reportDate}
+          referredBy={order?.referredBy || "Self"}
+          letterheadOn={letterheadOn}
+          onLetterheadChange={setLetterheadOn}
+          onBack={() => setViewTest(null)}
+          onBill={() => setBillOpen(true)}
+          onWhatsApp={() => setWhatsAppOpen(true)}
+          onPrint={handlePrint}
+        />
       ) : (
         <>
           {/* ── Top action bar ───────────────────────────────────────── */}
@@ -704,6 +712,12 @@ export default function Report() {
                 </div>
 
               </div>
+
+              {/* Report QR — scan for patient, test and report details */}
+              <div className="shrink-0 flex flex-col items-center gap-1 lg:border-l lg:border-gray-100 lg:pl-6">
+                <QrCode value={qrText} size={96} />
+                <p className="text-[10px] uppercase tracking-wide text-gray-400">Scan for details</p>
+              </div>
             </div>
           </div>
 
@@ -721,7 +735,7 @@ export default function Report() {
                   <tr className="bg-gray-50 text-left">
                     <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide">No.</th>
                     <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">TEST</th>
-                    <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">TEST AMOUNT</th>
+                    <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">BILL AMOUNT</th>
                     <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide text-right">ACTION</th>
                   </tr>
                 </thead>
@@ -887,8 +901,8 @@ export default function Report() {
                     </div>
                   </div>
 
-                  <div className="w-[62px] h-[62px] border-[1.5px] border-dashed border-gray-300 rounded-md flex items-center justify-center text-[8px] text-gray-400 mx-[18px] shrink-0">
-                    QR
+                  <div className="w-[62px] h-[62px] mx-[18px] shrink-0">
+                    <QrCode value={qrText} size={62} />
                   </div>
 
                   <div className="flex-1 text-right text-[10px] text-gray-600 leading-snug">
@@ -1074,13 +1088,6 @@ export default function Report() {
                     Discount{discount.type === "percentage" ? ` (${discount.value}%)` : ""}
                   </span>
                   <span>− ₹{discountAmount.toFixed(2)}</span>
-                </div>
-              )}
-              {/* ADDED: GST row */}
-              {gstAmount > 0 && (
-                <div className="flex justify-between text-gray-600">
-                  <span>GST ({gstRate}%)</span>
-                  <span>₹{gstAmount.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between border-t border-gray-200 pt-2 font-semibold text-gray-900">

@@ -351,7 +351,6 @@ export default function OrderDetail() {
         <PrintOrderLabelModal
           orderNo={orderId}
           barcode={order?.barcode}
-          status={order?.status}
           patient={patient}
           testNames={tests.map((t) => t.name).filter(Boolean)}
           orderedAt={formattedOrderedAt}

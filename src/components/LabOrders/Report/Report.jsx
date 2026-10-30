@@ -128,6 +128,27 @@ function mapApiOrder(data) {
     })),
   };
 }
+// Converts the SVG QR into a PNG data URI so the PDF engine can draw it.
+function svgToPngDataUri(svg, size = 240) {
+  return new Promise((resolve, reject) => {
+    if (!svg.includes("xmlns=")) {
+      svg = svg.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(img, 0, 0, size, size);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = reject;
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  });
+}
 
 export default function Report() {
   const { orderId } = useParams();
@@ -345,19 +366,20 @@ export default function Report() {
     console.log("Schedule reminder for", test.name);
   }
 
-  async function handleDownloadPdf() {
-    setDownloadingPdf(true);
-    setDownloadError("");
-    try {
-      const data = await getOrderReportUrlApi(orderId, letterheadOn);
-      window.open(data.url, "_blank");
-    } catch (err) {
-      console.error("Download PDF failed:", err.message);
-      setDownloadError(err.message || "Couldn't prepare the report. Please try again.");
-    } finally {
-      setDownloadingPdf(false);
-    }
+async function handleDownloadPdf() {
+  setDownloadingPdf(true);
+  setDownloadError("");
+  try {
+    const qrImage = await svgToPngDataUri(qrSvgString(qrText, 240), 240);
+    const data = await getOrderReportUrlApi(orderId, letterheadOn, qrImage);
+    window.open(data.url, "_blank");
+  } catch (err) {
+    console.error("Download PDF failed:", err.message);
+    setDownloadError(err.message || "Couldn't prepare the report. Please try again.");
+  } finally {
+    setDownloadingPdf(false);
   }
+}
 
   // Print Function — mirrors the Blade PDF-download template exactly.
   // Kept as a self-contained HTML document (written into a hidden iframe)

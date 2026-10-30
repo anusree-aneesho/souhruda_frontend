@@ -27,18 +27,26 @@ export default function Doctors() {
   const [editingDoctor, setEditingDoctor] = useState(null);
   const [confirmingRemove, setConfirmingRemove] = useState(null); 
 
-  const fetchDoctors = async (pageNum = 1) => {
-    setLoading(true);
-    const res = await getDoctorsApi(pageNum);
+  const fetchDoctors = async (pageNum = 1, q = search) => {
+  setLoading(true);
+  try {
+    const res = await getDoctorsApi(pageNum, q.trim());
     setDoctors(res.data);
     setLastPage(res.last_page);
     setPage(res.current_page);
+  } catch (err) {
+    showToast(err.message || "Failed to load doctors.", "error");
+  } finally {
     setLoading(false);
-  };
+  }
+};
 
+  // Runs on first load and whenever the search text changes (after a short pause),
+  // always starting from page 1.
   useEffect(() => {
-    fetchDoctors(1);
-  }, []);
+    const timer = setTimeout(() => fetchDoctors(1, search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const handleDelete = (id) => {
     const target = doctors.find((d) => d.id === id);
@@ -67,9 +75,7 @@ export default function Doctors() {
     fetchDoctors(page);
   };
 
-  const filteredDoctors = doctors.filter((doc) =>
-    doc.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredDoctors = doctors; // the backend already filtered them
 
   return (
     <div>
@@ -99,7 +105,7 @@ export default function Doctors() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search doctors..."
+              placeholder="Search name, reg no, phone, hospital..."
               className="w-64 border border-gray-200 rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
           </div>

@@ -262,8 +262,13 @@ export function deleteTestCategory(id) {
 
 // ── Home Collection ──────────────────────────────
 
-export async function getHomeCollectionRequestsApi() {
-  return request("/home-collection-requests");
+export async function getHomeCollectionRequestsApi({ q, status, slotDate } = {}) {
+  const params = new URLSearchParams();
+  if (q) params.append("q", q);
+  if (status) params.append("status", status);
+  if (slotDate) params.append("slot_date", slotDate);
+  const qs = params.toString();
+  return request(`/home-collection-requests${qs ? `?${qs}` : ""}`);
 }
 
 export async function createHomeCollectionRequestApi(payload) {
@@ -611,8 +616,13 @@ export async function updateStaffMemberApi(id, payload) {
   });
 }
 
-export async function getStaffMembersApi() {
-  return request("/staff-members");
+export async function getStaffMembersApi({ q, role, branchId } = {}) {
+  const params = new URLSearchParams();
+  if (q) params.append("q", q);
+  if (role) params.append("role", role);
+  if (branchId) params.append("branch_id", branchId);
+  const qs = params.toString();
+  return request(`/staff-members${qs ? `?${qs}` : ""}`);
 }
 
 export async function getStaffRolesApi() {
@@ -650,8 +660,11 @@ export async function updateTestRangeApi(testId, payload) {
 
 // ── Doctors ──────────────────────────────────────────────
 
-export async function getDoctorsApi(page = 1) {
-  return request(`/doctors?page=${page}`);
+export async function getDoctorsApi(page = 1, q = "") {
+  const params = new URLSearchParams();
+  params.append("page", page);
+  if (q) params.append("q", q);
+  return request(`/doctors?${params.toString()}`);
 }
 
 export async function createDoctorApi(payload) {

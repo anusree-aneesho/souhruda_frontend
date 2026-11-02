@@ -18,7 +18,9 @@ const BranchesList = forwardRef(function BranchesList(
   const [deleting, setDeleting] = useState(false);
   const [alert, setAlert] = useState(null); // { title, message }
   const { user } = useAuth();
-  const canManageBranches = user?.role === "super_admin";
+  const isSuperAdmin = user?.role === "super_admin";
+  // Super admin and admin can open, edit and delete branches.
+  const canManageBranches = isSuperAdmin || user?.role === "admin";
 
   async function loadBranches() {
     setLoading(true);
@@ -61,12 +63,15 @@ const BranchesList = forwardRef(function BranchesList(
 
   // Highlight the branch in effect. A super admin has no branch of their own, so
   // only their explicit pick counts; with no pick, "All branches" is highlighted.
+  // An admin can pick any branch, and falls back to their own when none is picked.
   // Everyone else works in their own branch.
   const firstActiveId = [...(branches || [])]
     .filter((b) => b.is_active !== false)
     .sort((a, b) => a.id - b.id)[0]?.id;
-  const activeBranchId = canManageBranches
+  const activeBranchId = isSuperAdmin
     ? selectedBranchId ?? null
+    : canManageBranches
+    ? selectedBranchId ?? user?.branchId ?? firstActiveId ?? null
     : user?.branchId ?? firstActiveId ?? null;
 
   return (
@@ -81,7 +86,7 @@ const BranchesList = forwardRef(function BranchesList(
         <p className="text-sm text-gray-500 px-3 py-2">No branches added yet.</p>
       ) : (
         <div className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible">
-          {canManageBranches && (
+          {isSuperAdmin && (
             <button
               type="button"
               onClick={() => onSelectBranch?.(null)}

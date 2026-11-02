@@ -23,6 +23,7 @@ import { buildQrText } from "../../../utils/qrDetails";
 import { orderBarcodeValue } from "../../../utils/sampleBarcode";
 import { qrSvgString } from "../../../utils/qrSvg";
 import { getOrderReportUrlApi, getOrderApi, getSettingsApi, getGstSettingsApi, markOrderPaidApi } from "../../../api/api";
+import { calcBillTotals } from "../../../utils/orderPricing"; // ADDED (GST): same helper BillModal uses
 
 // ADDED: payment mode options for the Confirm Payment popup
 const PAYMENT_MODES = [
@@ -270,17 +271,26 @@ export default function Report() {
     setSearchParams({});
   }
 
-  // ADDED: payment details shown in the Confirm Payment popup (also used for the UPI QR)
-  const subtotal = billTests.reduce(
-    (sum, t) => sum + (t.packageId != null ? 0 : Number(t.price || 0)),
-    0
-  );
+  // CHANGED (GST): same maths as BillModal, so the popup total always matches the bill
+  const gstEnabled = gstInfo?.is_gst_registered;
+  const gstRate = gstEnabled ? Number(gstInfo.gst_rate) || 0 : 0;
+
+  const fallbackTestsTotal = billTests.reduce((sum, t) => sum + Number(t.price || 0), 0);
+  const testsTotal = order?.billTotal != null ? Number(order.billTotal) : fallbackTestsTotal;
   const homeVisitFee = Number(order?.homeVisitFee || 0);
-  const discountAmount =
-    discount.type === "percentage"
-      ? (subtotal * Number(discount.value || 0)) / 100
-      : Number(discount.value || 0);
-  const payableAmount = Math.max(0, subtotal + homeVisitFee - discountAmount);
+
+  const {
+    discountAmount,
+    subtotal: afterDiscount,
+    gstAmount,
+    grandTotal: payableAmount,
+  } = calcBillTotals({
+    testsTotal,
+    discountType: discount.type,
+    discountValue: Number(discount.value) || 0,
+    homeVisitFee,
+    gstRate,
+  });
 
   const ageText =
     patient.age !== undefined && patient.age !== null && patient.age !== "-" && patient.age !== ""
@@ -1153,19 +1163,13 @@ async function handleDownloadPdf() {
             <p className="text-sm text-gray-600 text-center">
               Mark Order {orderId} as paid? This confirms the payment has been received.
             </p>
-            {/* ADDED: payment details with total amount */}
+            {/* CHANGED (GST): payment details now match the Bill modal, including GST */}
             <div className="rounded-xl border border-gray-100 bg-gray-50 px-5 py-4 space-y-2 text-sm">
               <p className="text-xs font-medium text-gray-400 tracking-wide mb-1">PAYMENT DETAILS</p>
               <div className="flex justify-between text-gray-600">
-                <span>Subtotal</span>
-                <span>₹{subtotal.toFixed(2)}</span>
+                <span>Tests total</span>
+                <span>₹{testsTotal.toFixed(2)}</span>
               </div>
-              {homeVisitFee > 0 && (
-                <div className="flex justify-between text-gray-600">
-                  <span>Home visit fee</span>
-                  <span>₹{homeVisitFee.toFixed(2)}</span>
-                </div>
-              )}
               {discountAmount > 0 && (
                 <div className="flex justify-between text-gray-600">
                   <span>
@@ -1173,6 +1177,24 @@ async function handleDownloadPdf() {
                   </span>
                   <span>− ₹{discountAmount.toFixed(2)}</span>
                 </div>
+              )}
+              {homeVisitFee > 0 && (
+                <div className="flex justify-between text-gray-600">
+                  <span>Home visit fee</span>
+                  <span>₹{homeVisitFee.toFixed(2)}</span>
+                </div>
+              )}
+              {gstEnabled && (
+                <>
+                  <div className="flex justify-between text-gray-600">
+                    <span>Subtotal</span>
+                    <span>₹{afterDiscount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span>GST ({gstRate}%)</span>
+                    <span>₹{gstAmount.toFixed(2)}</span>
+                  </div>
+                </>
               )}
               <div className="flex justify-between border-t border-gray-200 pt-2 font-semibold text-gray-900">
                 <span>Total amount</span>

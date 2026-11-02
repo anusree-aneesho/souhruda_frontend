@@ -65,6 +65,8 @@ function mapRequest(r) {
     // the table by the same grouping the counts already use — null for
     // anything not shown on a card (e.g. cancelled).
     bucket: bucketStatus(r.status),
+    // Unpaid and not cancelled — what the "Payment Pending" card adds up and filters by.
+    paymentPending: r.status !== "cancelled" && r.payment_status !== "paid",
   };
 }
 
@@ -75,6 +77,7 @@ const FILTER_LABELS = {
   reportReady: "Report Ready",
   sentToPatient: "Sent to Patient",
   cancelled: "Cancelled",
+  paymentPending: "Payment Pending",
 };
 
 // Bucket the raw statuses into the four summary cards
@@ -97,6 +100,19 @@ function computeCounts(rows) {
     },
     { requested: 0, inProgress: 0, reportReady: 0, sentToPatient: 0, cancelled: 0 }
     );
+}
+
+// Money still to be collected: every non-cancelled request that isn't paid yet
+function computePendingPayment(rows) {
+  return rows.reduce(
+    (acc, r) => {
+      if (r.status === "cancelled" || r.payment_status === "paid") return acc;
+      acc.count += 1;
+      acc.total += Number(r.grand_total) || 0;
+      return acc;
+    },
+    { count: 0, total: 0 }
+  );
 }
 
 export default function HomeCollection() {
@@ -161,6 +177,7 @@ export default function HomeCollection() {
 
   const requests = rawRequests.map(mapRequest);
   const counts = computeCounts(rawRequests);
+  const pendingPayment = computePendingPayment(rawRequests);
 
   const today = todayLocalDate();
   const term = search.trim().toLowerCase();
@@ -170,7 +187,9 @@ export default function HomeCollection() {
       [r.requestId, r.patient, r.technician, r.status, r.date, r.slotDateRaw]
         .filter(Boolean)
         .some((field) => field.toLowerCase().includes(term));
-    const matchesStatus = !statusFilter || r.bucket === statusFilter;
+    const matchesStatus =
+      !statusFilter ||
+      (statusFilter === "paymentPending" ? r.paymentPending : r.bucket === statusFilter);
     const matchesDate = !dateFilter || r.slotDateRaw === today;
     return matchesSearch && matchesStatus && matchesDate;
   });
@@ -210,7 +229,7 @@ export default function HomeCollection() {
   return (
     <div className="space-y-6">
       <HomeCollectionHeader />
-      <HomeCollectionStats counts={counts} activeFilter={statusFilter} onFilterChange={handleFilterChange} />
+      <HomeCollectionStats counts={counts} pendingPayment={pendingPayment} activeFilter={statusFilter} onFilterChange={handleFilterChange} />
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative w-full sm:w-80">

@@ -58,6 +58,8 @@ function mapRequest(r) {
     date: formatDate(r.slot_date),
     slotDateRaw: r.slot_date,
     slot: r.slot_label,
+    // Position in this date + slot, by booking time (#1 = booked first)
+    queueNo: r.queue_no ?? null,
     payment: formatPayment(r.payment_mode),
     technician: r.technician?.name ? formatNameWithTitle(r.technician.title, r.technician.name) : "Unassigned",
     status: formatStatus(r.status),
@@ -184,7 +186,7 @@ export default function HomeCollection() {
   const filteredRequests = requests.filter((r) => {
     const matchesSearch =
       !term ||
-      [r.requestId, r.patient, r.technician, r.status, r.date, r.slotDateRaw]
+      [r.requestId, r.patient, r.technician, r.status]
         .filter(Boolean)
         .some((field) => field.toLowerCase().includes(term));
     const matchesStatus =

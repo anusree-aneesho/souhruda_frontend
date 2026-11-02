@@ -8,7 +8,7 @@ import Toast from "../../common/Toast/Toast";
 import { useToast } from "../../common/Toast/useToast";
 import { updateHomeCollectionStatusApi } from "../../../api/api";
 
-export default function HomeCollectionRow({ requestId, patient, tests, distance, date, slot, payment, technician, status, onCancelled }) {
+export default function HomeCollectionRow({ requestId, patient, tests, distance, date, slot, queueNo, payment, technician, status, onCancelled }) {
   const paymentStyles = {
     Card: "bg-amber-100 text-amber-700",
     Cash: "bg-orange-100 text-orange-700",
@@ -53,7 +53,14 @@ export default function HomeCollectionRow({ requestId, patient, tests, distance,
       <td className="py-3 text-sm text-gray-500">{distance}</td>
       <td className="py-3 text-sm text-gray-700">
         {date}
-        <p className="text-xs text-gray-400">{slot}</p>
+        <p className="text-xs text-gray-400">
+          {slot}
+          {queueNo != null && (
+            <span className="ml-2 inline-block rounded-full bg-teal-50 px-1.5 py-0.5 text-[10px] font-semibold text-teal-700">
+              #{queueNo}
+            </span>
+          )}
+        </p>
       </td>
       <td className="py-3">
         <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${paymentStyles[payment] ?? "bg-gray-100 text-gray-600"}`}>

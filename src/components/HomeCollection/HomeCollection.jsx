@@ -167,7 +167,7 @@ export default function HomeCollection() {
   const filteredRequests = requests.filter((r) => {
     const matchesSearch =
       !term ||
-      [r.requestId, r.patient, r.technician, r.status]
+      [r.requestId, r.patient, r.technician, r.status, r.date, r.slotDateRaw]
         .filter(Boolean)
         .some((field) => field.toLowerCase().includes(term));
     const matchesStatus = !statusFilter || r.bucket === statusFilter;

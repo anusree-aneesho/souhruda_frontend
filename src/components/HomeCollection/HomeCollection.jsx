@@ -59,8 +59,7 @@ function mapRequest(r) {
     date: formatDate(r.slot_date),
     slotDateRaw: r.slot_date,
     slot: r.slot_label,
-    // Position in this date + slot, by booking time (#1 = booked first)
-    queueNo: r.queue_no ?? null,
+    queueNo: null,
     payment: formatPayment(r.payment_mode),
     technician: r.technician?.name ? formatNameWithTitle(r.technician.title, r.technician.name) : "Unassigned",
     status: formatStatus(r.status),

@@ -212,11 +212,13 @@ export default function HomeCollection() {
 
   const today = todayLocalDate();
   const term = search.trim().toLowerCase();
-  const filteredRequests = requests.filter((r) => {
-    const matchesStatus = !statusFilter || r.bucket === statusFilter;
-    const matchesDate = !dateFilter || r.slotDateRaw === today;
-    return matchesStatus && matchesDate;
-  });
+ const filteredRequests = requests.filter((r) => {
+  const matchesStatus =
+    !statusFilter ||
+    (statusFilter === "paymentPending" ? r.paymentPending : r.bucket === statusFilter);
+  const matchesDate = !dateFilter || r.slotDateRaw === today;
+  return matchesStatus && matchesDate;
+});
 
   // Clicking an already-active stat card clears the filter back to "All".
   function handleFilterChange(key) {

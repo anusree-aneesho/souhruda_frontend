@@ -1,5 +1,5 @@
 // src/components/SettingPage/StaffManagement.jsx
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Search, Pencil, Trash2, Star } from "lucide-react";
 import AddStaffModal from "./modals/AddStaffModal";
 import TechnicianDetailsDrawer from "./TechnicianDetailsDrawer";
@@ -266,37 +266,42 @@ export default function StaffManagement() {
 
   const showTechnicianColumns = roleFilter === TECHNICIAN_ROLE;
 
+  // Search text + role (as the backend expects it, e.g. "Lab Technician" -> "technician")
+  const staffParams = () => ({
+    q: search.trim(),
+    role: roleFilter
+      ? ROLE_VALUE_MAP[roleFilter] ?? roleFilter.toLowerCase().replace(/\s+/g, "_")
+      : "",
+  });
+
+  // Loads on first render and whenever the search text, role or selected branch
+  // changes (after a short pause). The selected branch itself is sent to the
+  // backend as the X-Branch-Id header, so it only needs to trigger the reload.
   useEffect(() => {
     let cancelled = false;
 
-    setIsLoading(true);
-    getStaffMembersApi()
-      .then((res) => {
-        if (!cancelled) setStaffMembers((res.data || []).map(mapStaff));
-      })
-      .catch(() => {
-        if (!cancelled) setStaffMembers([]);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
+    const timer = setTimeout(() => {
+      setIsLoading(true);
+      getStaffMembersApi(staffParams())
+        .then((res) => {
+          if (!cancelled) setStaffMembers((res.data || []).map(mapStaff));
+        })
+        .catch(() => {
+          if (!cancelled) setStaffMembers([]);
+        })
+        .finally(() => {
+          if (!cancelled) setIsLoading(false);
+        });
+    }, 300);
 
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
-  }, [branchId]); // refetch when the branch dropdown changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, roleFilter, branchId]);
 
-  const filteredStaff = useMemo(() => {
-    const q = search.toLowerCase();
-    return staffMembers.filter(
-      (s) =>
-        (!roleFilter || s.role === roleFilter) &&
-        (s.name.toLowerCase().includes(q) ||
-          s.staffId.toLowerCase().includes(q) ||
-          (s.phone ?? "").includes(search) ||
-          (s.branch ?? "").toLowerCase().includes(q))
-    );
-  }, [staffMembers, search, roleFilter]);
+  const filteredStaff = staffMembers; // the backend already filtered them
 
   function handleAddStaff() {
     setModalState({ editingStaff: null });
@@ -316,54 +321,54 @@ export default function StaffManagement() {
     showToast(`Rating updated for ${technician.name}.`);
   }
 
-async function handleSaveStaff(formData) {
-  const isEdit = Boolean(formData.id);
+  async function handleSaveStaff(formData) {
+    const isEdit = Boolean(formData.id);
 
-  try {
-    if (isEdit) {
-      const payload = {
-        title: formData.title || null,
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        branch_id: formData.branch_id,
-        status: formData.status,
-        latitude: formData.latitude || null,
-        longitude: formData.longitude || null,
-        signature: formData.signature,
-        remove_signature: formData.remove_signature,
-      };
+    try {
+      if (isEdit) {
+        const payload = {
+          title: formData.title || null,
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          branch_id: formData.branch_id,
+          status: formData.status,
+          latitude: formData.latitude || null,
+          longitude: formData.longitude || null,
+          signature: formData.signature,
+          remove_signature: formData.remove_signature,
+        };
 
-      await updateStaffMemberApi(formData.id, payload);
-      showToast(`${formData.name} updated successfully.`);
-    } else {
-      const payload = {
-        title: formData.title || null,
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        branch_id: formData.branch_id,
-        role: ROLE_VALUE_MAP[formData.role],
-        status: formData.status,
-        latitude: formData.latitude || null,
-        longitude: formData.longitude || null,
-        signature: formData.signature,
-        remove_signature: formData.remove_signature,
-      };
+        await updateStaffMemberApi(formData.id, payload);
+        showToast(`${formData.name} updated successfully.`);
+      } else {
+        const payload = {
+          title: formData.title || null,
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          branch_id: formData.branch_id,
+          role: ROLE_VALUE_MAP[formData.role],
+          status: formData.status,
+          latitude: formData.latitude || null,
+          longitude: formData.longitude || null,
+          signature: formData.signature,
+          remove_signature: formData.remove_signature,
+        };
 
-      await addStaffApi(payload);
-      showToast(`${formData.name} added successfully — credentials emailed.`);
+        await addStaffApi(payload);
+        showToast(`${formData.name} added successfully — credentials emailed.`);
+      }
+
+      setModalState(null);
+      const res = await getStaffMembersApi(staffParams());
+      const refreshed = (res.data || []).map(mapStaff);
+      setStaffMembers(refreshed);
+      setViewingTechnician((prev) => (prev ? refreshed.find((s) => s.id === prev.id) ?? null : null));
+    } catch (err) {
+      showToast(err.message || "Failed to save staff member.", "error");
     }
-
-    setModalState(null);
-    const res = await getStaffMembersApi();
-    const refreshed = (res.data || []).map(mapStaff);
-    setStaffMembers(refreshed);
-    setViewingTechnician((prev) => (prev ? refreshed.find((s) => s.id === prev.id) ?? null : null));
-  } catch (err) {
-    showToast(err.message || "Failed to save staff member.", "error");
   }
-}
 
   function handleRemove(staff) {
     setConfirmingRemove(staff);
@@ -382,6 +387,7 @@ async function handleSaveStaff(formData) {
       showToast(err.message || "Failed to remove staff member.", "error");
     }
   }
+
   return (
     <div className="space-y-6">
       <StaffHeader onAddStaff={handleAddStaff} />

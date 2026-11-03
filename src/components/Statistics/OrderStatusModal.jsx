@@ -17,7 +17,11 @@ function statusLabel(s) {
 
 const inr = (n) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
-export default function OrderStatusModal({ initialRange = "Today", initialTab = "all", onClose }) {
+// lockTab: opened from one of the Statistics cards (Total / Completed / Pending /
+// Sample Collected / Cancelled). The modal then shows only that category and the
+// other summary tiles are display-only. Without it (the donut's "View Report")
+// the tiles still switch the table.
+export default function OrderStatusModal({ initialRange = "Today", initialTab = "all", lockTab = false, onClose }) {
   const navigate = useNavigate();
   const [range, setRange] = useState(initialRange);
   const [tab, setTab] = useState(initialTab);
@@ -92,24 +96,45 @@ export default function OrderStatusModal({ initialRange = "Today", initialTab = 
           ))}
         </div>
 
-        {/* Summary tiles (click to filter the table) */}
+        {/* Summary tiles: click to filter the table (locked when opened from a card) */}
         <div className="grid grid-cols-2 gap-3 px-6 py-4 sm:grid-cols-3 lg:grid-cols-5">
-          {tiles.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key)}
-              className={`rounded-lg p-3 text-left cursor-pointer transition hover:shadow-md ${t.cls} ${
-                tab === t.key ? "ring-2 ring-teal-600 ring-offset-1" : ""
-              }`}
-            >
-              <p className="text-xs opacity-80">{t.label}</p>
-              <p className="text-xl font-bold">
-                {loading ? "…" : t.value}
-                {!loading && t.sub && <span className="ml-1.5 text-xs font-normal opacity-70">({t.sub})</span>}
-              </p>
-            </button>
-          ))}
+          {tiles.map((t) => {
+            const active = tab === t.key;
+            const body = (
+              <>
+                <p className="text-xs opacity-80">{t.label}</p>
+                <p className="text-xl font-bold">
+                  {loading ? "…" : t.value}
+                  {!loading && t.sub && <span className="ml-1.5 text-xs font-normal opacity-70">({t.sub})</span>}
+                </p>
+              </>
+            );
+            const ring = active ? "ring-2 ring-teal-600 ring-offset-1" : "";
+
+            if (lockTab) {
+              return (
+                <div
+                  key={t.key}
+                  aria-disabled={!active}
+                  className={`rounded-lg p-3 text-left select-none ${t.cls} ${ring} ${
+                    active ? "" : "opacity-50 cursor-not-allowed"
+                  }`}
+                >
+                  {body}
+                </div>
+              );
+            }
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTab(t.key)}
+                className={`rounded-lg p-3 text-left cursor-pointer transition hover:shadow-md ${t.cls} ${ring}`}
+              >
+                {body}
+              </button>
+            );
+          })}
         </div>
 
         {/* Orders table */}

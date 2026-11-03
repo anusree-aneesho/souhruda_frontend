@@ -133,6 +133,7 @@ export default function HomeCollection() {
   );
   const { activeId } = useHomeCollectionModal();
   const prevActiveIdRef = useRef(null);
+  const [searchResults, setSearchResults] = useState(null); // null = no search typed
 
   const load = useCallback(async () => {
     try {
@@ -148,6 +149,33 @@ export default function HomeCollection() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // When something is typed, ask the backend (after a short pause).
+// The count cards still use the full list.
+useEffect(() => {
+  const q = search.trim();
+  if (!q) {
+    setSearchResults(null);
+    return;
+  }
+
+  let cancelled = false;
+  const timer = setTimeout(async () => {
+    try {
+      const data = await getHomeCollectionRequestsApi({ q });
+      if (!cancelled) setSearchResults(Array.isArray(data) ? data : data.data || []);
+    } catch {
+      if (!cancelled) setSearchResults([]);
+    }
+  }, 300);
+
+  return () => {
+    cancelled = true;
+    clearTimeout(timer);
+  };
+}, [search, rawRequests]);
+
+
 
   // NewOrderModal navigates back here with { justBooked: created } right
   // after a successful booking (same route, so React Router won't remount
@@ -177,24 +205,17 @@ export default function HomeCollection() {
     prevActiveIdRef.current = activeId;
   }, [activeId, load]);
 
-  const requests = rawRequests.map(mapRequest);
+  const requests = (searchResults ?? rawRequests).map(mapRequest);
   const counts = computeCounts(rawRequests);
   const pendingPayment = computePendingPayment(rawRequests);
 
   const today = todayLocalDate();
   const term = search.trim().toLowerCase();
   const filteredRequests = requests.filter((r) => {
-    const matchesSearch =
-      !term ||
-      [r.requestId, r.patient, r.technician, r.status]
-        .filter(Boolean)
-        .some((field) => field.toLowerCase().includes(term));
-    const matchesStatus =
-      !statusFilter ||
-      (statusFilter === "paymentPending" ? r.paymentPending : r.bucket === statusFilter);
-    const matchesDate = !dateFilter || r.slotDateRaw === today;
-    return matchesSearch && matchesStatus && matchesDate;
-  });
+  const matchesStatus = !statusFilter || r.bucket === statusFilter;
+  const matchesDate = !dateFilter || r.slotDateRaw === today;
+  return matchesStatus && matchesDate;
+});
 
   // Clicking an already-active stat card clears the filter back to "All".
   function handleFilterChange(key) {
@@ -268,10 +289,10 @@ export default function HomeCollection() {
       <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-4">
         {isLoading && <p className="text-sm text-gray-400">Loading home collection requests…</p>}
         {!isLoading && error && <p className="text-sm text-red-600">{error}</p>}
-        {!isLoading && !error && requests.length === 0 && (
+        {!isLoading && !error && rawRequests.length === 0 && (
           <p className="text-sm text-gray-400">No home collection requests yet.</p>
         )}
-        {!isLoading && !error && requests.length > 0 && filteredRequests.length === 0 && (
+        {!isLoading && !error && rawRequests.length > 0 && filteredRequests.length === 0 && (
           <p className="text-sm text-gray-400">
             {term && (statusFilter || dateFilter)
               ? `No requests match "${search}" in this category.`

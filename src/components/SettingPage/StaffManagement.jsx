@@ -259,11 +259,20 @@ export default function StaffManagement() {
   }, []);
 
   const showTechnicianColumns = roleFilter === TECHNICIAN_ROLE;
+  // Search text + role (as the backend expects it, e.g. "Lab Technician" -> "lab_technician")
+const staffParams = () => ({
+  q: search.trim(),
+  role: roleFilter
+    ? ROLE_VALUE_MAP[roleFilter] ?? roleFilter.toLowerCase().replace(/\s+/g, "_")
+    : "",
+});
 
-  useEffect(() => {
-    let cancelled = false;
+  // Loads on first render and whenever the search text or role changes (after a short pause)
+useEffect(() => {
+  let cancelled = false;
 
-    getStaffMembersApi()
+  const timer = setTimeout(() => {
+    getStaffMembersApi(staffParams())
       .then((res) => {
         if (!cancelled) setStaffMembers((res.data || []).map(mapStaff));
       })
@@ -273,23 +282,15 @@ export default function StaffManagement() {
       .finally(() => {
         if (!cancelled) setIsLoading(false);
       });
+  }, 300);
 
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  return () => {
+    cancelled = true;
+    clearTimeout(timer);
+  };
+}, [search, roleFilter]);
 
-  const filteredStaff = useMemo(() => {
-    const q = search.toLowerCase();
-    return staffMembers.filter(
-      (s) =>
-        (!roleFilter || s.role === roleFilter) &&
-        (s.name.toLowerCase().includes(q) ||
-          s.staffId.toLowerCase().includes(q) ||
-          (s.phone ?? "").includes(search) ||
-          (s.branch ?? "").toLowerCase().includes(q))
-    );
-  }, [staffMembers, search, roleFilter]);
+  const filteredStaff = staffMembers; // the backend already filtered them
 
   function handleAddStaff() {
     setModalState({ editingStaff: null });
@@ -349,7 +350,7 @@ async function handleSaveStaff(formData) {
     }
 
     setModalState(null);
-    const res = await getStaffMembersApi();
+    const res = await getStaffMembersApi(staffParams());
     const refreshed = (res.data || []).map(mapStaff);
     setStaffMembers(refreshed);
     setViewingTechnician((prev) => (prev ? refreshed.find((s) => s.id === prev.id) ?? null : null));

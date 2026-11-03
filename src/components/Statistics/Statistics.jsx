@@ -437,8 +437,26 @@ function RankingsModal({ type, data, loading, onClose }) {
 // AttentionModal — "View All" popup for Attention Needed
 // Tabs: Critical Results, Follow-ups Due, Samples Delayed
 // ─────────────────────────────────────────────────────────────
+
+// How long a sample has been waiting since collection
+const delayInfo = (value) => {
+  const hrs = Math.max(0, (Date.now() - new Date(value).getTime()) / 36e5);
+  const days = Math.floor(hrs / 24);
+  const label =
+    days >= 1
+      ? `${days} day${days > 1 ? "s" : ""} overdue`
+      : `${Math.floor(hrs)} hrs overdue`;
+
+  if (days >= 7)
+    return { label, tag: "Critical", chip: "bg-red-50 text-red-600", icon: "bg-red-50 text-red-500", text: "text-red-600" };
+  if (days >= 2)
+    return { label, tag: "High", chip: "bg-orange-50 text-orange-600", icon: "bg-orange-50 text-orange-500", text: "text-orange-600" };
+  return { label, tag: "Moderate", chip: "bg-amber-50 text-amber-600", icon: "bg-amber-50 text-amber-500", text: "text-amber-600" };
+};
+
 function AttentionModal({ open, alerts, loading, initialTab = "critical", onClose }) {
   const [tab, setTab] = useState(initialTab);
+  const [showAll, setShowAll] = useState(false);
 
   if (!open) {
     return null;
@@ -492,7 +510,7 @@ function AttentionModal({ open, alerts, loading, initialTab = "critical", onClos
                   )}
                 </p>
                 <p className="text-xs text-gray-400 truncate">
-                  {row.test_name} · Order #{row.order_id}
+                  {row.test_name} · Order {row.order_no ?? row.order_id}
                 </p>
               </div>
               <div className="text-right shrink-0">
@@ -529,41 +547,82 @@ function AttentionModal({ open, alerts, loading, initialTab = "critical", onClos
                 </p>
                 <p className="text-xs text-gray-400 truncate">{row.test_name ?? "Follow-up"}</p>
               </div>
-              <span className="text-xs text-gray-500 shrink-0">{formatDate(row.due_at)}</span>
+              <span className="text-xs text-gray-500 shrink-0">
+                  {row.due_at
+                  ? new Date(row.due_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" })
+                  : "-"}
+              </span>
             </div>
           ))}
         </div>
       );
     }
 
-    // samples delayed
-    return samplesDelayedList.length === 0 ? (
-      <Empty text="No delayed samples." />
-    ) : (
-      <div className="space-y-1">
-        {samplesDelayedList.map((row) => (
-          <div
-            key={row.order_id}
-            className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition"
+    // samples delayed: most overdue first
+    const sorted = [...samplesDelayedList].sort(
+      (a, b) => new Date(a.sample_collected_at) - new Date(b.sample_collected_at)
+    );
+    if (sorted.length === 0) return <Empty text="No delayed samples." />;
+
+    const shown = showAll ? sorted : sorted.slice(0, 8);
+    const oldest = delayInfo(sorted[0].sample_collected_at);
+
+    return (
+      <div className="space-y-3">
+        {/* Summary strip */}
+        <div className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3 text-xs">
+          <span className="text-gray-500">
+            <span className="text-base font-bold text-gray-900">{sorted.length}</span> samples delayed
+          </span>
+          <span className="text-gray-500">
+            Longest wait:{" "}
+            <span className={`font-semibold ${oldest.text}`}>
+              {oldest.label.replace(" overdue", "")}
+            </span>
+          </span>
+        </div>
+
+        <div className="space-y-1">
+          {shown.map((row) => {
+            const d = delayInfo(row.sample_collected_at);
+            return (
+              <div
+                key={row.order_id}
+                className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition"
+              >
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${d.icon}`}>
+                  <Clock size={15} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-800 truncate">
+                    {row.patient_name}
+                    {row.patient_number && (
+                      <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-400 truncate">
+                Order {row.order_no ?? row.order_id} · Collected {formatDate(row.sample_collected_at)}               </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${d.chip}`}>
+                    {d.tag}
+                  </span>
+                  <p className={`text-xs font-medium mt-0.5 ${d.text}`}>{d.label}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {sorted.length > 8 && (
+          <button
+            type="button"
+            onClick={() => setShowAll(!showAll)}
+            className="w-full py-2 text-xs font-medium text-teal-600 hover:underline cursor-pointer"
           >
-            <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
-              <Clock size={15} className="text-orange-500" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-gray-800 truncate">
-                {row.patient_name}
-                {row.patient_number && (
-                  <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
-                )}
-              </p>
-              <p className="text-xs text-gray-400 truncate">Order #{row.order_id}</p>
-            </div>
-            <div className="text-right shrink-0">
-              <p className="text-xs text-gray-500">{formatDate(row.sample_collected_at)}</p>
-              <p className="text-[11px] text-gray-400">Collected</p>
-            </div>
-          </div>
-        ))}
+            {showAll ? "Show less" : `Show all ${sorted.length}`}
+          </button>
+        )}
       </div>
     );
   };

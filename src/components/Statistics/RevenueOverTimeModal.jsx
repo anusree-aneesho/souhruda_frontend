@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import { getOrdersListForRangeApi } from "../../api/api";
 import { RANGES } from "../../utils/dateRange";
@@ -16,8 +15,8 @@ function paymentLabel(s) {
 
 const inr = (n) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
-export default function RevenueOverTimeModal({ initialRange = "Today", onClose }) {
-  const navigate = useNavigate();
+export default function RevenueOverTimeModal({ initialRange = "Today", onClose }) 
+{
   const [range, setRange] = useState(initialRange);
   const [filter, setFilter] = useState("all"); // "all" | "paid" | "unpaid"
   const [rows, setRows] = useState([]);
@@ -145,8 +144,7 @@ export default function RevenueOverTimeModal({ initialRange = "Today", onClose }
                 {visible.map((o) => (
                   <tr
                     key={o.order_no}
-                    onClick={() => navigate(`/lab-orders/${o.order_no}`)}
-                    className="cursor-pointer border-b border-gray-100 hover:bg-gray-50"
+            
                   >
                     <td className="px-6 py-3 text-gray-500">{o.order_no}</td>
                     <td className="py-3 font-medium text-gray-900">

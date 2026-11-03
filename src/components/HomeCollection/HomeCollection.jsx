@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Search, X } from "lucide-react";
 import HomeCollectionHeader from "./HomeCollectionHeader";
+import { useSelectedBranch } from "../../utils/selectedBranch";
 import HomeCollectionStats from "./HomeCollectionStats";
 import HomeCollectionTable from "./HomeCollectionTable/HomeCollectionTable";
 import HomeCollectionCard from "./HomeCollectionTable/HomeCollectionCard";
@@ -133,6 +134,7 @@ export default function HomeCollection() {
   );
   const { activeId } = useHomeCollectionModal();
   const prevActiveIdRef = useRef(null);
+  const branchId = useSelectedBranch()?.id ?? null; // refetch when branch changes
 
   const load = useCallback(async () => {
     try {
@@ -147,7 +149,7 @@ export default function HomeCollection() {
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, branchId]);
 
   // NewOrderModal navigates back here with { justBooked: created } right
   // after a successful booking (same route, so React Router won't remount
@@ -226,7 +228,7 @@ export default function HomeCollection() {
   // now-empty page.
   useEffect(() => {
     setPage(1);
-  }, [search, dateFilter]);
+  }, [search, dateFilter, branchId]);
 
   return (
     <div className="space-y-6">

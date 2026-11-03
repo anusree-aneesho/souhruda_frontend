@@ -8,6 +8,8 @@ import { addStaffApi, getStaffMembersApi, getStaffRolesApi, updateStaffMemberApi
 import Toast from "../common/Toast/Toast";
 import { useToast } from "../common/Toast/useToast";
 import { formatNameWithTitle } from "../Patients/patientTitles";
+import BranchFilter from "../common/BranchFilter";
+import { useSelectedBranch } from "../../utils/selectedBranch";
 
 const TECHNICIAN_ROLE = "Lab Technician";
 
@@ -71,13 +73,16 @@ function StaffHeader({ onAddStaff }) {
           Everyone with access to the lab, across roles and branches.
         </p>
       </div>
-      <button
-        onClick={onAddStaff}
-        className="flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors w-full sm:w-auto cursor-pointer"
-      >
-        <Plus size={16} />
-        Add Staff
-      </button>
+      <div className="flex flex-col sm:flex-row gap-3">
+        <BranchFilter />
+        <button
+          onClick={onAddStaff}
+          className="flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors w-full sm:w-auto cursor-pointer"
+        >
+          <Plus size={16} />
+          Add Staff
+        </button>
+      </div>
     </div>
   );
 }
@@ -240,6 +245,7 @@ export default function StaffManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [confirmingRemove, setConfirmingRemove] = useState(null); // staff | null
   const { toast, showToast, hideToast } = useToast();
+  const branchId = useSelectedBranch()?.id ?? null;
 
   // Role filter options come from the roles table (GET /staff-roles).
   // The old fixed list is only a fallback if that request fails.
@@ -263,6 +269,7 @@ export default function StaffManagement() {
   useEffect(() => {
     let cancelled = false;
 
+    setIsLoading(true);
     getStaffMembersApi()
       .then((res) => {
         if (!cancelled) setStaffMembers((res.data || []).map(mapStaff));
@@ -277,7 +284,7 @@ export default function StaffManagement() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [branchId]); // refetch when the branch dropdown changes
 
   const filteredStaff = useMemo(() => {
     const q = search.toLowerCase();

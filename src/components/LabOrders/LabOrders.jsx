@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { X } from "lucide-react";
 import LabOrdersHeader from "./LabOrdersHeader";
+import { useSelectedBranch } from "../../utils/selectedBranch";
 import LabOrdersFilters from "./LabOrdersFilters";
 import LabOrdersTable from "./LabOrdersTable/LabOrdersTable";
 import LabOrderCard from "./LabOrdersTable/LabOrderCard";
@@ -86,6 +87,7 @@ export default function LabOrders() {
   const [modalOrder, setModalOrder] = useState(null);
   const [cancelledOrder, setCancelledOrder] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const branchId = useSelectedBranch()?.id ?? null; // refetch when branch changes
 
   // GST setting — needed so the BILL column matches the payable total.
   useEffect(() => {
@@ -147,7 +149,7 @@ export default function LabOrders() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, isTodayFilter, search, page, refreshKey]);
+  }, [activeTab, isTodayFilter, search, page, refreshKey, branchId]);
 
   // Map after both the orders and the GST rate are known, so the bill
   // updates automatically if the GST setting loads after the list.
@@ -159,7 +161,7 @@ export default function LabOrders() {
   // Reset to page 1 whenever the filter or search changes.
   useEffect(() => {
     setPage(1);
-  }, [activeTab, isTodayFilter, search]);
+  }, [activeTab, isTodayFilter, search, branchId]);
 
   // Clicking any of All / Pending / Completed drops the "Today" filter and
   // returns to normal tab-driven browsing.

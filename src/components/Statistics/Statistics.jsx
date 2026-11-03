@@ -1327,6 +1327,7 @@ export default function Statistics() {
         <OrderStatusModal
           initialRange="1 Year"
           initialTab={orderStatusModal.tab}
+          lockTab
           onClose={() => setOrderStatusModal(null)}
         />
       )}

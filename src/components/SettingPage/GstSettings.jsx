@@ -282,7 +282,7 @@ function GstBadge({ registered }) {
   );
 }
 
-// Super admin view: every branch's GST details, with Edit per branch.
+// Super admin and admin view: every branch's GST details, with Edit per branch.
 function AllBranchesGst() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -391,7 +391,7 @@ export default function GstSettings() {
     .trim()
     .replace(/[\s-]+/g, "_");
 
-  // Super admin sees every branch; everyone else edits their own branch.
-  if (role === "super_admin" || role === "superadmin") return <AllBranchesGst />;
+  // Super admin and admin see every branch; everyone else edits their own branch.
+  if (["super_admin", "superadmin", "admin"].includes(role)) return <AllBranchesGst />;
   return <GstForm />;
 }

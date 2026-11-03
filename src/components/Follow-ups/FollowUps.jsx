@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import FollowUpsHeader from "./FollowUpsHeader";
+import { useSelectedBranch } from "../../utils/selectedBranch";
 import FollowUpsTable from "./FollowUpsTable/FollowUpsTable";
 import FollowUpDetailModal from "./modals/FollowUpDetailModal";
 import { getFollowUpRemindersApi } from "../../api/api";
@@ -43,6 +44,7 @@ export default function FollowUps() {
   const [viewingId, setViewingId] = useState(null);
   const navigate = useNavigate();
   const [refreshKey, setRefreshKey] = useState(0);
+  const branchId = useSelectedBranch()?.id ?? null; // refetch when branch changes
 
   // Wait for a short pause in typing before hitting the API.
   useEffect(() => {
@@ -53,7 +55,7 @@ export default function FollowUps() {
   // Back to page 1 whenever the filter or search changes.
   useEffect(() => {
     setPage(1);
-  }, [activeTab, debouncedSearch]);
+  }, [activeTab, debouncedSearch, branchId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,7 +92,7 @@ export default function FollowUps() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, debouncedSearch, page, refreshKey]);
+  }, [activeTab, debouncedSearch, page, refreshKey, branchId]);
 
   return (
     <div className="space-y-6">

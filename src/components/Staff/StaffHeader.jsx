@@ -1,5 +1,6 @@
 // src/components/Staff/StaffHeader.jsx
 import { Plus } from "lucide-react";
+import BranchFilter from "../common/BranchFilter";
 
 export default function StaffHeader({ onAddStaff }) {
   return (
@@ -10,6 +11,8 @@ export default function StaffHeader({ onAddStaff }) {
           Front officers across all branches.
         </p>
       </div>
+      <div className="flex flex-col sm:flex-row gap-3">
+      <BranchFilter />
       <button
         onClick={onAddStaff}
         className="flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors w-full sm:w-auto cursor-pointer"
@@ -17,6 +20,7 @@ export default function StaffHeader({ onAddStaff }) {
         <Plus size={16} />
         Add Front officer
       </button>
+      </div>
     </div>
   );
 }

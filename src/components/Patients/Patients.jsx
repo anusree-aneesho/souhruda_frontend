@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import PatientsHeader from "./PatientsHeader";
+import { useSelectedBranch } from "../../utils/selectedBranch";
 import PatientsSearch from "./PatientsSearch";
 import PatientsTable from "./PatientsTable/PatientsTable";
 import PatientCard from "./PatientsTable/PatientCard";
@@ -67,10 +68,13 @@ export default function Patients() {
     }
   }, []);
 
+  // Refetch when a super admin switches branch (see common/BranchFilter).
+  const branchId = useSelectedBranch()?.id ?? null;
+
   useEffect(() => {
     const timer = setTimeout(() => loadPatients(search), 300);
     return () => clearTimeout(timer);
-  }, [search, loadPatients]);
+  }, [search, loadPatients, branchId]);
 
   const lastPage = Math.max(1, Math.ceil(patients.length / PAGE_SIZE));
   const pagePatients = useMemo(

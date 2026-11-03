@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import StaffHeader from "./StaffHeader";
+import { useSelectedBranch } from "../../utils/selectedBranch";
 import StaffSearch from "./StaffSearch";
 import StaffTable from "./StaffTable/StaffTable";
 import StaffCard from "./StaffTable/StaffCard";
@@ -108,6 +109,7 @@ export default function Staff() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const { toast, showToast, hideToast } = useToast();
+  const branchId = useSelectedBranch()?.id ?? null; // refetch when branch changes
 
   useEffect(() => {
     async function loadData() {
@@ -127,7 +129,7 @@ export default function Staff() {
     }
 
     loadData();
-  }, []);
+  }, [branchId]);
 
   const filteredStaff = useMemo(() => {
     return staff.filter(
@@ -143,7 +145,7 @@ export default function Staff() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search]);
+  }, [search, branchId]);
 
   useEffect(() => {
     if (currentPage > totalPages) {

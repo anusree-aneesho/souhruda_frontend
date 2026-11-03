@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { useOrderModal } from "../../Context/OrderModalContext";
 import OptimizeRouteModal from "./OptimizeRouteModal";
+import BranchFilter from "../common/BranchFilter";
 
 export default function HomeCollectionHeader() {
   const { open } = useOrderModal();
@@ -18,6 +19,7 @@ export default function HomeCollectionHeader() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
+        <BranchFilter />
         <button
           onClick={() => setRouteModalOpen(true)}
           className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"

@@ -104,8 +104,16 @@ const BACKEND_FIELD_MAP = {
 
 const EMPTY_SELECTION = { technician: "", lab_assistant: "", lab_incharge: "" };
 
+// True when any field differs from the snapshot taken at load / last save.
+// Compared as strings so a loaded 50 and a typed "50" count as the same.
+function hasFormChanges(current, initial) {
+  if (!current || !initial) return false;
+  return Object.keys(initial).some((k) => String(current[k] ?? "") !== String(initial[k] ?? ""));
+}
+
 export default function SettingsForm({ branchId = null, branchName = "", onSaved }) {
   const [formData, setFormData] = useState(null);
+  const [initialData, setInitialData] = useState(null); // values as loaded / last saved
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -152,7 +160,7 @@ export default function SettingsForm({ branchId = null, branchName = "", onSaved
         const res = await getSettingsApi(branchId);
         if (cancelled) return;
         const s = res.data;
-        setFormData({
+        const loaded = {
           labName: s.lab_name || "",
           address: s.address || "",
           city: s.city || "",
@@ -171,7 +179,9 @@ export default function SettingsForm({ branchId = null, branchName = "", onSaved
           perKmRate: s.per_km_rate ?? "",
           freeRadius: s.free_radius ?? "",
           maxDistanceKm: s.max_distance_km ?? "",
-        });
+        };
+        setFormData(loaded);
+        setInitialData(loaded);
         applyLockState(s);
       } catch (err) {
         if (!cancelled) setError(err.message || "Failed to load settings.");
@@ -231,9 +241,16 @@ export default function SettingsForm({ branchId = null, branchName = "", onSaved
     }
   }
 
+  // Save stays disabled until something changes: a field edit, a newly
+  // captured lab location, or a newly chosen signatory.
+  const isDirty =
+    hasFormChanges(formData, initialData) ||
+    !!captured ||
+    Object.values(selected).some(Boolean);
+
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!canEdit) return;
+    if (!canEdit || !isDirty) return;
 
     setError("");
 
@@ -320,6 +337,7 @@ export default function SettingsForm({ branchId = null, branchName = "", onSaved
       }
       setCaptured(null);
       setSelected(EMPTY_SELECTION);
+      setInitialData(formData); // what's on screen is now the saved state
 
       showToast("Settings saved successfully.");
       onSaved?.(formData.labName);
@@ -465,8 +483,8 @@ export default function SettingsForm({ branchId = null, branchName = "", onSaved
       {canEdit && (
         <button
           type="submit"
-          disabled={saving}
-          className="rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors disabled:opacity-50 cursor-pointer"
+          disabled={saving || !isDirty}
+          className="rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
         >
           {saving ? "Saving..." : "Save Settings"}
         </button>

@@ -27,6 +27,7 @@ function validate(formData) {
 
 function GstForm({ branchId = null, branchName = "", onBack, onSaved }) {
   const [formData, setFormData] = useState(null);
+  const [initialData, setInitialData] = useState(null); // values as loaded / last saved
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,7 +53,7 @@ function GstForm({ branchId = null, branchName = "", onBack, onSaved }) {
         const res = await getGstSettingsApi(branchId);
         if (cancelled) return;
         const s = res.data;
-        setFormData({
+        const loaded = {
           isGstRegistered: s.is_gst_registered ?? false,
           gstin: s.gstin || "",
           legalBusinessName: s.legal_business_name || "",
@@ -61,7 +62,9 @@ function GstForm({ branchId = null, branchName = "", onBack, onSaved }) {
           state: s.state || "",
           stateCode: s.state_code || "",
           invoicePrefix: s.invoice_prefix || "",
-        });
+        };
+        setFormData(loaded);
+        setInitialData(loaded);
       } catch (err) {
         if (!cancelled) setError(err.message || "Failed to load GST settings.");
       } finally {
@@ -85,9 +88,15 @@ function GstForm({ branchId = null, branchName = "", onBack, onSaved }) {
     setFieldErrors({});
   }
 
+  // Save stays disabled until a value differs from what was loaded / last saved.
+  const isDirty =
+    !!formData &&
+    !!initialData &&
+    Object.keys(initialData).some((k) => String(formData[k] ?? "") !== String(initialData[k] ?? ""));
+
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!canEdit) return;
+    if (!canEdit || !isDirty) return;
 
     setError("");
 
@@ -111,6 +120,7 @@ function GstForm({ branchId = null, branchName = "", onBack, onSaved }) {
         state_code: formData.stateCode,
         invoice_prefix: formData.invoicePrefix,
       }, branchId);
+      setInitialData(formData); // what's on screen is now the saved state
       showToast("GST settings saved successfully.");
       onSaved?.();
     } catch (err) {
@@ -258,8 +268,8 @@ function GstForm({ branchId = null, branchName = "", onBack, onSaved }) {
           {canEdit && (
             <button
               type="submit"
-              disabled={saving}
-              className="rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors disabled:opacity-50 cursor-pointer"
+              disabled={saving || !isDirty}
+              className="rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
             >
               {saving ? "Saving..." : "Save GST Settings"}
             </button>

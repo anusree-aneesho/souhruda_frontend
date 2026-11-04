@@ -1,5 +1,5 @@
 // src/components/TestMaster/TestsTable/TestsTable.jsx
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import { Plus, Search, ArrowLeft } from "lucide-react";
 import TestRow from "./TestRow";
 import TestCard from "./TestCard";
@@ -13,7 +13,17 @@ const TABLE_MIN_HEIGHT = HEADER_HEIGHT + PAGE_SIZE * ROW_HEIGHT;
 
 const thClass = "pb-2 text-xs font-semibold text-gray-500 tracking-wider uppercase";
 
-export default function TestsTable({ categoryName, tests, testsById = {}, onAddTest, onEditTest, onRemoveTest }) {
+// `searchableTests` is every test from every category (each with its own
+// `category`), so the search box can look beyond the selected category.
+export default function TestsTable({
+  categoryName,
+  tests,
+  searchableTests = [],
+  testsById = {},
+  onAddTest,
+  onEditTest,
+  onRemoveTest,
+}) {
   const [viewingTest, setViewingTest] = useState(null);
   const [openGroupId, setOpenGroupId] = useState(null);
   const [page, setPage] = useState(1);
@@ -27,9 +37,11 @@ export default function TestsTable({ categoryName, tests, testsById = {}, onAddT
     setOpenGroupId(null);
   }, [categoryName]);
 
-  // The group being viewed (e.g. CBC). Looked up from the live list so it stays
-  // fresh after an edit, and falls back to the normal list if it was removed.
-  const openGroup = openGroupId ? tests.find((t) => t.id === openGroupId) || null : null;
+  // The group being viewed (e.g. CBC). Looked up from every test (not just this
+  // category) so it still opens when it was found through a cross-category
+  // search, stays fresh after an edit, and falls back to the normal list if it
+  // was removed.
+  const openGroup = openGroupId ? testsById[openGroupId] || null : null;
 
   // What the table lists: this category's tests, or — inside a group — that
   // group's parameters, in the order they were set, resolved from every category.
@@ -38,11 +50,16 @@ export default function TestsTable({ categoryName, tests, testsById = {}, onAddT
     return (openGroup.parameterIds || []).map((id) => testsById[id]).filter(Boolean);
   }, [openGroup, tests, testsById]);
 
+  // Searching outside a group looks through ALL categories; inside a group it
+  // only searches that group's parameters.
+  const isGlobalSearch = !openGroup && search.trim() !== "";
+
   const filteredTests = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return listedTests;
-    return listedTests.filter((t) => t.name.toLowerCase().includes(q));
-  }, [listedTests, search]);
+    const source = openGroup || searchableTests.length === 0 ? listedTests : searchableTests;
+    return source.filter((t) => t.name.toLowerCase().includes(q));
+  }, [listedTests, searchableTests, openGroup, search]);
 
   function openGroupView(test) {
     setOpenGroupId(test.id);
@@ -63,6 +80,12 @@ export default function TestsTable({ categoryName, tests, testsById = {}, onAddT
   const lastPage = Math.max(1, Math.ceil(filteredTests.length / PAGE_SIZE));
   const pageTests = filteredTests.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  // While searching across categories, show a category label above each run of
+  // results so it's clear where a test lives.
+  function startsNewCategory(index) {
+    return isGlobalSearch && (index === 0 || pageTests[index - 1].category !== pageTests[index].category);
+  }
+
   return (
     <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] flex flex-col">
       <div className="flex items-center justify-between mb-5">
@@ -78,6 +101,13 @@ export default function TestsTable({ categoryName, tests, testsById = {}, onAddT
             <h3 className="text-base font-semibold text-gray-900">{openGroup.name}</h3>
             <p className="text-xs text-gray-500 mt-0.5">
               {listedTests.length} {listedTests.length === 1 ? "parameter" : "parameters"} in this test
+            </p>
+          </div>
+        ) : isGlobalSearch ? (
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">Search Results</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {filteredTests.length} {filteredTests.length === 1 ? "test" : "tests"} found across all categories
             </p>
           </div>
         ) : (
@@ -98,28 +128,32 @@ export default function TestsTable({ categoryName, tests, testsById = {}, onAddT
         )}
       </div>
 
-      {listedTests.length > 4 && (
+      {/* Always available outside a group, so a test in another category can be
+          found even from a category with only a few tests. */}
+      {(!openGroup || listedTests.length > 4) && (
         <div className="relative mb-4">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search tests..."
+            placeholder={openGroup ? "Search parameters..." : "Search tests in all categories..."}
             className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
           />
         </div>
       )}
 
       <div className="flex-1" style={{ minHeight: `${TABLE_MIN_HEIGHT}px` }}>
-        {listedTests.length === 0 && (
+        {listedTests.length === 0 && !isGlobalSearch && (
           <p className="text-sm text-gray-400 text-center py-8">
             {openGroup ? "No parameters found for this test." : "No tests in this category yet."}
           </p>
         )}
 
-        {listedTests.length > 0 && filteredTests.length === 0 && (
-          <p className="text-sm text-gray-400 text-center py-8">No tests match your search.</p>
+        {filteredTests.length === 0 && (isGlobalSearch || listedTests.length > 0) && (
+          <p className="text-sm text-gray-400 text-center py-8">
+            {isGlobalSearch ? "No tests match your search in any category." : "No tests match your search."}
+          </p>
         )}
 
         {filteredTests.length > 0 && (
@@ -137,34 +171,51 @@ export default function TestsTable({ categoryName, tests, testsById = {}, onAddT
                   </tr>
                 </thead>
                 <tbody>
-                  {pageTests.map((test) => (
-                    <TestRow
-                      key={test.id}
-                      test={test}
-                      onEdit={onEditTest}
-                      onRemove={onRemoveTest}
-                      onViewRange={setViewingTest}
-                      onOpenGroup={openGroupView}
-                      canManage={canManage}
-                      canRemove={!openGroup}
-                    />
+                  {pageTests.map((test, i) => (
+                    <Fragment key={test.id}>
+                      {startsNewCategory(i) && (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="pt-4 pb-1 text-[11px] font-semibold text-teal-700 tracking-wider uppercase"
+                          >
+                            {test.category}
+                          </td>
+                        </tr>
+                      )}
+                      <TestRow
+                        test={test}
+                        onEdit={onEditTest}
+                        onRemove={onRemoveTest}
+                        onViewRange={setViewingTest}
+                        onOpenGroup={openGroupView}
+                        canManage={canManage}
+                        canRemove={!openGroup}
+                      />
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
             </div>
 
             <div className="md:hidden space-y-3">
-              {pageTests.map((test) => (
-                <TestCard
-                  key={test.id}
-                  test={test}
-                  onEdit={onEditTest}
-                  onRemove={onRemoveTest}
-                  onViewRange={setViewingTest}
-                  onOpenGroup={openGroupView}
-                  canManage={canManage}
-                  canRemove={!openGroup}
-                />
+              {pageTests.map((test, i) => (
+                <Fragment key={test.id}>
+                  {startsNewCategory(i) && (
+                    <p className="pt-2 text-[11px] font-semibold text-teal-700 tracking-wider uppercase">
+                      {test.category}
+                    </p>
+                  )}
+                  <TestCard
+                    test={test}
+                    onEdit={onEditTest}
+                    onRemove={onRemoveTest}
+                    onViewRange={setViewingTest}
+                    onOpenGroup={openGroupView}
+                    canManage={canManage}
+                    canRemove={!openGroup}
+                  />
+                </Fragment>
               ))}
             </div>
           </>

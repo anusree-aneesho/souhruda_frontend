@@ -120,6 +120,13 @@ export default function TestMaster() {
     });
   });
 
+  // Every full test from every category, in category order, each carrying its
+  // own category. The tests search box looks through this instead of only the
+  // selected category.
+  const searchableTests = categories.flatMap((cat) =>
+    (testsByCategory[cat.name] || []).map((t) => ({ ...t, category: cat.name }))
+  );
+
   // { [testId]: [ids of the groups that include it] }
   const groupIdsByTestId = {};
   Object.values(testsByCategory).forEach((list) => {
@@ -290,9 +297,11 @@ export default function TestMaster() {
     setConfirmingRemove(null);
     try {
       await deleteLabTest(test.id);
+      // Use the test's own category, not the selected one: a test found through
+      // the cross-category search can belong to a different category.
       setTestsByCategory((prev) => ({
         ...prev,
-        [activeCategory]: prev[activeCategory].filter((t) => t.id !== test.id),
+        [test.category]: (prev[test.category] || []).filter((t) => t.id !== test.id),
       }));
       setToast({ message: "Test removed successfully", type: "success" });
     } catch (err) {
@@ -321,6 +330,7 @@ export default function TestMaster() {
         <TestsTable
           categoryName={activeCategory}
           tests={(testsByCategory[activeCategory] || []).map((t) => ({ ...t, category: activeCategory }))}
+          searchableTests={searchableTests}
           testsById={testsById}
           onAddTest={() => setTestModalState({ editingTest: null })}
           onEditTest={(test) => setTestModalState({ editingTest: test })}
@@ -355,7 +365,7 @@ export default function TestMaster() {
       {confirmingRemove && (
         <ConfirmModal
           title="Remove Test"
-          message={`Do you want to remove "${confirmingRemove.name}" from ${activeCategory}?`}
+          message={`Do you want to remove "${confirmingRemove.name}" from ${confirmingRemove.category}?`}
           confirmLabel="Remove"
           cancelLabel="Cancel"
           danger

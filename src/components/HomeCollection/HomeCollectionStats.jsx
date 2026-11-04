@@ -8,17 +8,17 @@ export default function HomeCollectionStats({ counts, pendingPayment, activeFilt
   const c = counts || { requested: 0, inProgress: 0, reportReady: 0, sentToPatient: 0, cancelled: 0 };
 
   const stats = [
-    { key: "requested", label: "Requested", value: c.requested, icon: Clock, color: "gray" },
-    { key: "inProgress", label: "In Progress", value: c.inProgress, icon: MapPin, color: "amber" },
-    { key: "reportReady", label: "Report Ready", value: c.reportReady, icon: FileText, color: "blue" },
-    { key: "sentToPatient", label: "Sent to Patient", value: c.sentToPatient, icon: CheckCircle, color: "green" },
-    { key: "cancelled", label: "Cancelled", value: c.cancelled, icon: XCircle, color: "red" },
+    { id: "requested", label: "Requested", value: c.requested, icon: Clock, color: "gray" },
+    { id: "inProgress", label: "In Progress", value: c.inProgress, icon: MapPin, color: "amber" },
+    { id: "reportReady", label: "Report Ready", value: c.reportReady, icon: FileText, color: "blue" },
+    { id: "sentToPatient", label: "Sent to Patient", value: c.sentToPatient, icon: CheckCircle, color: "green" },
+    { id: "cancelled", label: "Cancelled", value: c.cancelled, icon: XCircle, color: "red" },
   ];
 
   // Total still to be collected from patients (cancelled requests excluded)
   const pending = pendingPayment || { count: 0, total: 0 };
   const pendingCard = {
-    key: "paymentPending",
+    id: "paymentPending",
     label: "Payment Pending",
     value: rs(pending.total),
     sublabel: `${pending.count} ${pending.count === 1 ? "request" : "requests"}`,
@@ -28,19 +28,25 @@ export default function HomeCollectionStats({ counts, pendingPayment, activeFilt
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-      {stats.map((stat) => (
+      {stats.map(({ id, ...props }) => (
         <StatCard
-          key={stat.key}
-          {...stat}
-          active={activeFilter === stat.key}
-          onClick={onFilterChange ? () => onFilterChange(stat.key) : undefined}
+          key={id}
+          {...props}
+          active={activeFilter === id}
+          onClick={onFilterChange ? () => onFilterChange(id) : undefined}
         />
       ))}
-      <StatCard
-        {...pendingCard}
-        active={activeFilter === pendingCard.key}
-        onClick={onFilterChange ? () => onFilterChange(pendingCard.key) : undefined}
-      />
+      {(() => {
+        const { id, ...props } = pendingCard;
+        return (
+          <StatCard
+            key={id}
+            {...props}
+            active={activeFilter === id}
+            onClick={onFilterChange ? () => onFilterChange(id) : undefined}
+          />
+        );
+      })()}
     </div>
   );
 }

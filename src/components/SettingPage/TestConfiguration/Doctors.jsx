@@ -79,7 +79,7 @@ export default function Doctors() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600">
             <Stethoscope size={20} />
@@ -96,19 +96,6 @@ export default function Doctors() {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search name, reg no, phone, hospital..."
-              className="w-64 border border-gray-200 rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-            />
-          </div>
           <button
             onClick={() => setShowAddModal(true)}
             className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 transition-colors text-white px-5 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap cursor-pointer"
@@ -117,6 +104,21 @@ export default function Doctors() {
             Add Doctor
           </button>
         </div>
+      </div>
+
+      {/* Search: left side, under the heading */}
+      <div className="relative mb-5 w-full max-w-md">
+        <Search
+          size={16}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+        />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search name, reg no, phone, hospital..."
+          className="w-full border border-gray-200 rounded-lg pl-9 pr-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+        />
       </div>
 
       <div className="bg-white rounded-xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">

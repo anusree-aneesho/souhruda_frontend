@@ -1,7 +1,7 @@
 // src/components/Reports/BranchSummaryReport.jsx
 import { useState, useEffect } from "react";
 import { ALL_BRANCHES, filterByBranch, useBranchOptions } from "./shared/branchFilter";
-import { useSelectedBranch } from "../../utils/selectedBranch";
+import { useViewBranch } from "../../utils/selectedBranch";
 import { Building2, Users, ClipboardList, IndianRupee } from "lucide-react";
 import StatCard from "../common/StatCard";
 import ReportToolbar from "./shared/ReportToolbar";
@@ -19,7 +19,8 @@ export default function BranchSummaryReport({ onBack }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   // The branch comes from the topbar switcher (same one used across the app).
-  const activeBranch = useSelectedBranch();
+  const view = useViewBranch();
+  const activeBranch = view === "all" ? null : view;
   const branchId = activeBranch ? String(activeBranch.id) : ALL_BRANCHES;
 
   useEffect(() => {

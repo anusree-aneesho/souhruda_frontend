@@ -3,12 +3,13 @@ import { useParams, useNavigate, Navigate, Link } from "react-router-dom";
 import ReportItemGrid from "./ReportItemGrid";
 import ComingSoonReport from "./ComingSoonReport";
 import { REPORT_CATEGORIES } from "./reportConfig";
-import { useSelectedBranch } from "../../utils/selectedBranch";
+import { useViewBranch } from "../../utils/selectedBranch";
 
 export default function Reports() {
   const { categoryKey, itemKey } = useParams();
   const navigate = useNavigate();
-  const selectedBranch = useSelectedBranch();
+  const view = useViewBranch();
+  const selectedBranch = view === "all" ? null : view;
 
   const category = REPORT_CATEGORIES.find((c) => c.key === categoryKey);
 

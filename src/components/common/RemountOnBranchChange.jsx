@@ -4,9 +4,9 @@
 // branch picked in the topbar changes. Used for pages (Statistics, Reports)
 // that load their data once on mount instead of watching the selected branch.
 import { Fragment } from "react";
-import { useSelectedBranch } from "../../utils/selectedBranch";
+import { useViewBranch } from "../../utils/selectedBranch";
 
 export default function RemountOnBranchChange({ children }) {
-  const branch = useSelectedBranch();
-  return <Fragment key={branch?.id ?? "all"}>{children}</Fragment>;
+  const view = useViewBranch(); // "all" | { id, name }
+  return <Fragment key={view === "all" ? "all" : view.id}>{children}</Fragment>;
 }

@@ -35,7 +35,7 @@ export default function AppRoutes() {
 
       <Route element={<ProtectedRoute />}>
         <Route element={<MainLayout />}>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<RemountOnBranchChange><Dashboard /></RemountOnBranchChange>} />
           <Route path="/lab-orders" element={<LabOrders />} />
           <Route path="/home-collection" element={<HomeCollection />} />
           <Route path="/staff" element={<Staff />} />

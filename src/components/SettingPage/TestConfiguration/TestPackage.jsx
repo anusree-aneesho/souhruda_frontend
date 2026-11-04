@@ -9,6 +9,12 @@ import { useToast } from "../../common/Toast/useToast";
 function PackageCard({ pkg, onEdit }) {
   const labTests = pkg.lab_tests || [];
 
+  // Actual ("marked") price = what the tests cost one by one. Shown faded and
+  // struck through next to the package price, only when the package is cheaper.
+  const actualPrice = labTests.reduce((sum, t) => sum + Number(t.price || 0), 0);
+  const packagePrice = Number(pkg.price || 0);
+  const showActual = actualPrice > packagePrice;
+
   return (
     <div className="group relative bg-white rounded-xl border border-gray-200 shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-5 hover:border-teal-300 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all">
       <button
@@ -37,8 +43,16 @@ function PackageCard({ pkg, onEdit }) {
       <h3 className="text-sm font-semibold text-gray-900 truncate" title={pkg.name}>
         {pkg.name}
       </h3>
-      <p className="text-2xl font-bold text-teal-700 mt-1">
-        ₹{Number(pkg.price || 0).toFixed(2)}
+      <p className="mt-1 flex items-baseline gap-2">
+        <span className="text-2xl font-bold text-teal-700">₹{packagePrice.toFixed(2)}</span>
+        {showActual && (
+          <span
+            className="text-sm font-medium text-gray-400 line-through opacity-60"
+            title="Actual price (tests bought separately)"
+          >
+            ₹{actualPrice.toFixed(2)}
+          </span>
+        )}
       </p>
 
       <div className="flex items-center gap-1.5 text-xs text-gray-400 mt-4 mb-2">
@@ -71,7 +85,24 @@ export default function TestPackage() {
   const [error, setError] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingPackage, setEditingPackage] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("all"); // all | active | inactive
   const { toast, showToast, hideToast } = useToast();
+
+  // Latest first (newest created at the top); id breaks ties and covers rows with no date
+  const time = (p) => Date.parse(p.created_at) || 0;
+  const latestFirst = [...packages].sort((a, b) => time(b) - time(a) || b.id - a.id);
+  const activeCount = packages.filter((p) => p.is_active).length;
+  const inactiveCount = packages.length - activeCount;
+  const visiblePackages = latestFirst.filter(
+    (p) =>
+      statusFilter === "all" ||
+      (statusFilter === "active" ? p.is_active : !p.is_active)
+  );
+  const filters = [
+    { key: "all", label: "All", count: packages.length },
+    { key: "active", label: "Active", count: activeCount },
+    { key: "inactive", label: "Inactive", count: inactiveCount },
+  ];
 
   useEffect(() => {
     let cancelled = false;
@@ -125,7 +156,9 @@ export default function TestPackage() {
         <div>
           <h2 className="text-lg font-bold text-gray-900">Existing Packages</h2>
           <p className="text-sm text-gray-500 mt-0.5">
-            {packages.length} package{packages.length === 1 ? "" : "s"} configured
+            {statusFilter === "all"
+              ? `${packages.length} package${packages.length === 1 ? "" : "s"} configured`
+              : `${visiblePackages.length} of ${packages.length} packages`}
           </p>
         </div>
         <button
@@ -136,6 +169,26 @@ export default function TestPackage() {
           Add Package
         </button>
       </div>
+
+      {/* Active / Inactive filter — the list below is always newest first */}
+      {packages.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 -mt-2">
+          {filters.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => setStatusFilter(f.key)}
+              className={`px-3.5 py-1.5 rounded-lg border text-sm font-medium transition-colors cursor-pointer ${
+                statusFilter === f.key
+                  ? "bg-teal-600 border-teal-600 text-white"
+                  : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              {f.label} <span className="opacity-80">({f.count})</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {loadingPackages ? (
         <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] flex items-center gap-2 text-sm text-gray-400 py-10 justify-center">
@@ -156,9 +209,22 @@ export default function TestPackage() {
             Click "Add Package" to bundle tests together under a single price.
           </p>
         </div>
+      ) : visiblePackages.length === 0 ? (
+        <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] text-center py-10">
+          <p className="text-sm text-gray-500">
+            No {statusFilter} packages.{" "}
+            <button
+              type="button"
+              onClick={() => setStatusFilter("all")}
+              className="text-teal-600 font-medium hover:underline cursor-pointer"
+            >
+              Show all
+            </button>
+          </p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {packages.map((pkg) => (
+          {visiblePackages.map((pkg) => (
             <PackageCard key={pkg.id} pkg={pkg} onEdit={setEditingPackage} />
           ))}
         </div>

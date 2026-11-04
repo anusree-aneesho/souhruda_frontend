@@ -34,6 +34,14 @@ export default function AddPackageModal({ tests, editingPackage, onClose, onSave
       .reduce((sum, t) => sum + Number(t.price || 0), 0);
   }, [tests, selectedIds]);
 
+  // The package price must be lower than the tests' own total ("marked") price,
+  // otherwise it isn't a package deal. Whole rupees only, so the highest allowed
+  // price is one below the total (900.00 -> 899, 900.50 -> 900).
+  const maxPrice = Math.max(0, Math.ceil(totalTestsPrice) - 1);
+  const priceTooHigh =
+    selectedCount > 0 && price !== "" && Number(price) >= totalTestsPrice;
+  const priceLimitMessage = `Package price must be less than the total test price (₹${totalTestsPrice.toFixed(2)}).`;
+
   function toggleTest(id) {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((tid) => tid !== id) : [...prev, id]
@@ -61,6 +69,10 @@ export default function AddPackageModal({ tests, editingPackage, onClose, onSave
     }
     if (selectedIds.length < 2) {
       setError("Select at least 2 tests for this package.");
+      return;
+    }
+    if (Number(price) >= totalTestsPrice) {
+      setError(priceLimitMessage);
       return;
     }
 
@@ -108,12 +120,21 @@ export default function AddPackageModal({ tests, editingPackage, onClose, onSave
             <input
               type="number"
               min="0"
+              max={selectedCount > 0 ? maxPrice : undefined}
               step="1"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               placeholder="e.g. 1499"
-              className={inputClass}
+              className={`${inputClass} ${priceTooHigh ? "border-red-400 focus:border-red-500 focus:ring-red-500" : ""}`}
             />
+            {/* Live limit: tells you the highest price allowed for the selected tests */}
+            {selectedCount > 0 && (
+              <p className={`mt-1 text-[11px] ${priceTooHigh ? "text-red-500" : "text-gray-400"}`}>
+                {priceTooHigh
+                  ? `Must be less than ₹${totalTestsPrice.toFixed(2)}`
+                  : `Less than ₹${totalTestsPrice.toFixed(2)} (selected tests)`}
+              </p>
+            )}
           </div>
         </div>
 
@@ -212,7 +233,7 @@ export default function AddPackageModal({ tests, editingPackage, onClose, onSave
           </button>
           <button
             onClick={handleSubmit}
-            disabled={saving}
+            disabled={saving || priceTooHigh}
             className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
           >
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}

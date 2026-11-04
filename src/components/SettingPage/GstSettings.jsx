@@ -4,6 +4,7 @@ import Toast from "../common/Toast/Toast";
 import { useToast } from "../common/Toast/useToast";
 import { getGstSettingsApi, updateGstSettingsApi, getAllBranchesGstApi } from "../../api/api";
 import { useAuth } from "../../Context/AuthContext";
+import { useViewBranch, setViewBranch } from "../../utils/selectedBranch";
 
 function validate(formData) {
   const errors = {};
@@ -289,6 +290,11 @@ function AllBranchesGst() {
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(null); // { id, name }
 
+  // Follows the branch dropdown in the top bar: "All branches" lists every
+  // branch; picking one opens that branch's GST form directly.
+  const view = useViewBranch(); // "all" | { id, name }
+  const selectedBranchId = view === "all" ? null : view.id;
+
   async function loadRows() {
     setLoading(true);
     try {
@@ -312,6 +318,20 @@ function AllBranchesGst() {
         branchId={editing.id}
         branchName={editing.name}
         onBack={() => setEditing(null)}
+        onSaved={loadRows}
+      />
+    );
+  }
+
+  // A branch picked in the top bar: show that branch's GST form straight away.
+  // "← All branches" switches the top bar back to "All branches".
+  if (selectedBranchId) {
+    return (
+      <GstForm
+        key={selectedBranchId}
+        branchId={selectedBranchId}
+        branchName={view.name}
+        onBack={() => setViewBranch("all")}
         onSaved={loadRows}
       />
     );

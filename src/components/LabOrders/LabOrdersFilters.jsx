@@ -4,20 +4,30 @@ import { useAuth } from "../../Context/AuthContext";
 
 const tabs = ["All", "Pending", "Sample Collected", "Completed", "Cancelled"];
 
-export default function LabOrdersFilters({ search, onSearchChange, activeTab, onTabChange }) {
+export default function LabOrdersFilters({
+  search,
+  onSearchChange,
+  activeTab,
+  onTabChange,
+  dateFilter,
+}) {
   const { user } = useAuth();
   const showTabs = user?.role !== "front_office";
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-      <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2.5 w-full sm:w-72">
-        <Search size={16} className="text-gray-400 shrink-0" />
-        <input
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search order, patient, ID..."
-          className="flex-1 text-sm outline-none placeholder:text-gray-400 min-w-0"
-        />
+    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2.5 w-full sm:w-72">
+          <Search size={16} className="text-gray-400 shrink-0" />
+          <input
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Search order, patient, ID..."
+            className="flex-1 text-sm outline-none placeholder:text-gray-400 min-w-0"
+          />
+        </div>
+
+        {dateFilter}
       </div>
 
       {showTabs && (

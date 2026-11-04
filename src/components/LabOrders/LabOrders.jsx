@@ -13,6 +13,7 @@ import { useToast } from "../common/Toast/useToast";
 import { getOrdersApi, getGstSettingsApi } from "../../api/api";
 import { calcBillTotals } from "../../utils/orderPricing";
 import CancelledOrderModal from "./CancelledOrderModal";
+import SlotDateFilter from "../common/SlotDateFilter";
 
 const PER_PAGE = 9;
 
@@ -74,6 +75,8 @@ export default function LabOrders() {
   const initialTab = searchParams.get("tab") === "pending" ? "Pending" : "All";
   const initialToday = searchParams.get("today") === "1";
 
+  const [dates, setDates] = useState(null);
+
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isTodayFilter, setIsTodayFilter] = useState(initialToday);
@@ -129,6 +132,8 @@ export default function LabOrders() {
       today: isTodayFilter ? 1 : undefined,
       status: tabToStatus(activeTab),
       q: search,
+      date_from: dates?.date_from,
+      date_to: dates?.date_to,
       page,
       per_page: PER_PAGE,
     })
@@ -149,7 +154,8 @@ export default function LabOrders() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, isTodayFilter, search, page, refreshKey, branchId]);
+ }, [activeTab, isTodayFilter, search, dates?.date_from, dates?.date_to, page, refreshKey, branchId]);
+
 
   // Map after both the orders and the GST rate are known, so the bill
   // updates automatically if the GST setting loads after the list.
@@ -160,9 +166,13 @@ export default function LabOrders() {
 
   // Reset to page 1 whenever the filter or search changes.
   useEffect(() => {
-    setPage(1);
-  }, [activeTab, isTodayFilter, search, branchId]);
+  setPage(1);
+}, [activeTab, isTodayFilter, search, dates?.date_from, dates?.date_to, branchId]);
 
+  function handleDateChange(v) {
+  setDates(v);
+  if (v && isTodayFilter) clearTodayFilter();
+}
   // Clicking any of All / Pending / Completed drops the "Today" filter and
   // returns to normal tab-driven browsing.
   function handleTabChange(tab) {
@@ -218,6 +228,7 @@ export default function LabOrders() {
           onSearchChange={setSearch}
           activeTab={isTodayFilter ? null : activeTab}
           onTabChange={handleTabChange}
+          dateFilter={<SlotDateFilter onChange={handleDateChange} />}
         />
 
         {loadError && (
@@ -239,7 +250,7 @@ export default function LabOrders() {
 
             {filteredOrders.length === 0 && (
               <p className="text-sm text-gray-400 text-center py-6">
-                {isTodayFilter ? "No orders today." : "No orders found."}
+                {isTodayFilter ? "No orders today." : dates ? `No orders for ${dates.label}.` : "No orders found."}
               </p>
             )}
 

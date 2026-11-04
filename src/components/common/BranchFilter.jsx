@@ -15,11 +15,14 @@ import { useLocation } from "react-router-dom";
 import { Building2, ChevronDown } from "lucide-react";
 import { getBranchesApi, BRANCHES_CHANGED_EVENT } from "../../api/api";
 import { useAuth } from "../../Context/AuthContext";
-import { useSelectedBranch, setSelectedBranch } from "../../utils/selectedBranch";
+import { useViewBranch, setViewBranch, setSelectedBranch } from "../../utils/selectedBranch";
 
 export default function BranchFilter() {
   const { user } = useAuth();
-  const selected = useSelectedBranch();
+  // What the dropdown shows follows the "view branch" (the one the list pages,
+  // GST Settings, etc. read): "all" | { id, name }.
+  const view = useViewBranch();
+  const selected = view === "all" ? null : view;
   const { pathname } = useLocation();
   const [branches, setBranches] = useState([]);
   const isSuperAdmin = user?.role === "super_admin";
@@ -56,11 +59,18 @@ export default function BranchFilter() {
   function handleChange(e) {
     const id = e.target.value;
     if (!id) {
-      setSelectedBranch(null); // All branches
+      // All branches
+      setSelectedBranch(null);
+      setViewBranch("all");
       return;
     }
     const branch = branches.find((b) => String(b.id) === id);
-    if (branch) setSelectedBranch(branch);
+    if (branch) {
+      // Set both: the view branch drives what the pages show, the Settings
+      // branch is the working branch for new records.
+      setSelectedBranch(branch);
+      setViewBranch(branch);
+    }
   }
 
   // Keep the current pick visible even if the list hasn't loaded yet.

@@ -4,7 +4,7 @@ import Toast from "../common/Toast/Toast";
 import { useToast } from "../common/Toast/useToast";
 import { getGstSettingsApi, updateGstSettingsApi, getAllBranchesGstApi } from "../../api/api";
 import { useAuth } from "../../Context/AuthContext";
-import { useViewBranch, setViewBranch } from "../../utils/selectedBranch";
+import { useViewBranch, setViewBranch, setSelectedBranch } from "../../utils/selectedBranch";
 
 function validate(formData) {
   const errors = {};
@@ -298,7 +298,6 @@ function AllBranchesGst() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [editing, setEditing] = useState(null); // { id, name }
 
   // Follows the branch dropdown in the top bar: "All branches" lists every
   // branch; picking one opens that branch's GST form directly.
@@ -322,26 +321,27 @@ function AllBranchesGst() {
     loadRows();
   }, []);
 
-  if (editing) {
-    return (
-      <GstForm
-        branchId={editing.id}
-        branchName={editing.name}
-        onBack={() => setEditing(null)}
-        onSaved={loadRows}
-      />
-    );
+  // Edit = pick that branch in the top bar, exactly like choosing it in the
+  // dropdown. The form below then opens for it, and "← All branches" (or the
+  // dropdown) takes you back to this list.
+  function openBranch(b) {
+    const branch = { id: b.branch_id, name: b.branch_name };
+    setSelectedBranch(branch);
+    setViewBranch(branch);
   }
 
   // A branch picked in the top bar: show that branch's GST form straight away.
-  // "← All branches" switches the top bar back to "All branches".
+  // "← All branches" resets the top bar dropdown back to "All branches".
   if (selectedBranchId) {
     return (
       <GstForm
         key={selectedBranchId}
         branchId={selectedBranchId}
         branchName={view.name}
-        onBack={() => setViewBranch("all")}
+        onBack={() => {
+          setViewBranch("all");
+          setSelectedBranch(null); // keeps the top-bar dropdown in sync
+        }}
         onSaved={loadRows}
       />
     );
@@ -397,7 +397,7 @@ function AllBranchesGst() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button
-                        onClick={() => setEditing({ id: b.branch_id, name: b.branch_name })}
+                        onClick={() => openBranch(b)}
                         className="px-4 py-1.5 rounded-lg border border-teal-200 bg-teal-50 text-xs font-medium text-teal-700 hover:bg-teal-100 cursor-pointer"
                       >
                         Edit

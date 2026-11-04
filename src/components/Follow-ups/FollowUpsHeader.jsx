@@ -1,5 +1,4 @@
 // src/components/FollowUps/FollowUpsHeader.jsx
-import BranchFilter from "../common/BranchFilter";
 
 export default function FollowUpsHeader() {
   return (
@@ -13,7 +12,6 @@ export default function FollowUpsHeader() {
         Re-test reminders suggested from abnormal results, so patients don't fall through the cracks.
       </p>
     </div>
-    <BranchFilter />
     </div>
   );
 }

@@ -8,7 +8,6 @@ import { addStaffApi, getStaffMembersApi, getStaffRolesApi, updateStaffMemberApi
 import Toast from "../common/Toast/Toast";
 import { useToast } from "../common/Toast/useToast";
 import { formatNameWithTitle } from "../Patients/patientTitles";
-import BranchFilter from "../common/BranchFilter";
 import { useSelectedBranch } from "../../utils/selectedBranch";
 
 const TECHNICIAN_ROLE = "Lab Technician";
@@ -74,7 +73,6 @@ function StaffHeader({ onAddStaff }) {
         </p>
       </div>
       <div className="flex flex-col sm:flex-row gap-3">
-        <BranchFilter />
         <button
           onClick={onAddStaff}
           className="flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors w-full sm:w-auto cursor-pointer"

@@ -14,6 +14,7 @@ import LabAssistants from "../components/LabAssistants/LabAssistants";
 import FollowUps from "../components/Follow-ups/FollowUps";
 import PatientDetails from "../components/Follow-ups/PatientDetails";
 import Statistics from "../components/Statistics/Statistics";
+import RemountOnBranchChange from "../components/common/RemountOnBranchChange";
 import Settings from "../components/SettingPage/Settings";
 import OrderDetail from "../components/LabOrders/OrderDetail/OrderDetail";
 import Report from "../components/LabOrders/Report/Report";
@@ -52,7 +53,7 @@ export default function AppRoutes() {
           <Route path="/reports/:categoryKey" element={<Reports />} />
           <Route path="/reports/:categoryKey/:itemKey" element={<Reports />} />
 
-          <Route path="/statistics" element={<Statistics />} />
+          <Route path="/statistics" element={<RemountOnBranchChange><Statistics /></RemountOnBranchChange>} />
           <Route path="/lab-orders/:orderId" element={<OrderDetail />} />
           <Route path="/lab-orders/:orderId/report" element={<Report />} />
           <Route path="/activity-logs" element={<ActivityLogPage />} />

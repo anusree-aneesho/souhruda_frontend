@@ -4,6 +4,7 @@
 // compared side by side.
 import { useState, useEffect } from "react";
 import { ALL_BRANCHES, filterByBranch, useBranchOptions } from "./shared/branchFilter";
+import { useSelectedBranch } from "../../utils/selectedBranch";
 import { IndianRupee, ClipboardList } from "lucide-react";
 import StatCard from "../common/StatCard";
 import ReportToolbar from "./shared/ReportToolbar";
@@ -20,7 +21,9 @@ export default function BranchRevenueReport({ onBack }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [branchId, setBranchId] = useState(ALL_BRANCHES);
+  // The branch comes from the topbar switcher (same one used across the app).
+  const activeBranch = useSelectedBranch();
+  const branchId = activeBranch ? String(activeBranch.id) : ALL_BRANCHES;
 
   useEffect(() => {
     // Don't query with an empty or inverted range (e.g. after clearing a date
@@ -100,10 +103,6 @@ export default function BranchRevenueReport({ onBack }) {
           { label: "Date From", value: dateFrom, onChange: setDateFrom, max: dateTo },
           { label: "Date To", value: dateTo, onChange: setDateTo, min: dateFrom },
         ]}
-        search={branchId}
-        onSearchChange={setBranchId}
-        searchOptions={branchOptions}
-        searchLabel="Branch"
         onExportCsv={() => exportSectionsToCsv(`branch-revenue-report_${dateFrom}_to_${dateTo}`, exportSections())}
         onExportPdf={() => exportSectionsToPdf(`Branch Revenue Report (${formatPeriod(dateFrom, dateTo)})${branchSuffix}`, exportSections())}
       />

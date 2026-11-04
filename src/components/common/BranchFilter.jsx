@@ -1,26 +1,30 @@
 // src/components/common/BranchFilter.jsx
 //
-// Super admin only: a dropdown of "All branches" + every branch, shown in the
-// header of Patients / Lab Orders / Home Collection / Follow-ups.
+// Super admin only: the branch switcher, shown in the topbar (in place of the
+// old static branch badge). It offers "All branches" + every branch.
 //
-// It reads and writes the same app-wide selected branch used by Settings and
-// the topbar badge (utils/selectedBranch.js), so all three stay in sync. The
-// choice is sent to the backend as X-Branch-Id on every request, which is what
-// narrows the lists. Pages refetch by depending on useSelectedBranch()?.id.
-import { useEffect, useState } from "react";
+// It reads and writes the app-wide selected branch (utils/selectedBranch.js),
+// which is shared with Settings. The choice is sent to the backend as
+// X-Branch-Id on every request, which is what narrows the lists. Pages refetch
+// by depending on useSelectedBranch()?.id.
+//
+// Looks like a pill showing the current branch name; a transparent native
+// <select> sits on top of it, so clicking the pill opens the branch list.
+import { useCallback, useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Building2, ChevronDown } from "lucide-react";
-import { getBranchesApi } from "../../api/api";
+import { getBranchesApi, BRANCHES_CHANGED_EVENT } from "../../api/api";
 import { useAuth } from "../../Context/AuthContext";
 import { useSelectedBranch, setSelectedBranch } from "../../utils/selectedBranch";
 
 export default function BranchFilter() {
   const { user } = useAuth();
   const selected = useSelectedBranch();
+  const { pathname } = useLocation();
   const [branches, setBranches] = useState([]);
   const isSuperAdmin = user?.role === "super_admin";
 
-  useEffect(() => {
-    if (!isSuperAdmin) return;
+  const loadBranches = useCallback(() => {
     let cancelled = false;
     getBranchesApi()
       .then((res) => {
@@ -32,7 +36,20 @@ export default function BranchFilter() {
     return () => {
       cancelled = true;
     };
-  }, [isSuperAdmin]);
+  }, []);
+
+  // The topbar stays mounted across pages, so refetch on navigation...
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    return loadBranches();
+  }, [isSuperAdmin, pathname, loadBranches]);
+
+  // ...and whenever a branch is added / edited / deleted in Settings.
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    window.addEventListener(BRANCHES_CHANGED_EVENT, loadBranches);
+    return () => window.removeEventListener(BRANCHES_CHANGED_EVENT, loadBranches);
+  }, [isSuperAdmin, loadBranches]);
 
   if (!isSuperAdmin) return null;
 
@@ -50,16 +67,23 @@ export default function BranchFilter() {
   const hasSelectedInList = selected && branches.some((b) => b.id === selected.id);
 
   return (
-    <div className="relative w-full sm:w-56">
-      <Building2
-        size={15}
-        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-teal-600"
-      />
+    <div
+      title="Switch branch"
+      className={`relative flex max-w-[15rem] items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors focus-within:ring-2 focus-within:ring-teal-500 ${
+        selected
+          ? "bg-teal-50 text-teal-700 hover:bg-teal-100"
+          : "bg-amber-50 text-amber-700 hover:bg-amber-100"
+      }`}
+    >
+      <Building2 size={13} className="shrink-0" />
+      <span className="truncate">{selected ? selected.name : "All branches"}</span>
+      <ChevronDown size={13} className="shrink-0 opacity-70" />
+
       <select
         value={selected?.id ?? ""}
         onChange={handleChange}
-        aria-label="Filter by branch"
-        className="w-full appearance-none rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-9 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:border-teal-500 focus:outline-none cursor-pointer"
+        aria-label="Switch branch"
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0 text-sm text-gray-700"
       >
         <option value="">All branches</option>
         {selected && !hasSelectedInList && (
@@ -72,10 +96,6 @@ export default function BranchFilter() {
           </option>
         ))}
       </select>
-      <ChevronDown
-        size={15}
-        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-      />
     </div>
   );
 }

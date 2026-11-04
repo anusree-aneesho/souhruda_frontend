@@ -3,12 +3,19 @@ import { useParams, useNavigate, Navigate, Link } from "react-router-dom";
 import ReportItemGrid from "./ReportItemGrid";
 import ComingSoonReport from "./ComingSoonReport";
 import { REPORT_CATEGORIES } from "./reportConfig";
+import { useSelectedBranch } from "../../utils/selectedBranch";
 
 export default function Reports() {
   const { categoryKey, itemKey } = useParams();
   const navigate = useNavigate();
+  const selectedBranch = useSelectedBranch();
 
   const category = REPORT_CATEGORIES.find((c) => c.key === categoryKey);
+
+  // Reports load their data once, so remount them (=> refetch) when the branch
+  // picked in the topbar changes. The Branch Reports compare every branch and
+  // just filter on screen, so they don't need to refetch.
+  const branchKey = category?.key === "branch" ? "all-branches" : selectedBranch?.id ?? "all";
 
   // Unknown category in the URL — send back to the first real category.
   if (!category) {
@@ -35,7 +42,7 @@ export default function Reports() {
           onSelect={(key) => navigate(`/reports/${category.key}/${key}`)}
         />
         {category.quickView && (
-          <category.quickView onViewAll={() => navigate(`/reports/${category.key}/${category.items[0].key}`)} />
+          <category.quickView key={branchKey} onViewAll={() => navigate(`/reports/${category.key}/${category.items[0].key}`)} />
         )}
       </div>
     );
@@ -61,7 +68,7 @@ export default function Reports() {
         <span className="text-gray-600">{item.title}</span>
       </p>
       {ActiveComponent ? (
-        <ActiveComponent onBack={goBack} />
+        <ActiveComponent key={branchKey} onBack={goBack} />
       ) : (
         <ComingSoonReport
           title={item.title}

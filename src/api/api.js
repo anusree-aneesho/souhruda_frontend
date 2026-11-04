@@ -157,6 +157,12 @@ export async function getSignatoryOptionsApi(branchId) {
   return request(`/settings/signatory-options${qs}`);
 }
 
+export const BRANCHES_CHANGED_EVENT = "souhruda:branches-changed";
+function notifyBranchesChanged(result) {
+  window.dispatchEvent(new Event(BRANCHES_CHANGED_EVENT));
+  return result;
+}
+
 // ── Branch ─────────────────────────────────────────────────
 
 export async function getBranchesApi() {
@@ -188,7 +194,7 @@ export async function createBranchApi(branchData) {
   return request("/branches", {
     method: "POST",
     body: toBranchFormData(branchData),
-  });
+  }).then(notifyBranchesChanged);
 }
 
 export async function updateBranchApi(id, branchData) {
@@ -199,13 +205,13 @@ export async function updateBranchApi(id, branchData) {
   return request(`/branches/${id}`, {
     method: "POST",
     body: formData,
-  });
+  }).then(notifyBranchesChanged);
 }
 
 export async function deleteBranchApi(id) {
   return request(`/branches/${id}`, {
     method: "DELETE",
-  });
+  }).then(notifyBranchesChanged);
 }
 
 export async function getGstSettingsApi(branchId) {

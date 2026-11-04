@@ -2,7 +2,6 @@
 import { Plus } from "lucide-react";
 import { useOrderModal } from "../../Context/OrderModalContext";
 import { useAuth } from "../../Context/AuthContext";
-import BranchFilter from "../common/BranchFilter";
 
 export default function LabOrdersHeader() {
   const { open } = useOrderModal();
@@ -18,7 +17,6 @@ export default function LabOrdersHeader() {
         </p>
       </div>
       <div className="flex flex-col sm:flex-row gap-3">
-      <BranchFilter />
       {canCreateOrders && (
         <button onClick={open} className="flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors w-full sm:w-auto cursor-pointer">
           <Plus size={16} />

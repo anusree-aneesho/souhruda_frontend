@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import { getOrdersApi } from "../../api/api";
 import { RANGES, getRangeBounds } from "../../utils/dateRange";
@@ -15,6 +16,7 @@ function statusLabel(s) {
 }
 
 export default function OrdersOverTimeModal({ initialRange = "Today", onClose }) {
+  const navigate = useNavigate();
   const [range, setRange] = useState(initialRange);
   const [statusFilter, setStatusFilter] = useState("all");
   const [allOrders, setAllOrders] = useState([]);
@@ -120,13 +122,18 @@ export default function OrdersOverTimeModal({ initialRange = "Today", onClose })
         </div>
 
         {/* Orders table */}
-        <div className="flex-1 overflow-y-auto">
-          {loading ? (
-            <p className="py-10 text-center text-xs text-gray-400">Loading…</p>
-          ) : visible.length === 0 ? (
+        {/* Fixed height: the box keeps its size when you switch the range, so it
+            doesn't jump. The old rows stay (dimmed) until the new ones arrive. */}
+        <div className="relative h-[340px] shrink-0 overflow-y-auto">
+          {loading && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center">
+              <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-teal-500 border-t-transparent" />
+            </div>
+          )}
+          {!loading && visible.length === 0 ? (
             <p className="py-10 text-center text-xs text-gray-400">No orders match this filter.</p>
           ) : (
-            <table className="w-full text-sm">
+            <table className={`w-full text-sm transition-opacity duration-150 ${loading ? "pointer-events-none opacity-30" : ""}`}>
               <thead className="bg-gray-50 text-left text-xs text-gray-500">
                 <tr>
                   <th className="px-6 py-2 font-medium">Order</th>
@@ -140,6 +147,8 @@ export default function OrdersOverTimeModal({ initialRange = "Today", onClose })
                 {visible.map((o) => (
                   <tr
                     key={o.order_no}
+                    onClick={() => navigate(`/lab-orders/${o.order_no}`)}
+                    className="cursor-pointer border-b border-gray-100 hover:bg-gray-50"
                   >
                     <td className="px-6 py-3 text-gray-500">{o.order_no}</td>
                     <td className="py-3 font-medium text-gray-900">

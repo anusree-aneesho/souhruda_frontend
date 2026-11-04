@@ -85,10 +85,15 @@ function DonutCard({ title, total, segments, range, onRangeChange, loading, onVi
         )}
       </div>
 
-      {loading ? (
-        <p className="text-xs text-gray-400 text-center py-6">Loading…</p>
-      ) : (
-        <div className="flex items-center gap-6">
+      {/* Donut stays in place while loading (dimmed + spinner) so the card — and the
+          range buttons under it — never jump up and down */}
+      <div className="relative min-h-[7rem]">
+        {loading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center">
+            <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-teal-500 border-t-transparent" />
+          </div>
+        )}
+        <div className={`flex items-center gap-6 transition-opacity duration-150 ${loading ? "opacity-30 pointer-events-none" : ""}`}>
           <div
             className="relative w-28 h-28 rounded-full flex items-center justify-center shrink-0"
             style={{ background: `conic-gradient(${gradientParts.join(", ")})` }}
@@ -110,7 +115,7 @@ function DonutCard({ title, total, segments, range, onRangeChange, loading, onVi
             ))}
           </div>
         </div>
-      )}
+      </div>
 
       {onRangeChange && <RangeFilter active={range} onChange={onRangeChange} />}
     </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import { getOrdersListForRangeApi } from "../../api/api";
 import { RANGES } from "../../utils/dateRange";
@@ -21,6 +22,7 @@ const inr = (n) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 // other summary tiles are display-only. Without it (the donut's "View Report")
 // the tiles still switch the table.
 export default function OrderStatusModal({ initialRange = "Today", initialTab = "all", lockTab = false, onClose }) {
+  const navigate = useNavigate();
   const [range, setRange] = useState(initialRange);
   const [tab, setTab] = useState(initialTab);
   const [inRange, setInRange] = useState([]);
@@ -136,13 +138,18 @@ export default function OrderStatusModal({ initialRange = "Today", initialTab = 
         </div>
 
         {/* Orders table */}
-        <div className="flex-1 overflow-y-auto border-t border-gray-100">
-          {loading ? (
-            <p className="py-10 text-center text-xs text-gray-400">Loading…</p>
-          ) : visible.length === 0 ? (
+        {/* Fixed height: the box keeps its size when you switch the range, so it
+            doesn't jump. The old rows stay (dimmed) until the new ones arrive. */}
+        <div className="relative h-[340px] shrink-0 overflow-y-auto border-t border-gray-100">
+          {loading && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center">
+              <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-teal-500 border-t-transparent" />
+            </div>
+          )}
+          {!loading && visible.length === 0 ? (
             <p className="py-10 text-center text-xs text-gray-400">No orders in this range.</p>
           ) : (
-            <table className="w-full text-sm">
+            <table className={`w-full text-sm transition-opacity duration-150 ${loading ? "pointer-events-none opacity-30" : ""}`}>
               <thead className="bg-gray-50 text-left text-xs text-gray-500">
                 <tr>
                   <th className="px-6 py-2 font-medium">Order</th>
@@ -156,7 +163,8 @@ export default function OrderStatusModal({ initialRange = "Today", initialTab = 
                 {visible.map((o) => (
                   <tr
                     key={o.order_no}
-                    className="border-b border-gray-100 select-none"
+                    onClick={() => navigate(`/lab-orders/${o.order_no}`)}
+                    className="cursor-pointer border-b border-gray-100 hover:bg-gray-50"
                   >
                     <td className="px-6 py-3 text-gray-500">{o.order_no}</td>
                     <td className="py-3 font-medium text-gray-900">

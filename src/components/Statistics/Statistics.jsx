@@ -204,7 +204,8 @@ function DonutDetailModal({ title, total, segments, footerStat, range, onRangeCh
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    // Light blur: the page behind stays readable
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4">
       <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
 
         {/* Header */}
@@ -230,13 +231,14 @@ function DonutDetailModal({ title, total, segments, footerStat, range, onRangeCh
             <RangeFilter options={rangeOptions} active={range} onSelect={onRangeChange} />
           )}
 
-          {loading ? (
-            <div className="py-10 text-center">
-              <div className="inline-block w-5 h-5 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-gray-400 mt-3">Loading…</p>
-            </div>
-          ) : (
-            <>
+          {/* Same blocks while loading (dimmed, spinner on top) so the box never changes height */}
+          <div className="relative">
+            {loading && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center">
+                <div className="inline-block w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            <div className={`space-y-5 transition-opacity duration-150 ${loading ? "opacity-30 pointer-events-none" : ""}`}>
               <div className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3">
                 <span className="text-sm text-gray-500">Total</span>
                 <span className="text-xl font-bold text-gray-900">{total}</span>
@@ -268,8 +270,8 @@ function DonutDetailModal({ title, total, segments, footerStat, range, onRangeCh
                   </div>
                 ))}
               </div>
-            </>
-          )}
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
@@ -352,7 +354,7 @@ function RankingsModal({ type, data, loading, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4">
       <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
 
         {/* Header */}
@@ -628,7 +630,7 @@ function AttentionModal({ open, alerts, loading, initialTab = "critical", onClos
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4">
       <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100">

@@ -71,7 +71,7 @@ export default function CollectionReportModal({ open, range, onRangeChange, onCl
     : report?.totalPaid;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4">
       <div className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100">
@@ -153,16 +153,18 @@ export default function CollectionReportModal({ open, range, onRangeChange, onCl
         </div>
 
         {/* Table */}
-        <div className="max-h-[360px] overflow-auto border-t border-gray-100">
-          {loading ? (
-            <div className="py-12 text-center">
-              <div className="inline-block w-5 h-5 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-gray-400 mt-3">Loading…</p>
+        {/* Fixed height: the box keeps its size while you switch range / tab, so it
+            doesn't jump. The old rows stay (dimmed) until the new ones arrive. */}
+        <div className="relative h-[340px] overflow-auto border-t border-gray-100">
+          {loading && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center">
+              <div className="inline-block w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
             </div>
-          ) : rows.length === 0 ? (
+          )}
+          {!loading && rows.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-12">No orders in this range.</p>
           ) : (
-            <table className="w-full text-sm">
+            <table className={`w-full text-sm transition-opacity duration-150 ${loading ? "opacity-30 pointer-events-none" : ""}`}>
               <thead className="sticky top-0 bg-gray-50 text-xs text-gray-500">
                 <tr>
                   <th className="text-left font-medium px-6 py-2.5">Order ID</th>

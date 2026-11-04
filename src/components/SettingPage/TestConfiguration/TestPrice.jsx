@@ -122,14 +122,23 @@ export default function TestPrice() {
 
   const query = search.trim().toLowerCase();
 
+  // Price search: "150", "₹150", "1,500" or "150.00" all work. A number matches any
+  // price that contains it (150 finds 150.00 and 1500.00); exact prices are listed first.
+  const priceQuery = query.replace(/[₹,\s]/g, "");
+  const isPriceQuery = /^\d+(\.\d+)?$/.test(priceQuery);
+
   const matches = useMemo(() => {
     if (!query) return tests;
-    return tests.filter(
-      (t) =>
-        t.name.toLowerCase().includes(query) ||
-        (categoryNameById[t.categoryId] || "").toLowerCase().includes(query)
-    );
-  }, [tests, query, categoryNameById]);
+    const found = tests.filter((t) => {
+      if (t.name.toLowerCase().includes(query)) return true;
+      if ((categoryNameById[t.categoryId] || "").toLowerCase().includes(query)) return true;
+      return isPriceQuery && t.price.toFixed(2).includes(priceQuery);
+    });
+    if (!isPriceQuery) return found;
+    // exact price matches first, then the rest in their usual order
+    const exact = (t) => (t.price === Number(priceQuery) ? 0 : 1);
+    return [...found].sort((a, b) => exact(a) - exact(b));
+  }, [tests, query, categoryNameById, isPriceQuery, priceQuery]);
 
   const visible = matches.slice(0, query ? SEARCH_LIMIT : PREVIEW_COUNT);
 
@@ -158,7 +167,7 @@ export default function TestPrice() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search tests or categories..."
+            placeholder="Search tests, categories or price..."
             className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
           />
         </div>

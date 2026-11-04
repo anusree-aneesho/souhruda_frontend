@@ -8,6 +8,7 @@ import HomeCollectionStats from "./HomeCollectionStats";
 import HomeCollectionTable from "./HomeCollectionTable/HomeCollectionTable";
 import HomeCollectionCard from "./HomeCollectionTable/HomeCollectionCard";
 import Pagination from "../common/Pagination";
+import SlotDateFilter from "../common/SlotDateFilter"; // ADDED: calendar filter
 import Toast from "../common/Toast/Toast";
 import { useToast } from "../common/Toast/useToast";
 import { getHomeCollectionRequestsApi } from "../../api/api";
@@ -122,6 +123,8 @@ export default function HomeCollection() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  // ADDED: calendar range from SlotDateFilter — { date_from, date_to, label } or null
+  const [dates, setDates] = useState(null);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState(null);
   const { toast, showToast, hideToast } = useToast();
@@ -134,7 +137,7 @@ export default function HomeCollection() {
   const { activeId } = useHomeCollectionModal();
   const prevActiveIdRef = useRef(null);
   const branchId = useSelectedBranch()?.id ?? null; // refetch when branch changes
-  const [searchResults, setSearchResults] = useState(null); // null = no search typed
+  const [searchResults, setSearchResults] = useState(null); // null = no search/calendar filter active
 
   const load = useCallback(async () => {
     try {
@@ -151,12 +154,13 @@ export default function HomeCollection() {
     load();
   }, [load, branchId]);
 
-  // When something is typed, ask the backend (after a short pause).
+  // CHANGED: runs for a search term, a calendar range, or both together.
+  // Typing waits 300ms; picking a date range applies straight away.
   // The count cards still use the full list. rawRequests is a dependency so
-  // an active search is re-run after a reload (e.g. when the branch changes).
+  // an active filter is re-run after a reload (e.g. when the branch changes).
   useEffect(() => {
     const q = search.trim();
-    if (!q) {
+    if (!q && !dates) {
       setSearchResults(null);
       return;
     }
@@ -164,18 +168,24 @@ export default function HomeCollection() {
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
-        const data = await getHomeCollectionRequestsApi({ q });
+        const params = {};
+        if (q) params.q = q;
+        if (dates) {
+          params.date_from = dates.date_from;
+          params.date_to = dates.date_to;
+        }
+        const data = await getHomeCollectionRequestsApi(params);
         if (!cancelled) setSearchResults(Array.isArray(data) ? data : data.data || []);
       } catch {
         if (!cancelled) setSearchResults([]);
       }
-    }, 300);
+    }, q ? 300 : 0);
 
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [search, rawRequests]);
+  }, [search, dates, rawRequests]);
 
   // NewOrderModal navigates back here with { justBooked: created } right
   // after a successful booking (same route, so React Router won't remount
@@ -211,13 +221,13 @@ export default function HomeCollection() {
 
   const today = todayLocalDate();
   const term = search.trim().toLowerCase();
- const filteredRequests = requests.filter((r) => {
-  const matchesStatus =
-    !statusFilter ||
-    (statusFilter === "paymentPending" ? r.paymentPending : r.bucket === statusFilter);
-  const matchesDate = !dateFilter || r.slotDateRaw === today;
-  return matchesStatus && matchesDate;
-});
+  const filteredRequests = requests.filter((r) => {
+    const matchesStatus =
+      !statusFilter ||
+      (statusFilter === "paymentPending" ? r.paymentPending : r.bucket === statusFilter);
+    const matchesDate = !dateFilter || r.slotDateRaw === today;
+    return matchesStatus && matchesDate;
+  });
 
   // Clicking an already-active stat card clears the filter back to "All".
   function handleFilterChange(key) {
@@ -235,8 +245,17 @@ export default function HomeCollection() {
     }
   }
 
-  // Newest-first, capped to the latest 50, 8 per page.
-  const displayedRequests = filteredRequests.slice(0, MAX_DISPLAYED);
+  // ADDED: called by the calendar picker on Apply / Clear.
+  // The calendar replaces the "Today" shortcut so the two don't fight.
+  function handleDatesChange(v) {
+    setDates(v);
+    setPage(1);
+    if (dateFilter) clearDateFilter();
+  }
+
+  // Newest-first, 8 per page. Capped to the latest 50 — except while a
+  // calendar range is chosen, so "2026" really shows every slot in 2026.
+  const displayedRequests = filteredRequests.slice(0, dates ? Infinity : MAX_DISPLAYED);
   const totalPages = Math.max(1, Math.ceil(displayedRequests.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pageRequests = displayedRequests.slice(
@@ -244,12 +263,12 @@ export default function HomeCollection() {
     safePage * PAGE_SIZE
   );
 
-  // Any time the search term, date filter or branch changes, start back at
-  // page 1 — otherwise a narrower result set can leave the user stranded on a
-  // now-empty page.
+  // Any time the search term, date filter, calendar range or branch changes,
+  // start back at page 1 — otherwise a narrower result set can leave the user
+  // stranded on a now-empty page.
   useEffect(() => {
     setPage(1);
-  }, [search, dateFilter, branchId]);
+  }, [search, dateFilter, dates, branchId]);
 
   return (
     <div className="space-y-6">
@@ -266,6 +285,9 @@ export default function HomeCollection() {
             className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:bg-white transition-colors"
           />
         </div>
+
+        {/* ADDED: calendar filter — day, range, month or year */}
+        <SlotDateFilter onChange={handleDatesChange} />
 
         {statusFilter && (
           <button
@@ -296,10 +318,12 @@ export default function HomeCollection() {
         )}
         {!isLoading && !error && rawRequests.length > 0 && filteredRequests.length === 0 && (
           <p className="text-sm text-gray-400">
-            {term && (statusFilter || dateFilter)
+            {term && (statusFilter || dateFilter || dates)
               ? `No requests match "${search}" in this category.`
               : term
               ? `No requests match "${search}".`
+              : dates
+              ? `No requests slotted in ${dates.label}.`
               : "No requests in this category."}{" "}
             {statusFilter && (
               <button onClick={() => setStatusFilter(null)} className="text-teal-600 font-medium hover:underline">

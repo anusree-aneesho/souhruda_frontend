@@ -424,4 +424,4 @@ export default function GstSettings() {
   // Super admin and admin see every branch; everyone else edits their own branch.
   if (["super_admin", "superadmin", "admin"].includes(role)) return <AllBranchesGst />;
   return <GstForm />;
-}
+}  

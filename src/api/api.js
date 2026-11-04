@@ -268,11 +268,13 @@ export function deleteTestCategory(id) {
 
 // ── Home Collection ──────────────────────────────
 
-export async function getHomeCollectionRequestsApi({ q, status, slotDate } = {}) {
+export async function getHomeCollectionRequestsApi({ q, status, slotDate, date_from, date_to } = {}) {
   const params = new URLSearchParams();
   if (q) params.append("q", q);
   if (status) params.append("status", status);
   if (slotDate) params.append("slot_date", slotDate);
+  if (date_from) params.append("date_from", date_from);
+  if (date_to) params.append("date_to", date_to);
   const qs = params.toString();
   return request(`/home-collection-requests${qs ? `?${qs}` : ""}`);
 }

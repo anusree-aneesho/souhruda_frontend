@@ -468,6 +468,16 @@ function AttentionModal({ open, alerts, loading, initialTab = "critical", onClos
       return value;
     }
   };
+  
+const waitingFor = (value) => {
+  if (!value) return { text: "-", cls: "text-gray-500" };
+  const hours = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 3600000));
+  const days = Math.floor(hours / 24);
+  const text = hours < 24 ? `${hours}h` : `${days}d ${hours % 24}h`;
+  const cls =
+    hours >= 24 ? "text-red-600" : hours >= 8 ? "text-orange-600" : "text-amber-600";
+  return { text, cls };
+};
 
   const tabs = [
     { key: "critical", label: "Critical Results", count: criticalResults.length, active: "text-red-600 border-red-500" },
@@ -499,7 +509,7 @@ function AttentionModal({ open, alerts, loading, initialTab = "critical", onClos
                   )}
                 </p>
                 <p className="text-xs text-gray-400 truncate">
-                  {row.test_name} · Order #{row.order_id}
+                  {row.test_name} · Order ID:{row.order_no ?? row.order_id}
                 </p>
               </div>
               <div className="text-right shrink-0">
@@ -534,7 +544,10 @@ function AttentionModal({ open, alerts, loading, initialTab = "critical", onClos
                     <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
                   )}
                 </p>
-                <p className="text-xs text-gray-400 truncate">{row.test_name ?? "Follow-up"}</p>
+                <p className="text-xs text-gray-400 truncate">
+                {row.test_name ?? "Follow-up"}
+                {(row.order_no ?? row.order_id) ? ` · Order ID: ${row.order_no ?? row.order_id}` : ""}
+              </p>
               </div>
               <span className="text-xs text-gray-500 shrink-0">{formatDate(row.due_at)}</span>
             </div>
@@ -548,29 +561,40 @@ function AttentionModal({ open, alerts, loading, initialTab = "critical", onClos
       <Empty text="No delayed samples." />
     ) : (
       <div className="space-y-1">
-        {samplesDelayedList.map((row) => (
-          <div
-            key={row.order_id}
-            className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition"
-          >
-            <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
-              <Clock size={15} className="text-orange-500" />
+        <p className="text-xs text-gray-500 px-2 pb-2">
+          {samplesDelayedList.length} sample{samplesDelayedList.length === 1 ? "" : "s"} waiting
+          more than 4 hours · last 7 days · longest wait first
+        </p>
+        {samplesDelayedList.map((row) => {
+          const w = waitingFor(row.sample_collected_at);
+          return (
+            <div
+              key={row.order_id}
+              className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition"
+            >
+              <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
+                <Clock size={15} className="text-orange-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-800 truncate">
+                  {row.patient_name}
+                  {row.patient_number && (
+                    <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
+                  )}
+                </p>
+                <p className="text-xs text-gray-400 truncate">
+                  Order ID: {row.order_no ?? row.order_id}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className={`text-sm font-semibold ${w.cls}`}>{w.text}</p>
+                <p className="text-[11px] text-gray-400">
+                  Collected {formatDate(row.sample_collected_at)}
+                </p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-gray-800 truncate">
-                {row.patient_name}
-                {row.patient_number && (
-                  <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
-                )}
-              </p>
-              <p className="text-xs text-gray-400 truncate">Order #{row.order_id}</p>
-            </div>
-            <div className="text-right shrink-0">
-              <p className="text-xs text-gray-500">{formatDate(row.sample_collected_at)}</p>
-              <p className="text-[11px] text-gray-400">Collected</p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   };

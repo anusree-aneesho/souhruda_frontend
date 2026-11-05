@@ -21,8 +21,6 @@ import { useViewBranch, setViewBranch, setSelectedBranch } from "../../utils/sel
 // Everywhere else (order details, report print page, patient follow-up details,
 // activity log, individual reports like /reports/home-collection/hc-summary...)
 // the top bar just shows the current branch name.
-// Exception: the Branch Reports compare branches and filter by the top bar
-// branch, so they keep the dropdown.
 const SWITCHABLE_EXACT = [
   "/",
   "/patients",
@@ -42,8 +40,7 @@ function isSwitchablePath(pathname) {
   if (SWITCHABLE_EXACT.includes(path)) return true;
   // Sidebar report categories: /reports/<category> (exactly one segment).
   if (/^\/reports\/[^/]+$/.test(path)) return true;
-  // Branch Reports (individual reports) filter by the top bar branch.
-  return path.startsWith("/reports/branch/");
+  return false;
 }
 
 export default function BranchFilter() {

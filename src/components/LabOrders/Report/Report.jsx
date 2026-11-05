@@ -934,7 +934,7 @@ async function handleDownloadPdf() {
                         )}
                         <div>
                           <h1 className="text-xl font-extrabold text-gray-900 tracking-tight leading-tight">
-                            {labInfo?.lab_name || "SOUHRUDA MEDICAL CENTRE"}
+                            {labInfo?.lab_name || "SYNORA MEDICAL CENTRE"}
                           </h1>
                           <p className="text-[9px] text-gray-500 uppercase tracking-[0.08em] mt-0.5">
                             Accurate · Caring · Instant
@@ -1105,7 +1105,7 @@ async function handleDownloadPdf() {
                 </div>
 
                 <div className="bg-teal-600 text-white text-center text-[10px] font-bold tracking-[0.03em] py-1.5">
-                  {labInfo?.lab_name || "SOUHRUDA MEDICAL CENTRE"}
+                  {labInfo?.lab_name || "SYNORA MEDICAL CENTRE"}
                 </div>
               </div>
             </div>

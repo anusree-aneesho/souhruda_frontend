@@ -8,7 +8,7 @@ export default function SidebarLogo() {
         SR
       </div>
       <div>
-        <p className="font-bold text-sm text-gray-900 leading-tight">SOUHRUDA</p>
+        <p className="font-bold text-sm text-gray-900 leading-tight">SYNORA</p>
         <p className="text-[10px] tracking-wide text-gray-400">LAB OS </p>
       </div>
     </Link>

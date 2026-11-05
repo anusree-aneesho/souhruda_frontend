@@ -17,6 +17,35 @@ import { getBranchesApi, BRANCHES_CHANGED_EVENT } from "../../api/api";
 import { useAuth } from "../../Context/AuthContext";
 import { useViewBranch, setViewBranch, setSelectedBranch } from "../../utils/selectedBranch";
 
+// Pages where the branch can be switched: exactly the sidebar destinations.
+// Everywhere else (order details, report print page, patient follow-up details,
+// activity log, individual reports like /reports/home-collection/hc-summary...)
+// the top bar just shows the current branch name.
+// Exception: the Branch Reports compare branches and filter by the top bar
+// branch, so they keep the dropdown.
+const SWITCHABLE_EXACT = [
+  "/",
+  "/patients",
+  "/lab-orders",
+  "/home-collection",
+  "/test-master",
+  "/follow-ups",
+  "/statistics",
+  "/settings/lab-settings",
+  "/settings/gst",
+  "/settings/staff-management",
+  "/settings/test-configuration",
+];
+
+function isSwitchablePath(pathname) {
+  const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  if (SWITCHABLE_EXACT.includes(path)) return true;
+  // Sidebar report categories: /reports/<category> (exactly one segment).
+  if (/^\/reports\/[^/]+$/.test(path)) return true;
+  // Branch Reports (individual reports) filter by the top bar branch.
+  return path.startsWith("/reports/branch/");
+}
+
 export default function BranchFilter() {
   const { user } = useAuth();
   // What the dropdown shows follows the "view branch" (the one the list pages,
@@ -56,6 +85,23 @@ export default function BranchFilter() {
 
   if (!isSuperAdmin) return null;
 
+  const pillColors = selected
+    ? "bg-teal-50 text-teal-700"
+    : "bg-amber-50 text-amber-700";
+
+  // Not a sidebar page: show the current branch, no switching.
+  if (!isSwitchablePath(pathname)) {
+    return (
+      <div
+        title="Current branch"
+        className={`flex max-w-[15rem] items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${pillColors}`}
+      >
+        <Building2 size={13} className="shrink-0" />
+        <span className="truncate">{selected ? selected.name : "All branches"}</span>
+      </div>
+    );
+  }
+
   function handleChange(e) {
     const id = e.target.value;
     if (!id) {
@@ -79,10 +125,8 @@ export default function BranchFilter() {
   return (
     <div
       title="Switch branch"
-      className={`relative flex max-w-[15rem] items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors focus-within:ring-2 focus-within:ring-teal-500 ${
-        selected
-          ? "bg-teal-50 text-teal-700 hover:bg-teal-100"
-          : "bg-amber-50 text-amber-700 hover:bg-amber-100"
+      className={`relative flex max-w-[15rem] items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors focus-within:ring-2 focus-within:ring-teal-500 ${pillColors} ${
+        selected ? "hover:bg-teal-100" : "hover:bg-amber-100"
       }`}
     >
       <Building2 size={13} className="shrink-0" />

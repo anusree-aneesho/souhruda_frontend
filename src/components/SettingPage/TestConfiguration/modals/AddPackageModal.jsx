@@ -19,6 +19,7 @@ export default function AddPackageModal({ tests, editingPackage, onClose, onSave
   const [searchTerm, setSearchTerm] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [priceNote, setPriceNote] = useState(""); // shown when the price was lowered automatically
 
   const filteredTests = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
@@ -43,6 +44,24 @@ export default function AddPackageModal({ tests, editingPackage, onClose, onSave
   const priceLimitMessage = `Package price must be less than the total test price (₹${totalTestsPrice.toFixed(2)}).`;
 
   function toggleTest(id) {
+    // Removing a test lowers the package price too: it scales down with the tests that
+    // remain, so the package keeps the same discount % (and stays below the new total).
+    if (selectedIds.includes(id) && price !== "" && Number(price) > 0) {
+      const removed = Number(tests.find((t) => t.id === id)?.price || 0);
+      const newTotal = totalTestsPrice - removed;
+      if (removed > 0 && newTotal > 0 && totalTestsPrice > 0) {
+        let next = Math.floor((Number(price) * newTotal) / totalTestsPrice);
+        next = Math.min(next, Math.max(1, Math.ceil(newTotal) - 1)); // always under the new total
+        next = Math.max(1, next);
+        if (next !== Number(price)) {
+          setPrice(String(next));
+          setPriceNote(`Price lowered to ₹${next} because a test was removed.`);
+        }
+      }
+    } else {
+      setPriceNote("");
+    }
+
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((tid) => tid !== id) : [...prev, id]
     );
@@ -123,10 +142,14 @@ export default function AddPackageModal({ tests, editingPackage, onClose, onSave
               max={selectedCount > 0 ? maxPrice : undefined}
               step="1"
               value={price}
-              onChange={(e) => setPrice(e.target.value)}
+              onChange={(e) => {
+                setPrice(e.target.value);
+                setPriceNote("");
+              }}
               placeholder="e.g. 1499"
               className={`${inputClass} ${priceTooHigh ? "border-red-400 focus:border-red-500 focus:ring-red-500" : ""}`}
             />
+            {priceNote && <p className="mt-1 text-[11px] text-teal-600">{priceNote}</p>}
             {/* Live limit: tells you the highest price allowed for the selected tests */}
             {selectedCount > 0 && (
               <p className={`mt-1 text-[11px] ${priceTooHigh ? "text-red-500" : "text-gray-400"}`}>

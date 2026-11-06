@@ -48,7 +48,7 @@ export default function AssignTechnicianModal({ hcCode, onClose, onAssign }) {
         {isLoading && <p className="text-sm text-gray-400">Finding nearby technicians…</p>}
         {!isLoading && error && <p className="text-sm text-red-600">{error}</p>}
         {!isLoading && !error && technicians.length === 0 && (
-          <p className="text-sm text-gray-400">No active technicians with a saved base location yet.</p>
+          <p className="text-sm text-gray-400">No active technicians with a saved base location in this branch yet.</p>
         )}
 
         <div className="space-y-3">

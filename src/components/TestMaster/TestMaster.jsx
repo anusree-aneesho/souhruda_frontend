@@ -11,7 +11,7 @@ import {
   getTestCategories,
   getLabTests,
   createTestCategory,
-  updateTestCategory,
+  deleteTestCategory,
   createLabTest,
   updateLabTest,
   deleteLabTest,
@@ -36,9 +36,8 @@ function mapTest(t) {
     isActive: t.is_active,
     parameters: (t.parameters || []).map((p) => ({ id: p.id, name: p.name })),
     parameterIds: (t.parameters || []).map((p) => p.id),
-    // CHANGED: ranges are kept exactly as the API returns them (age_label,
+    // Ranges are kept exactly as the API returns them (age_label,
     // age_min_value, ..., gender, range_raw) plus the test's range mode.
-    // This replaces the old demographicRanges object.
     rangeMode: t.range_mode || "general",
     ranges: t.ranges || [],
   };
@@ -52,9 +51,9 @@ export default function TestMaster() {
 
   const [isCategoryModalOpen, setCategoryModalOpen] = useState(false);
   const [testModalState, setTestModalState] = useState(null);
-  const [editingCategory, setEditingCategory] = useState(null);
   const [toast, setToast] = useState(null); // { message, type }
   const [confirmingRemove, setConfirmingRemove] = useState(null); // test | null
+  const [confirmingCategoryDelete, setConfirmingCategoryDelete] = useState(null); // category | null
 
   useEffect(() => {
     let cancelled = false;
@@ -159,41 +158,46 @@ export default function TestMaster() {
     }
   }
 
-  async function handleEditCategory(id, newName) {
-    if (categories.some((c) => c.id !== id && c.name.toLowerCase() === newName.toLowerCase())) {
-      setToast({ message: "A category with this name already exists.", type: "error" });
+  // A category can only be deleted when it has no tests. If it has any, show a
+  // message instead; if it's empty, ask for confirmation first.
+  function handleDeleteCategoryClick(cat) {
+    const count = (testsByCategory[cat.name] || []).length;
+
+    if (count > 0) {
+      setToast({
+        message: `"${cat.name}" contains ${count} test${count > 1 ? "s" : ""} and can't be deleted.`,
+        type: "error",
+      });
       return;
     }
 
+    setConfirmingCategoryDelete(cat);
+  }
+
+  async function confirmDeleteCategory() {
+    const cat = confirmingCategoryDelete;
+    setConfirmingCategoryDelete(null);
+
     try {
-      const res = await updateTestCategory(id, { name: newName });
-      const updated = res.data;
-      const oldCategory = categories.find((c) => c.id === id);
+      await deleteTestCategory(cat.id);
 
-      setCategories((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, name: updated.name } : c))
-      );
+      setCategories((prev) => prev.filter((c) => c.id !== cat.id));
+      setTestsByCategory((prev) => {
+        const next = { ...prev };
+        delete next[cat.name];
+        return next;
+      });
 
-      // The tests map is keyed by category name, so renaming means moving
-      // that category's tests under the new key.
-      if (oldCategory && oldCategory.name !== updated.name) {
-        setTestsByCategory((prev) => {
-          const updatedMap = { ...prev };
-          updatedMap[updated.name] = updatedMap[oldCategory.name] || [];
-          delete updatedMap[oldCategory.name];
-          return updatedMap;
-        });
-
-        if (activeCategory === oldCategory.name) {
-          setActiveCategory(updated.name);
-        }
+      // If the deleted category was the open one, fall back to the first remaining.
+      if (activeCategory === cat.name) {
+        const remaining = categories.filter((c) => c.id !== cat.id);
+        setActiveCategory(remaining[0]?.name || "");
       }
 
-      setCategoryModalOpen(false);
-      setEditingCategory(null);
-      setToast({ message: "Category updated successfully", type: "success" });
+      setToast({ message: "Category deleted successfully", type: "success" });
     } catch (err) {
-      setToast({ message: err.message || "Failed to update category", type: "error" });
+      // Also shows the backend's message if it refuses (e.g. category has tests).
+      setToast({ message: err.message || "Failed to delete category", type: "error" });
     }
   }
 
@@ -216,9 +220,9 @@ export default function TestMaster() {
       criteria: testData.criteria || null,
       note: testData.note || null,
       is_active: testData.isActive,
-      // CHANGED: the modal now supplies the range mode and the finished range
-      // rows. They are only sent when the modal supplies them, so a save that
-      // doesn't know about ranges can never wipe them.
+      // The modal supplies the range mode and the finished range rows. They are
+      // only sent when the modal supplies them, so a save that doesn't know
+      // about ranges can never wipe them.
       ...(testData.ranges !== undefined && {
         range_mode: testData.rangeMode,
         ranges: testData.ranges,
@@ -322,10 +326,7 @@ export default function TestMaster() {
           categories={categoriesWithCount}
           activeCategory={activeCategory}
           onSelect={setActiveCategory}
-          onEditCategory={(cat) => {
-            setEditingCategory(cat);
-            setCategoryModalOpen(true);
-          }}
+          onDeleteCategory={handleDeleteCategoryClick}
         />
         <TestsTable
           categoryName={activeCategory}
@@ -340,13 +341,8 @@ export default function TestMaster() {
 
       {isCategoryModalOpen && (
         <AddCategoryModal
-          editingCategory={editingCategory}
-          onClose={() => {
-            setCategoryModalOpen(false);
-            setEditingCategory(null);
-          }}
+          onClose={() => setCategoryModalOpen(false)}
           onAdd={handleAddCategory}
-          onEdit={handleEditCategory}
         />
       )}
 
@@ -371,6 +367,18 @@ export default function TestMaster() {
           danger
           onConfirm={confirmRemoveTest}
           onClose={() => setConfirmingRemove(null)}
+        />
+      )}
+
+      {confirmingCategoryDelete && (
+        <ConfirmModal
+          title="Delete Category"
+          message={`Do you want to delete the category "${confirmingCategoryDelete.name}"?`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          danger
+          onConfirm={confirmDeleteCategory}
+          onClose={() => setConfirmingCategoryDelete(null)}
         />
       )}
 

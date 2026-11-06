@@ -1,5 +1,5 @@
 // src/components/TestMaster/CategoryList/CategoryItem.jsx
-import { Pencil } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 const dotColors = {
   teal: "bg-teal-500",
@@ -8,7 +8,7 @@ const dotColors = {
   amber: "bg-amber-500",
 };
 
-export default function CategoryItem({ id, name, count, color, isActive, onClick, onEdit, canManage }) {
+export default function CategoryItem({ id, name, count, color, isActive, onClick, onDelete, canManage }) {
   return (
     <div
       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group ${
@@ -24,12 +24,12 @@ export default function CategoryItem({ id, name, count, color, isActive, onClick
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onEdit({ id, name });
+              onDelete({ id, name });
             }}
-            className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-teal-600 transition-opacity cursor-pointer"
-            title="Edit category name"
+            className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-600 transition-opacity cursor-pointer"
+            title="Delete category"
           >
-            <Pencil size={13} />
+            <Trash2 size={13} />
           </button>
         )}
         <span className="text-xs text-gray-400">{count}</span>

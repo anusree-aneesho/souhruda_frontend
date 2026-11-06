@@ -8,7 +8,7 @@ const PAGE_SIZE = 11;
 const ROW_HEIGHT = 44;
 const LIST_MIN_HEIGHT = PAGE_SIZE * ROW_HEIGHT;
 
-export default function CategoryList({ categories, activeCategory, onSelect, onEditCategory }) {
+export default function CategoryList({ categories, activeCategory, onSelect, onDeleteCategory }) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const { user } = useAuth();
@@ -62,7 +62,7 @@ export default function CategoryList({ categories, activeCategory, onSelect, onE
                 {...cat}
                 isActive={activeCategory === cat.name}
                 onClick={() => onSelect(cat.name)}
-                onEdit={onEditCategory}
+                onDelete={onDeleteCategory}
                 canManage={canManage}
               />
             ))

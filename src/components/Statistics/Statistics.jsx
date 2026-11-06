@@ -1010,7 +1010,7 @@ export default function Statistics() {
   const samplesTotal = awaitingCollection + samplesProcessing + samplesCompleted;
   const sampleSegments = [
     { label: "Pending Collection", count: awaitingCollection, pct: pct(awaitingCollection, samplesTotal), colorHex: "#FBBF24" },
-    { label: "Processing", count: samplesProcessing, pct: pct(samplesProcessing, samplesTotal), colorHex: "#818CF8" },
+    { label: "Sample Collected", count: samplesProcessing, pct: pct(samplesProcessing, samplesTotal), colorHex: "#818CF8" },
     { label: "Completed", count: samplesCompleted, pct: pct(samplesCompleted, samplesTotal), colorHex: "#22C55E" },
   ];
 
@@ -1263,7 +1263,7 @@ export default function Statistics() {
           reportModal === "patient"
             ? { label: "Total Patients", value: patientStatsLoading ? "…" : patientStats?.totalPatients?.toLocaleString() ?? 0 }
             : reportModal === "samples"
-            ? { label: "Collected", value: sampleStatsLoading ? "…" : sampleStats?.samplesCollected?.toLocaleString() ?? 0 }
+            ? { label: "Total Collected in Period", value: sampleStatsLoading ? "…" : sampleStats?.samplesCollected?.toLocaleString() ?? 0 }
             : reportModal === "reports"
             ? { label: "Generated (PDF)", value: reportStatsLoading ? "…" : reportStats?.reportsGenerated?.toLocaleString() ?? 0 }
             : null

@@ -17,7 +17,7 @@ export default function PrintOrderLabelModal({ orderNo, barcode, patient, testNa
         <div className="print-target">
           <div className="max-w-sm mx-auto border border-gray-200 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-semibold text-gray-900">Souhruda Lab</p>
+              <p className="text-sm font-semibold text-gray-900">Synora Lab</p>
               <p className="text-xs text-gray-400">#{orderNo}</p>
             </div>
 

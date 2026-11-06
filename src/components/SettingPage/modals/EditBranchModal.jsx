@@ -163,7 +163,7 @@ export default function EditBranchModal({ branch, onClose, onBranchUpdated }) {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              placeholder="e.g. Souhruda Kannur"
+              placeholder="e.g. Saynora Kannur"
               className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
                 fieldErrors.name
                   ? "border-red-300 focus:border-red-500 focus:ring-red-500"

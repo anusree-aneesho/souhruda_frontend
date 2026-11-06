@@ -118,7 +118,7 @@ export default function AddBranchModal({ onClose, onBranchAdded }) {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              placeholder="e.g. Souhruda Kannur"
+              placeholder="e.g. Synora Kannur"
               className={`w-full rounded-lg border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
                 fieldErrors.name
                   ? "border-red-300 focus:border-red-500 focus:ring-red-500"

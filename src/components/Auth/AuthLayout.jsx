@@ -9,7 +9,7 @@ export default function AuthLayout({ children }) {
             SR
           </div>
           <div>
-            <p className="font-bold text-base leading-tight">SOUHRUDA</p>
+            <p className="font-bold text-base leading-tight">SYNORA</p>
             <p className="text-[11px] tracking-wide text-teal-100">LAB OS</p>
           </div>
         </div>
@@ -24,7 +24,7 @@ export default function AuthLayout({ children }) {
           </p>
         </div>
 
-        <p className="text-xs text-teal-100">© {new Date().getFullYear()} Souhruda Lab OS</p>
+        <p className="text-xs text-teal-100">© {new Date().getFullYear()} Synora Lab OS</p>
       </div>
 
       {/* Form panel */}
@@ -36,7 +36,7 @@ export default function AuthLayout({ children }) {
               SR
             </div>
             <div>
-              <p className="font-bold text-sm text-gray-900 leading-tight">SOUHRUDA</p>
+              <p className="font-bold text-sm text-gray-900 leading-tight">SYNORA</p>
               <p className="text-[10px] tracking-wide text-gray-400">LAB OS</p>
             </div>
           </div>

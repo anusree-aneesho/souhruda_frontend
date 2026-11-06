@@ -214,7 +214,7 @@ function GstForm({ branchId = null, branchName = "", onBack, onSaved }) {
                   name="legalBusinessName"
                   value={formData.legalBusinessName}
                   onChange={handleChange}
-                  placeholder="e.g. Souhruda Diagnostics Pvt Ltd"
+                  placeholder="e.g. Synora Diagnostics Pvt Ltd"
                   error={fieldErrors.legalBusinessName}
                 />
               </div>

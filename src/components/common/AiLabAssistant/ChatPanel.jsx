@@ -11,6 +11,7 @@ import {
   Paperclip,
   FileText,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
 import LabBotIcon from "./Labboticon";
 import ChatMessage from "./ChatMessage";
@@ -50,6 +51,7 @@ export default function ChatPanel({ onClose }) {
   const [files, setFiles] = useState([]);
   const [fileError, setFileError] = useState("");
   const [typedPlaceholder, setTypedPlaceholder] = useState("");
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const scrollRef = useRef(null);
   const fileInputRef = useRef(null);
   // Bumped whenever the visible conversation changes, so in-flight streams
@@ -162,10 +164,16 @@ export default function ChatPanel({ onClose }) {
     setFileError("");
   }
 
-  // Clear the current chat: removes the saved conversation (if any) and starts fresh.
-  async function clearChat() {
+  // The eraser button only opens the confirmation modal.
+  function clearChat() {
     if (isLoading || (messages.length === 0 && !activeId)) return;
-    if (!window.confirm("Clear this chat? This will delete the conversation.")) return;
+    setShowClearConfirm(true);
+  }
+
+  // Runs when the user presses "Clear" in the modal: removes the saved
+  // conversation (if any) and starts fresh.
+  async function confirmClear() {
+    setShowClearConfirm(false);
     const id = activeId;
     newChat();
     if (!id) return;
@@ -393,9 +401,10 @@ export default function ChatPanel({ onClose }) {
     conversations.find((conversation) => conversation.id === activeId)?.title || "LabAgent";
     const sizeClass = isHistoryOpen ? "w-[92vw] sm:w-[560px]" : "w-80 sm:w-96";
 
+
   return (
 <div
-    className={`${sizeClass} bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col transition-all duration-200`}
+    className={`${sizeClass} relative bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col transition-all duration-200`}
     style={isWide ? { height: "85vh", maxHeight: "85vh" } : { maxHeight: "70vh" }}
     onClick={(event) => event.stopPropagation()}
   >
@@ -569,9 +578,39 @@ export default function ChatPanel({ onClose }) {
             >
               <Send size={16} />
             </button>
-          </form>
+                   </form>
         </div>
       </div>
+
+      {showClearConfirm && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-[260px] rounded-xl bg-white p-4 text-center shadow-xl">
+            <div className="mx-auto mb-2 flex size-10 items-center justify-center rounded-full bg-red-50">
+              <AlertCircle size={20} className="text-red-500" />
+            </div>
+            <p className="text-sm font-semibold text-gray-800">Clear chat</p>
+            <p className="mt-1 text-xs text-gray-600">
+              Clear this chat? This will delete the conversation.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowClearConfirm(false)}
+                className="flex-1 rounded-lg border border-gray-200 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmClear}
+                className="flex-1 rounded-lg bg-teal-600 py-2 text-xs font-medium text-white hover:bg-teal-700 cursor-pointer"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

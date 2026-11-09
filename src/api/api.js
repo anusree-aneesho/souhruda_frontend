@@ -1,10 +1,10 @@
 import { getSelectedBranch } from "../utils/selectedBranch";
 
-const API_BASE_URL = "http://localhost:8000/api/v1";
+export const API_BASE_URL  = "http://localhost:8000/api/v1";
 
 // A super admin works "inside" the branch picked in Settings; tell the backend
 // which one on every call. (The backend ignores this header for everyone else.)
-function activeBranchHeader() {
+export function activeBranchHeader() {
   try {
     const user = JSON.parse(localStorage.getItem("souhruda_auth_user") || "null");
     if (user?.role !== "super_admin") return {};
@@ -15,7 +15,7 @@ function activeBranchHeader() {
   return id ? { "X-Branch-Id": String(id) } : {};
 }
 
-async function request(endpoint, options = {}) {
+export async function request(endpoint, options = {}) {
   const token = localStorage.getItem("souhruda_auth_token");
   const isFormData = options.body instanceof FormData;
 
@@ -1059,4 +1059,11 @@ export async function getTestWiseRevenueReportApi({ dateFrom, dateTo, q } = {}) 
   if (q) params.append("q", q);
   const qs = params.toString();
   return request(`/reports/tests/revenue${qs ? `?${qs}` : ""}`);
+}
+// ── AI Lab Assistant ───────────────────────────
+export async function askAssistantApi({ message, conversationId = null }) {
+  return request("/assistant/ask", {
+    method: "POST",
+    body: JSON.stringify({ message, conversation_id: conversationId }),
+  });
 }

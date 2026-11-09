@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { X, Send } from "lucide-react";
 import ChatMessage from "./ChatMessage";
 import SuggestedPrompts from "./SuggestedPrompts";
-import { generateResponse } from "./generateResponse";
+import { askAssistantApi } from "../../../api/api";
 
 const initialMessages = [
   {
@@ -15,18 +15,38 @@ const initialMessages = [
 export default function ChatPanel({ onClose }) {
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState("");
+  const [conversationId, setConversationId] = useState(null);
+  const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages]);
+  }, [messages, loading]);
 
-  function sendMessage(text) {
+  async function sendMessage(text) {
     const trimmed = text.trim();
-    if (!trimmed) return;
-    const botReply = generateResponse(trimmed);
-    setMessages((prev) => [...prev, { role: "user", text: trimmed }, { role: "bot", text: botReply }]);
+    if (!trimmed || loading) return;
+
+    setMessages((prev) => [...prev, { role: "user", text: trimmed }]);
     setInput("");
+    setLoading(true);
+
+    try {
+      const res = await askAssistantApi({ message: trimmed, conversationId });
+      // Keep the thread so follow-up questions have context.
+      if (res.conversation_id) setConversationId(res.conversation_id);
+      setMessages((prev) => [
+        ...prev,
+        { role: "bot", text: res.message || "I couldn't find an answer for that." },
+      ]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "bot", text: err.message || "Something went wrong. Please try again.", isError: true },
+      ]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleSubmit(e) {
@@ -52,8 +72,9 @@ export default function ChatPanel({ onClose }) {
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
         {messages.map((msg, i) => (
-          <ChatMessage key={i} role={msg.role} text={msg.text} />
+          <ChatMessage key={i} role={msg.role} text={msg.text} isError={msg.isError} />
         ))}
+        {loading && <ChatMessage role="bot" text="Thinking…" />}
       </div>
 
       <SuggestedPrompts onSelect={sendMessage} />
@@ -62,12 +83,15 @@ export default function ChatPanel({ onClose }) {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          maxLength={1000}
+          disabled={loading}
           placeholder="Type a question..."
-          className="flex-1 rounded-full border border-gray-200 px-4 py-2 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+          className="flex-1 rounded-full border border-gray-200 px-4 py-2 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 disabled:bg-gray-50"
         />
         <button
           type="submit"
-          className="h-9 w-9 shrink-0 rounded-full bg-teal-600 text-white flex items-center justify-center hover:bg-teal-700"
+          disabled={loading || !input.trim()}
+          className="h-9 w-9 shrink-0 rounded-full bg-teal-600 text-white flex items-center justify-center hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Send size={16} />
         </button>

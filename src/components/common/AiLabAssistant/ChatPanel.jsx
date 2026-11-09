@@ -412,7 +412,7 @@ export default function ChatPanel({ onClose }) {
         <button
           onClick={() => setIsHistoryOpen((prev) => !prev)}
           title={isHistoryOpen ? "Hide chat history" : "Show chat history"}
-          className="text-white/80 hover:text-white p-1.5 rounded-md hover:bg-white/10"
+          className="text-white/80 hover:text-white p-1.5 rounded-md hover:bg-white/10 cursor-pointer"
         >
           <PanelLeft size={16} />
         </button>
@@ -425,28 +425,28 @@ export default function ChatPanel({ onClose }) {
           onClick={clearChat}
           title="Clear chat"
           disabled={isLoading || (messages.length === 0 && !activeId)}
-          className="text-white/80 hover:text-white p-1.5 rounded-md hover:bg-white/10 disabled:opacity-40 disabled:hover:bg-transparent"
+          className="text-white/80 hover:text-white p-1.5 rounded-md hover:bg-white/10 disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer"
         >
           <Eraser size={16} />
         </button>
         <button
           onClick={newChat}
           title="New chat"
-          className="text-white/80 hover:text-white p-1.5 rounded-md hover:bg-white/10"
+          className="text-white/80 hover:text-white p-1.5 rounded-md hover:bg-white/10 cursor-pointer"
         >
           <SquarePen size={16} />
         </button>
         <button
           onClick={() => setIsWide((prev) => !prev)}
           title={isWide ? "Collapse panel" : "Expand panel"}
-          className="text-white/80 hover:text-white p-1.5 rounded-md hover:bg-white/10"
+          className="text-white/80 hover:text-white p-1.5 rounded-md hover:bg-white/10 cursor-pointer"
         >
           {isWide ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
         </button>
         <button
           onClick={onClose}
           title="Close"
-          className="text-white/80 hover:text-white p-1.5 rounded-md hover:bg-white/10"
+          className="text-white/80 hover:text-white p-1.5 rounded-md hover:bg-white/10 cursor-pointer"
         >
           <X size={18} />
         </button>
@@ -534,7 +534,7 @@ export default function ChatPanel({ onClose }) {
                       type="button"
                       onClick={() => removeFile(file.id)}
                       title="Remove file"
-                      className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                      className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600 cursor-pointer"
                     >
                       <X size={11} />
                     </button>
@@ -561,7 +561,7 @@ export default function ChatPanel({ onClose }) {
               onClick={() => fileInputRef.current?.click()}
               title="Attach file"
               disabled={files.length >= MAX_ATTACHMENTS}
-              className="h-9 w-9 shrink-0 rounded-lg border border-gray-200 text-gray-500 flex items-center justify-center hover:border-teal-300 hover:text-teal-600 transition-colors disabled:opacity-40"
+              className="h-9 w-9 shrink-0 rounded-lg border border-gray-200 text-gray-500 flex items-center justify-center hover:border-teal-300 hover:text-teal-600 transition-colors disabled:opacity-40 cursor-pointer"
             >
               <Paperclip size={16} />
             </button>
@@ -574,7 +574,7 @@ export default function ChatPanel({ onClose }) {
             <button
               type="submit"
               disabled={(!input.trim() && files.length === 0) || isLoading}
-              className="h-9 w-9 shrink-0 rounded-lg bg-teal-600 text-white flex items-center justify-center hover:bg-teal-700 transition-colors disabled:opacity-50"
+              className="h-9 w-9 shrink-0 rounded-lg bg-teal-600 text-white flex items-center justify-center hover:bg-teal-700 transition-colors disabled:opacity-50 cursor-pointer"
             >
               <Send size={16} />
             </button>

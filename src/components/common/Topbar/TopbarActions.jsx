@@ -2,10 +2,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../Context/AuthContext";
-import { Bell, LogOut, KeyRound } from "lucide-react";
+import { LogOut, KeyRound } from "lucide-react";
 import { requestProfilePasswordResetApi } from "../../../api/api";
 import ConfirmModal from "../../Patients/modals/ConfirmModal";
 import BranchFilter from "../BranchFilter";
+import CriticalAlertsBell from "../CriticalAlerts/CriticalAlertsBell";
 
 function useLiveClock() {
   const [now, setNow] = useState(new Date());
@@ -69,10 +70,7 @@ export default function TopbarActions() {
         {date} <span className="ml-1">{time}</span>
       </p>
 
-      <button className="relative text-gray-500 hover:text-gray-700 cursor-pointer">
-        <Bell size={20} />
-        <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-white" />
-      </button>
+      <CriticalAlertsBell />
 
       <div className="relative" ref={menuRef}>
         <button

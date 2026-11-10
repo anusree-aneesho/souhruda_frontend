@@ -189,7 +189,7 @@ export default function TestMaster() {
       });
 
       // If the deleted category was the open one, fall back to the first remaining.
-      if (activeCategory === cat.name) {
+      if (activeCategory === cat.name) { 
         const remaining = categories.filter((c) => c.id !== cat.id);
         setActiveCategory(remaining[0]?.name || "");
       }

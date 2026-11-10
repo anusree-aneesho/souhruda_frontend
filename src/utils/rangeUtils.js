@@ -8,7 +8,7 @@
 import { AGE_GROUP_PRESETS, PREGNANT_LABEL, GENDERS } from "../data/demographicGroups";
 
 export const RANGE_FORMAT_REGEX =
-  /^(-?\d+(\.\d+)?\s*-\s*-?\d+(\.\d+)?|[<>]\s*-?\d+(\.\d+)?|[A-Za-z][A-Za-z\s]*)$/;
+  /^(-?\d+(\.\d+)?\s*-\s*-?\d+(\.\d+)?|[<>]=?\s*-?\d+(\.\d+)?|[A-Za-z][A-Za-z\s-]*)$/;
 
 export const RANGE_FORMAT_HINT = 'Use a format like "70-100", "<200", ">40", or "Negative".';
 

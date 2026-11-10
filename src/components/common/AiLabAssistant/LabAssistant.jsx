@@ -20,7 +20,7 @@ export default function LabAssistant() {
   }, [isOpen]);
 
   return (
-    <div ref={containerRef} className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+    <div ref={containerRef} className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-3">
       {isOpen && <ChatPanel onClose={() => setIsOpen(false)} />}
 
       {/* Launcher is hidden while the panel is open; it returns when the panel closes

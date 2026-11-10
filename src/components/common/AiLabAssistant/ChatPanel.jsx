@@ -399,15 +399,28 @@ export default function ChatPanel({ onClose }) {
 
   const activeTitle =
     conversations.find((conversation) => conversation.id === activeId)?.title || "LabAgent";
-    const sizeClass = isHistoryOpen ? "w-[92vw] sm:w-[560px]" : "w-80 sm:w-96";
-
+  // Panel size follows the browser window: width and height are clamped
+  // against the viewport, so the panel shrinks/grows when the window is
+  // resized and never overflows the screen.
+  const panelWidth = isHistoryOpen
+    ? "clamp(300px, 48vw, 600px)"
+    : "clamp(280px, 30vw, 400px)";
+  // Normal: height scales with the window. Expanded: same width, 80% of screen height.
+  const panelHeight = isWide
+    ? "80dvh"
+    : "clamp(320px, 55dvh, 480px)";
 
   return (
-<div
-    className={`${sizeClass} relative bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col transition-all duration-200`}
-    style={isWide ? { height: "85vh", maxHeight: "85vh" } : { maxHeight: "70vh" }}
-    onClick={(event) => event.stopPropagation()}
-  >
+    <div
+      className="relative bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col transition-[width,height] duration-200"
+      style={{
+        width: panelWidth,
+        height: panelHeight,
+        maxWidth: "calc(100vw - 1.5rem)",
+        maxHeight: "calc(100dvh - 3rem)",
+      }}
+      onClick={(event) => event.stopPropagation()}
+    >
       <div className="bg-teal-600 px-3 py-3 flex items-center gap-1 shrink-0">
         <button
           onClick={() => setIsHistoryOpen((prev) => !prev)}

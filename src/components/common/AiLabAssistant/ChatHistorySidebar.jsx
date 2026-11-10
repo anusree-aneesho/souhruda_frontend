@@ -133,7 +133,7 @@ export default function ChatHistorySidebar({
   }
 
   return (
-    <aside className="flex w-52 shrink-0 flex-col border-r border-gray-100 bg-gray-50/70">
+    <aside className="flex w-[38%] min-w-[130px] max-w-[13rem] shrink-0 flex-col border-r border-gray-100 bg-gray-50/70">
       <div className="border-b border-gray-100 px-3 py-2.5">
         <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5">
           <Search size={13} className="shrink-0 text-gray-400" />

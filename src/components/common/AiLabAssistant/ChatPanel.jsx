@@ -408,7 +408,7 @@ export default function ChatPanel({ onClose }) {
   // Normal: height scales with the window. Expanded: same width, 80% of screen height.
   const panelHeight = isWide
     ? "80dvh"
-    : "clamp(320px, 55dvh, 480px)";
+    : "clamp(300px, 35dvh, 600px)";
 
   return (
     <div

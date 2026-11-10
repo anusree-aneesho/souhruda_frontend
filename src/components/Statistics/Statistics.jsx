@@ -56,6 +56,15 @@ const formatINR = (n) =>
     maximumFractionDigits: 2,
   })}`;
 
+  // True if the due date is today or later (compared by calendar day, ignoring time)
+const isUpcoming = (value) => {
+  if (!value) return false;
+  const due = new Date(value);
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  return due.getTime() >= startOfToday.getTime();
+};
+
 function StatCard({ label, value, icon: Icon, bg, color, onClick }) {
   return (
     <div
@@ -529,29 +538,38 @@ const waitingFor = (value) => {
         <Empty text="No follow-ups due this week." />
       ) : (
         <div className="space-y-1">
-          {followUps.map((row) => (
-            <div
-              key={row.id}
-              className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition"
-            >
-              <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
-                <Clock size={15} className="text-amber-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-800 truncate">
-                  {row.patient_name}
-                  {row.patient_number && (
-                    <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
-                  )}
-                </p>
-                <p className="text-xs text-gray-400 truncate">
+      {followUps.map((row) => {
+        const upcoming = isUpcoming(row.due_at);
+        return (
+          <div
+            key={row.id}
+            className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition"
+          >
+            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+              <Clock size={15} className="text-amber-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-gray-800 truncate">
+                {row.patient_name}
+                {row.patient_number && (
+                  <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
+                )}
+              </p>
+              <p className="text-xs text-gray-400 truncate">
                 {row.test_name ?? "Follow-up"}
                 {(row.order_no ?? row.order_id) ? ` · Order ID: ${row.order_no ?? row.order_id}` : ""}
               </p>
-              </div>
-              <span className="text-xs text-gray-500 shrink-0">{formatDate(row.due_at)}</span>
             </div>
-          ))}
+            <span
+              className={`text-xs shrink-0 ${
+                upcoming ? "font-bold text-gray-900" : "text-gray-500"
+              }`}
+            >
+              {formatDate(row.due_at)}
+            </span>
+          </div>
+        );
+      })}
         </div>
       );
     }

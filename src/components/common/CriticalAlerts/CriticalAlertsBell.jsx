@@ -168,9 +168,14 @@ export default function CriticalAlertsBell() {
   }, []);
 
   useEffect(() => {
-    load();
+    // Deferred one tick so the first fetch doesn't set state synchronously
+    // inside the effect body (react-hooks/set-state-in-effect).
+    const first = setTimeout(load, 0);
     const id = setInterval(load, REFRESH_MS);
-    return () => clearInterval(id);
+    return () => {
+      clearTimeout(first);
+      clearInterval(id);
+    };
   }, [load]);
 
   useEffect(() => {

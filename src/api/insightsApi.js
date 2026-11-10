@@ -18,3 +18,19 @@ export function getCriticalAlertDetailApi(orderItemId) {
 export function getTatAlertsApi() {
   return request("/insights/tat-alerts");
 }
+
+export function getTestWatchApi(limit = 5) {
+  return request(`/insights/test-watch?limit=${limit}`);
+}
+
+export function getTestWatchResultsApi(testId, limit = 50) {
+  return request(`/insights/test-watch/${testId}/results?limit=${limit}`);
+}
+
+export function getOutbreakWatchApi() {
+  return request("/insights/outbreak-watch");
+}
+
+export function getFollowUpRadarApi(limit = 5) {
+  return request(`/insights/follow-up-radar?limit=${limit}`);
+}

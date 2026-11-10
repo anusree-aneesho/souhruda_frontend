@@ -399,16 +399,12 @@ export default function ChatPanel({ onClose }) {
 
   const activeTitle =
     conversations.find((conversation) => conversation.id === activeId)?.title || "LabAgent";
-  // Panel size follows the browser window: width and height are clamped
-  // against the viewport, so the panel shrinks/grows when the window is
-  // resized and never overflows the screen.
-  const panelWidth = isHistoryOpen
-    ? "clamp(300px, 48vw, 600px)"
-    : "clamp(280px, 30vw, 400px)";
-  // Normal: height scales with the window. Expanded: same width, 80% of screen height.
-  const panelHeight = isWide
-    ? "80dvh"
-    : "clamp(300px, 35dvh, 600px)";
+  // Panel size is a percentage of the browser window, so it follows resizing.
+  //   normal:       24% width, 40% height
+  //   expanded:     24% width, 85% height
+  //   history open: 35% width, height unchanged (40%, or 85% if expanded)
+  const panelWidth = isHistoryOpen ? "35vw" : "24vw";
+  const panelHeight = isWide ? "85dvh" : "40dvh";
 
   return (
     <div

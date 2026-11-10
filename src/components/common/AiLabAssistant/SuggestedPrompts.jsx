@@ -8,7 +8,7 @@ export default function SuggestedPrompts({ onSelect }) {
         <button
           key={prompt}
           onClick={() => onSelect(prompt)}
-          className="text-xs font-medium text-teal-700 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors"
+          className="text-xs font-medium text-teal-700 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
         >
           {prompt}
         </button>

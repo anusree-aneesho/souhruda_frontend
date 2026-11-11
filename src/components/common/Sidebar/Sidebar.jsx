@@ -20,6 +20,7 @@ import {
   Package,
   Beaker,
   BarChart3,
+  TrendingUp,
   SlidersHorizontal,
   FileText,
 } from "lucide-react";
@@ -34,6 +35,7 @@ const allNavItems = [
   { label: "Test Master", icon: FlaskConical, path: "/test-master" },
   { label: "Follow-ups", icon: Clock, path: "/follow-ups" },
   { label: "Statistics", icon: BarChart3, path: "/statistics" },
+  { label: "Demand Forecast", icon: TrendingUp, path: "/demand-forecast", roles: ["admin", "super_admin", "superadmin"] },
   // Reports is rendered separately below as a dropdown, not a flat link.
 ];
 
@@ -88,9 +90,11 @@ export default function Sidebar() {
 
   const isFrontOffice = role === "front_office";
 
-  const navItems = isFrontOffice
-    ? allNavItems.filter((item) => item.path !== "/home-collection")
-    : allNavItems;
+  const navItems = (
+    isFrontOffice
+      ? allNavItems.filter((item) => item.path !== "/home-collection")
+      : allNavItems
+  ).filter((item) => !item.roles || item.roles.includes(role));
 
   const visibleSettingsItems = settingsSubItems.filter(
     (item) => !item.roles || item.roles.includes(role)
@@ -106,7 +110,7 @@ export default function Sidebar() {
       <SidebarLogo />
 
       <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
-        {navItems.map((item) => (
+        {navItems.map(({ roles, ...item }) => (
           <SidebarNavItem key={item.path} {...item} />
         ))}
 

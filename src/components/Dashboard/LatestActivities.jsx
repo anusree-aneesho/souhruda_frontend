@@ -17,13 +17,13 @@ function mapSubjectType(subjectType) {
   if (subjectType === "order") return "order";
   if (subjectType === "home_collection_request") return "homeCollection";
   if (subjectType === "patient") return "patient";
-  if (subjectType === "follow_up") return "followUp";
+  if (subjectType === "follow_up_reminder") return "followUp"; // CHANGED
   return null;
 }
 
-// Follow-up logs have no order number of their own. Borrow it from the
-// closest log in the list that mentions the same patient and has "Order #123".
-// Temporary workaround until the backend saves the order on the follow-up log.
+// Old follow-up logs have no subject, so no order number of their own. Borrow it
+// from the closest log in the list that mentions the same patient and has "Order #123".
+// Only used for old entries; new ones get the order number from the backend.
 function findNearbyOrderNo(logs, index) {
   const patientName = /scheduled for (.+?)\s+[—–-]\s/i.exec(
     logs[index].description || ""
@@ -70,12 +70,14 @@ export default function LatestActivities() {
           // Follow-up reminders: detected by text OR subject_type.
           const isFollowUpEntry =
             /follow-up reminder/i.test(log.description || "") ||
-            log.subject_type === "follow_up";
+            log.subject_type === "follow_up_reminder"; // CHANGED
 
-          // Order number for the follow-up: from the backend if present,
-          // otherwise borrowed from a nearby log of the same patient.
+          // CHANGED: order number for the follow-up. New entries get it from the
+          // backend (subject_reference); old ones borrow it from a nearby log.
           const followUpOrderNo = isFollowUpEntry
-            ? (log.subject_reference ?? findNearbyOrderNo(logs, index))
+            ? (log.subject_type === "follow_up_reminder"
+                ? (log.subject_reference ?? findNearbyOrderNo(logs, index))
+                : findNearbyOrderNo(logs, index))
             : null;
 
           const clickable =

@@ -400,11 +400,11 @@ export default function ChatPanel({ onClose }) {
   const activeTitle =
     conversations.find((conversation) => conversation.id === activeId)?.title || "LabAgent";
   // Panel size is a percentage of the browser window, so it follows resizing.
-  //   normal:       24% width, 40% height
-  //   expanded:     24% width, 85% height
-  //   history open: 35% width, height unchanged (40%, or 85% if expanded)
-  const panelWidth = isHistoryOpen ? "35vw" : "24vw";
-  const panelHeight = isWide ? "85dvh" : "40dvh";
+  //   normal:       28% width, 50% height
+  //   expanded:     28% width, 85% height
+  //   history open: 36% width, height unchanged (50%, or 85% if expanded)
+  const panelWidth = isHistoryOpen ? "36vw" : "28vw";
+  const panelHeight = isWide ? "85dvh" : "50dvh";
 
   return (
     <div

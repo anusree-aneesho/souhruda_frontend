@@ -34,3 +34,14 @@ export function getOutbreakWatchApi() {
 export function getFollowUpRadarApi(limit = 5) {
   return request(`/insights/follow-up-radar?limit=${limit}`);
 }
+
+// Demand forecast (admin / super admin only). `options` can carry an AbortSignal.
+export function getForecastBranchesApi(options = {}) {
+  return request("/forecast/branches", options);
+}
+
+export function getDemandForecastApi({ horizon = 7, branchId } = {}, options = {}) {
+  const params = new URLSearchParams({ horizon: String(horizon) });
+  if (branchId) params.set("branch_id", String(branchId));
+  return request(`/forecast/daily-orders?${params.toString()}`, options);
+}

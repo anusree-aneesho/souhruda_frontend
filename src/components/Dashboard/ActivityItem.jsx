@@ -86,6 +86,14 @@ export default function ActivityItem({ date, text, type, targetId, isLatest, hid
       open(targetId);
     } else if (type === "patient") {
       navigate(`/patients`);
+    } else if (type === "followUp") {
+      // New entries carry the order number -> open that order's report.
+      // Old entries have no order number -> open the Follow-ups page.
+      if (targetId) {
+        navigate(`/lab-orders/${targetId}/report`);
+      } else {
+        navigate(`/follow-ups`);
+      }
     }
   }
 
@@ -100,7 +108,11 @@ export default function ActivityItem({ date, text, type, targetId, isLatest, hid
     setModalOrder(null);
   }
 
-  const isClickable = type === "order" || type === "homeCollection" || type === "patient";
+  const isClickable =
+    type === "order" ||
+    type === "homeCollection" ||
+    type === "patient" ||
+    type === "followUp";
   const { Icon, bg, color } = getIconMeta(text);
 
   return (

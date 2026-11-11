@@ -17,7 +17,31 @@ function mapSubjectType(subjectType) {
   if (subjectType === "order") return "order";
   if (subjectType === "home_collection_request") return "homeCollection";
   if (subjectType === "patient") return "patient";
+  if (subjectType === "follow_up") return "followUp";
   return null;
+}
+
+// Follow-up logs have no order number of their own. Borrow it from the
+// closest log in the list that mentions the same patient and has "Order #123".
+// Temporary workaround until the backend saves the order on the follow-up log.
+function findNearbyOrderNo(logs, index) {
+  const patientName = /scheduled for (.+?)\s+[—–-]\s/i.exec(
+    logs[index].description || ""
+  )?.[1];
+  if (!patientName) return null;
+
+  let found = null;
+  let bestDistance = Infinity;
+  logs.forEach((other, i) => {
+    if (i === index) return;
+    const text = other.description || "";
+    const orderNo = /order\s*#(\d+)/i.exec(text)?.[1];
+    if (orderNo && text.includes(patientName) && Math.abs(i - index) < bestDistance) {
+      found = orderNo;
+      bestDistance = Math.abs(i - index);
+    }
+  });
+  return found;
 }
 
 export default function LatestActivities() {
@@ -30,26 +54,54 @@ export default function LatestActivities() {
     async function fetchActivities() {
       try {
         const result = await getActivityLogsApi(5, 1);
+        const logs = result.data;
 
-const mapped = result.data.map((log) => {
-  const isOrder = log.subject_type === "order";
-  const isDeletedEntry = /deleted/i.test(log.description || "");
-  const subjectGone = log.subject_exists === false;
+        const mapped = logs.map((log, index) => {
+          const isOrder = log.subject_type === "order";
+          const isDeletedEntry = /deleted/i.test(log.description || "");
+          const subjectGone = log.subject_exists === false;
 
-  // Old "order deleted" entries were saved without a subject. The order number
-  // is in the text ("Lab Order #50538 deleted for ..."), so read it from there.
-  const orderNoFromText = /order\s*#(\d+)/i.exec(log.description || "")?.[1];
-  const isOrderDeletedEntry = !log.subject_type && isDeletedEntry && Boolean(orderNoFromText);
+          // Old "order deleted" entries were saved without a subject. The order number
+          // is in the text ("Lab Order #50538 deleted for ..."), so read it from there.
+          const orderNoFromText = /order\s*#(\d+)/i.exec(log.description || "")?.[1];
+          const isOrderDeletedEntry =
+            !log.subject_type && isDeletedEntry && Boolean(orderNoFromText);
 
-  const clickable = isOrder || isOrderDeletedEntry || (!isDeletedEntry && !subjectGone);
+          // Follow-up reminders: detected by text OR subject_type.
+          const isFollowUpEntry =
+            /follow-up reminder/i.test(log.description || "") ||
+            log.subject_type === "follow_up";
 
-  return {
-    date: formatDate(log.created_at),
-    text: log.description,
-    type: isOrderDeletedEntry ? "order" : clickable ? mapSubjectType(log.subject_type) : null,
-    targetId: isOrderDeletedEntry ? orderNoFromText : (log.subject_reference ?? log.subject_id),
-  };
-});
+          // Order number for the follow-up: from the backend if present,
+          // otherwise borrowed from a nearby log of the same patient.
+          const followUpOrderNo = isFollowUpEntry
+            ? (log.subject_reference ?? findNearbyOrderNo(logs, index))
+            : null;
+
+          const clickable =
+            isOrder ||
+            isOrderDeletedEntry ||
+            isFollowUpEntry ||
+            (!isDeletedEntry && !subjectGone);
+
+          let type = null;
+          if (isOrderDeletedEntry) type = "order";
+          // With an order number, behave exactly like "Report ready" (order flow).
+          else if (isFollowUpEntry) type = followUpOrderNo ? "order" : "followUp";
+          else if (clickable) type = mapSubjectType(log.subject_type);
+
+          let targetId;
+          if (isOrderDeletedEntry) targetId = orderNoFromText;
+          else if (isFollowUpEntry) targetId = followUpOrderNo;
+          else targetId = log.subject_reference ?? log.subject_id;
+
+          return {
+            date: formatDate(log.created_at),
+            text: log.description,
+            type,
+            targetId,
+          };
+        });
 
         setActivities(mapped);
       } catch (err) {

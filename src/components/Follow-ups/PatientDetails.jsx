@@ -1,6 +1,6 @@
 // src/components/Follow-ups/PatientDetails.jsx
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   ChevronDown,
   PlusCircle,
@@ -50,6 +50,7 @@ function InfoItem({ icon: Icon, label, value }) {
 export default function PatientDetails() {
   const { patientNumber } = useParams();
   const navigate = useNavigate();
+  const location = useLocation(); // NEW: used to remember this page for the back button
   const { open } = useOrderModal();
 
   const [period, setPeriod] = useState("");
@@ -255,8 +256,13 @@ export default function PatientDetails() {
                           </td>
                           <td className="px-4 py-4 text-gray-800">{order.orderId}</td>
                           <td className="px-6 py-4 text-right">
+                            {/* NEW: goes to the report and remembers this page for the back button */}
                             <button
-                              onClick={() => navigate(`/lab-orders/${order.orderId}`)}
+                              onClick={() =>
+                                navigate(`/lab-orders/${order.orderId}/report`, {
+                                  state: { from: location.pathname, fromLabel: "Back to follow-ups" },
+                                })
+                              }
                               className="px-4 py-1.5 rounded-lg border border-teal-200 bg-teal-50 text-xs font-medium text-teal-700 hover:bg-teal-100 cursor-pointer"
                             >
                               View Details

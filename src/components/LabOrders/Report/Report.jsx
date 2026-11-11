@@ -174,7 +174,8 @@ export default function Report() {
 
   const [apiOrder, setApiOrder] = useState(null); // ADDED (refresh fix): order loaded from the server
   const existingOrder = findOrderById(orderId);
-  const order = existingOrder || (state ? { orderId, ...state } : apiOrder); // CHANGED: falls back to apiOrder
+  const hasOrderState = state && (state.patient || state.tests);
+const order = existingOrder || (hasOrderState ? { orderId, ...state } : apiOrder);// CHANGED: falls back to apiOrder
 
   const [paymentDone, setPaymentDone] = useState(Boolean(order?.paymentDone));
   const [confirmingPayment, setConfirmingPayment] = useState(false);
@@ -264,11 +265,11 @@ export default function Report() {
     : null;
 
   function openTest(t) {
-    setSearchParams({ test: String(t.id) });
+    setSearchParams({ test: String(t.id) }, { state });
   }
 
   function closeTest() {
-    setSearchParams({});
+    setSearchParams({}, { state });
   }
 
   // CHANGED (GST): same maths as BillModal, so the popup total always matches the bill
@@ -702,13 +703,13 @@ async function handleDownloadPdf() {
         <>
           {/* ── Top action bar ───────────────────────────────────────── */}
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => navigate("/lab-orders")}
-              className="text-sm font-medium text-teal-600 hover:underline cursor-pointer"
-            >
-              ← Back to orders
-            </button>
+          <button
+            type="button"
+           onClick={() => navigate(state?.from || "/lab-orders")}
+className="text-sm font-medium text-teal-600 hover:underline cursor-pointer"
+>
+  ← {state?.fromLabel || "Back to orders"}
+          </button>
 
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" onClick={() => setBillOpen(true)} className={actionBtn}>

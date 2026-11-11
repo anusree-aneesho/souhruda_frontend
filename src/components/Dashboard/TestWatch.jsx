@@ -68,9 +68,9 @@ function ResultsModal({ test, onClose }) {
                   {(r.message || r.insight) && (
                     <p className="text-xs text-gray-500 mt-1">{r.message || r.insight}</p>
                   )}
-                  {r.order_id && (
+                  {r.order_no && (
                     <Link
-                      to={`/lab-orders/${r.order_id}`}
+                      to={`/lab-orders/${encodeURIComponent(r.order_no)}`}
                       className="text-xs text-teal-600 hover:underline"
                     >
                       Order {r.order_no} →

@@ -830,7 +830,7 @@ className="text-sm font-medium text-teal-600 hover:underline cursor-pointer"
                   <tr className="bg-gray-50 text-left">
                     <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide">No.</th>
                     <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">TEST</th>
-                    <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">BILL AMOUNT</th>
+                    <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">TEST AMOUNT</th>
                     <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide text-right">ACTION</th>
                   </tr>
                 </thead>

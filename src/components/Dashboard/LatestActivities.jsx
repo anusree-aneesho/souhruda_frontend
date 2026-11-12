@@ -17,7 +17,7 @@ function mapSubjectType(subjectType) {
   if (subjectType === "order") return "order";
   if (subjectType === "home_collection_request") return "homeCollection";
   if (subjectType === "patient") return "patient";
-  if (subjectType === "follow_up_reminder") return "followUp"; // CHANGED
+  if (subjectType === "follow_up_reminder") return "followUp";
   return null;
 }
 
@@ -70,10 +70,10 @@ export default function LatestActivities() {
           // Follow-up reminders: detected by text OR subject_type.
           const isFollowUpEntry =
             /follow-up reminder/i.test(log.description || "") ||
-            log.subject_type === "follow_up_reminder"; // CHANGED
+            log.subject_type === "follow_up_reminder";
 
-          // CHANGED: order number for the follow-up. New entries get it from the
-          // backend (subject_reference); old ones borrow it from a nearby log.
+          // New entries get the order number from the backend (subject_reference);
+          // old ones borrow it from a nearby log.
           const followUpOrderNo = isFollowUpEntry
             ? (log.subject_type === "follow_up_reminder"
                 ? (log.subject_reference ?? findNearbyOrderNo(logs, index))
@@ -114,6 +114,10 @@ export default function LatestActivities() {
     }
 
     fetchActivities();
+
+    // NEW: reload when a patient is edited or deleted from the popup
+    window.addEventListener("patient-changed", fetchActivities);
+    return () => window.removeEventListener("patient-changed", fetchActivities);
   }, []);
 
   return (

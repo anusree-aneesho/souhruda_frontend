@@ -45,6 +45,7 @@ export default function FollowUpRadar() {
             <Link
               key={it.reminder_id}
               to={`/follow-ups/patient/${encodeURIComponent(it.patient_number)}`}
+              state={{ from: "/" }}
               className="flex items-center justify-between py-3 first:pt-0 hover:bg-gray-50"
             >
               <div className="min-w-0">
@@ -73,7 +74,7 @@ export default function FollowUpRadar() {
   }
 
   return (
-    <AICard title="Follow-up Radar" rightSlot={<Link to="/follow-ups" className="hover:underline">View all</Link>}>
+    <AICard title="Follow-up Radar" rightSlot={<Link to="/follow-ups" className="text-sm font-medium text-teal-600 hover:underline cursor-pointer">View all →</Link>}>
       {body}
     </AICard>
   );

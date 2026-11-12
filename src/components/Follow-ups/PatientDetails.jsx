@@ -53,6 +53,10 @@ export default function PatientDetails() {
   const location = useLocation(); // NEW: used to remember this page for the back button
   const { open } = useOrderModal();
 
+  const cameFrom = location.state?.from;               // e.g. "/dashboard"
+  const backPath = cameFrom || "/follow-ups";
+  const backLabel = cameFrom === "/" ? "Back to dashboard" : "Back to follow-ups";
+
   const [period, setPeriod] = useState("");
   const [page, setPage] = useState(1);
   const [data, setData] = useState(null);
@@ -122,10 +126,10 @@ export default function PatientDetails() {
       {/* Top bar */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <button
-          onClick={() => navigate("/follow-ups")}
+          onClick={() => navigate(backPath)}
           className="text-sm text-teal-600 font-medium hover:underline cursor-pointer"
         >
-          ← Back to follow-ups
+          ← {backLabel}
         </button>
 
         {patient && (
@@ -260,7 +264,7 @@ export default function PatientDetails() {
                             <button
                               onClick={() =>
                                 navigate(`/lab-orders/${order.orderId}/report`, {
-                                  state: { from: location.pathname, fromLabel: "Back to follow-ups" },
+                                  state: { from: location.pathname, fromLabel: "Back to follow-ups", fromState: location.state, },
                                 })
                               }
                               className="px-4 py-1.5 rounded-lg border border-teal-200 bg-teal-50 text-xs font-medium text-teal-700 hover:bg-teal-100 cursor-pointer"

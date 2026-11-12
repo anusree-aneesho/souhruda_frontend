@@ -139,9 +139,19 @@ export default function LabOrders() {
     })
       .then((res) => {
         if (!cancelled) {
+          const newLastPage = res.last_page ?? res.meta?.last_page ?? 1;
+          const newTotal = res.total ?? res.meta?.total ?? 0;
+
+          // Current page no longer exists (e.g. last order on the last page was
+          // deleted or cancelled) -> go back to the last valid page and refetch.
+          if (page > newLastPage && newTotal > 0) {
+            setPage(newLastPage);
+            return; // the page change triggers a new fetch
+          }
+
           setRawOrders(res.data || []);
-          setLastPage(res.last_page ?? res.meta?.last_page ?? 1);
-          setTotal(res.total ?? res.meta?.total ?? 0);
+          setLastPage(newLastPage);
+          setTotal(newTotal);
         }
       })
       .catch((err) => {

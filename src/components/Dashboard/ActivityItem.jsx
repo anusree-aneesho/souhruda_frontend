@@ -1,6 +1,7 @@
 // src/components/Dashboard/ActivityItem.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { usePatientModal } from "../../Context/PatientModalContext";
 import {
   Activity,
   CheckCircle2,
@@ -42,6 +43,7 @@ function getIconMeta(text = "") {
 export default function ActivityItem({ date, text, type, targetId, isLatest, hideDate = false }) {
   const navigate = useNavigate();
   const { open } = useHomeCollectionModal();
+  const { open: openPatient } = usePatientModal();
   const [modalOrder, setModalOrder] = useState(null);
   const [cancelledOrder, setCancelledOrder] = useState(null);
   const [checkingOrder, setCheckingOrder] = useState(false);
@@ -84,8 +86,9 @@ export default function ActivityItem({ date, text, type, targetId, isLatest, hid
       }
     } else if (type === "homeCollection") {
       open(targetId);
-    } else if (type === "patient") {
-      navigate(`/patients`);
+      } else if (type === "patient") {
+  openPatient(targetId);
+
     } else if (type === "followUp") {
       // New entries carry the order number -> open that order's report.
       // Old entries have no order number -> open the Follow-ups page.

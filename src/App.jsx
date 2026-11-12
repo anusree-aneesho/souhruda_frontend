@@ -4,6 +4,7 @@ import { AuthProvider } from "./Context/AuthContext";
 import { CommandPaletteProvider } from "./Context/CommandPaletteContext";
 import { OrderModalProvider } from "./Context/OrderModalContext";
 import { HomeCollectionModalProvider } from "./Context/HomeCollectionModalContext";
+import { PatientModalProvider } from "./Context/PatientModalContext"; // NEW
 import AppRoutes from "./Routes/AppRoutes";
 
 function App() {
@@ -13,7 +14,9 @@ function App() {
         <CommandPaletteProvider>
           <OrderModalProvider>
             <HomeCollectionModalProvider>
-              <AppRoutes />
+              <PatientModalProvider> {/* NEW */}
+                <AppRoutes />
+              </PatientModalProvider>
             </HomeCollectionModalProvider>
           </OrderModalProvider>
         </CommandPaletteProvider>

@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { getStatisticsCollectionReportApi } from "../../api/api";
 
-
 const statusStyles = {
   pending: "bg-amber-50 text-amber-700",
   sample_collected: "bg-indigo-50 text-indigo-700",
@@ -11,7 +10,7 @@ const statusStyles = {
   en_route: "bg-sky-50 text-sky-700",
   collected: "bg-teal-50 text-teal-700",
   processing: "bg-indigo-50 text-indigo-700",
-  report_ready: "bg-green-50 text-green-700",   
+  report_ready: "bg-green-50 text-green-700",
   sent: "bg-emerald-50 text-emerald-700",
   cancelled: "bg-red-50 text-red-600",
 };
@@ -25,7 +24,7 @@ const statusLabels = {
   en_route: "En Route",
   collected: "Collected",
   processing: "Sample Collected",
-  report_ready: "Completed",                   
+  report_ready: "Completed",
   sent: "Sent",
   cancelled: "Cancelled",
 };
@@ -43,6 +42,9 @@ const formatDate = (value) => {
 
 const formatMoney = (n) =>
   `₹${Number(n ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+
+const sumBy = (list, key) =>
+  list.reduce((total, r) => total + Number(r[key] ?? 0), 0);
 
 export default function CollectionReportModal({ open, range, onRangeChange, onClose }) {
   const [report, setReport] = useState(null);
@@ -72,20 +74,27 @@ export default function CollectionReportModal({ open, range, onRangeChange, onCl
 
   if (!open) return null;
 
-  const allRows = report?.rows ?? [];
-  const rows = tab === "all" ? allRows : allRows.filter((r) => r.type === tab);
+  // Cancelled home collection orders are excluded everywhere.
+  // Cancelled lab orders are still shown.
+  const allRows = (report?.rows ?? []).filter(
+    (r) => !(r.type === "home" && r.status === "cancelled")
+  );
 
-  // Footer totals come from the server (summed straight from the orders table),
-  // so they stay exact even when the table is limited to 500 rows.
-  const totalBill =
-    tab === "lab" ? report?.labBill
-    : tab === "home" ? report?.homeBill
-    : report?.totalBill;
+  const labRows = allRows.filter((r) => r.type === "lab");
+  const homeRows = allRows.filter((r) => r.type === "home");
 
-  const totalPaid =
-    tab === "lab" ? report?.labPaid
-    : tab === "home" ? report?.homePaid
-    : report?.totalPaid;
+  const rows = tab === "lab" ? labRows : tab === "home" ? homeRows : allRows;
+
+  // Counts and percentages (computed from the filtered rows)
+  const totalCount = allRows.length;
+  const labCount = labRows.length;
+  const homeCount = homeRows.length;
+  const labPercentage = totalCount ? Math.round((labCount / totalCount) * 100) : 0;
+  const homePercentage = totalCount ? 100 - labPercentage : 0;
+
+  // Footer totals for the active tab
+  const totalBill = sumBy(rows, "bill_total");
+  const totalPaid = sumBy(rows, "paid_amount");
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4">
@@ -137,7 +146,7 @@ export default function CollectionReportModal({ open, range, onRangeChange, onCl
             }`}
           >
             <p className="text-xs text-gray-500">Total Orders</p>
-            <p className="text-xl font-bold text-gray-900 mt-1">{loading ? "…" : report?.total ?? 0}</p>
+            <p className="text-xl font-bold text-gray-900 mt-1">{loading ? "…" : totalCount}</p>
           </button>
 
           <button
@@ -149,8 +158,8 @@ export default function CollectionReportModal({ open, range, onRangeChange, onCl
           >
             <p className="text-xs text-teal-700">Lab Orders</p>
             <p className="text-xl font-bold text-gray-900 mt-1">
-              {loading ? "…" : report?.lab ?? 0}
-              <span className="text-xs font-normal text-gray-400 ml-1.5">({report?.labPercentage ?? 0}%)</span>
+              {loading ? "…" : labCount}
+              <span className="text-xs font-normal text-gray-400 ml-1.5">({labPercentage}%)</span>
             </p>
           </button>
 
@@ -163,8 +172,8 @@ export default function CollectionReportModal({ open, range, onRangeChange, onCl
           >
             <p className="text-xs text-purple-700">Home Collection</p>
             <p className="text-xl font-bold text-gray-900 mt-1">
-              {loading ? "…" : report?.home ?? 0}
-              <span className="text-xs font-normal text-gray-400 ml-1.5">({report?.homePercentage ?? 0}%)</span>
+              {loading ? "…" : homeCount}
+              <span className="text-xs font-normal text-gray-400 ml-1.5">({homePercentage}%)</span>
             </p>
           </button>
         </div>

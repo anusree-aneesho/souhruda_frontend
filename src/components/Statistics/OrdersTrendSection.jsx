@@ -12,12 +12,12 @@ import OrderStatusModal from "./OrderStatusModal";
 
 const ALL_RANGES = ["Today", "Yesterday", "1 Week", "1 Month", "1 Year"];
 
-
-function RangeFilter({ active, onChange }) {
+// className lets each card push the buttons to the bottom (mt-auto)
+function RangeFilter({ active, onChange, className = "" }) {
   const options = active === "Today" ? ALL_RANGES.filter((r) => r !== "Today") : ALL_RANGES;
 
   return (
-    <div className="flex gap-1.5 flex-wrap">
+    <div className={`flex gap-1.5 flex-wrap ${className}`}>
       {options.map((r) => (
         <button
           key={r}
@@ -39,7 +39,9 @@ function RangeFilter({ active, onChange }) {
 
 function TrendCard({ title, range, onRangeChange, chartData, loading, formatValue, onViewReport }) {
   return (
-    <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-4">
+    // flex-col + h-full: the card fills the grid row, and the range buttons
+    // (mt-auto) sit at the bottom so all three cards line up
+    <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] flex h-full flex-col gap-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
         {onViewReport && (
@@ -61,7 +63,7 @@ function TrendCard({ title, range, onRangeChange, chartData, loading, formatValu
         <MiniBarChart data={chartData} labelKey="label" valueKey="value" formatValue={formatValue} />
       )}
 
-      <RangeFilter active={range} onChange={onRangeChange} />
+      <RangeFilter active={range} onChange={onRangeChange} className="mt-auto" />
     </div>
   );
 }
@@ -75,7 +77,7 @@ function DonutCard({ title, total, segments, range, onRangeChange, loading, onVi
   });
 
   return (
-    <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-4">
+    <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] flex h-full flex-col gap-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
         {onViewReport && (
@@ -86,14 +88,16 @@ function DonutCard({ title, total, segments, range, onRangeChange, loading, onVi
       </div>
 
       {/* Donut stays in place while loading (dimmed + spinner) so the card — and the
-          range buttons under it — never jump up and down */}
-      <div className="relative min-h-[7rem]">
+          range buttons under it — never jump up and down.
+          flex-1 + flex items-center: this area takes the spare height and
+          keeps the donut vertically centred in it. */}
+      <div className="relative min-h-[7rem] flex-1 flex items-center">
         {loading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center">
             <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-teal-500 border-t-transparent" />
           </div>
         )}
-        <div className={`flex items-center gap-6 transition-opacity duration-150 ${loading ? "opacity-30 pointer-events-none" : ""}`}>
+        <div className={`flex w-full items-center gap-6 transition-opacity duration-150 ${loading ? "opacity-30 pointer-events-none" : ""}`}>
           <div
             className="relative w-28 h-28 rounded-full flex items-center justify-center shrink-0"
             style={{ background: `conic-gradient(${gradientParts.join(", ")})` }}
@@ -117,7 +121,9 @@ function DonutCard({ title, total, segments, range, onRangeChange, loading, onVi
         </div>
       </div>
 
-      {onRangeChange && <RangeFilter active={range} onChange={onRangeChange} />}
+      {onRangeChange && (
+        <RangeFilter active={range} onChange={onRangeChange} className="mt-auto" />
+      )}
     </div>
   );
 }
@@ -216,7 +222,8 @@ export default function OrdersTrendSection() {
   }, [statusRange]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    // items-stretch makes all three cards the same height
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
       <TrendCard
         title="Orders Over Time"
         range={ordersRange}

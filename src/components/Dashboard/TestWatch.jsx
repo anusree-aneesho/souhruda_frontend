@@ -1,7 +1,7 @@
 // src/components/Dashboard/TestWatch.jsx
 // Today's most abnormal tests from the AI service. Click a test to see its results.
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom"; // NEW: useSearchParams
 import AICard from "../common/AIcard";
 import { getTestWatchApi, getTestWatchResultsApi } from "../../api/insightsApi";
 import useInsight from "./useInsight";
@@ -34,7 +34,7 @@ function ResultsModal({ test, onClose }) {
               {test.abnormal_count} abnormal
             </p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Close">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 cursor-pointer" aria-label="Close">
             ✕
           </button>
         </div>
@@ -68,10 +68,15 @@ function ResultsModal({ test, onClose }) {
                   {(r.message || r.insight) && (
                     <p className="text-xs text-gray-500 mt-1">{r.message || r.insight}</p>
                   )}
+                  {/* NEW: opens the report and remembers this popup for the back button */}
                   {r.order_no && (
                     <Link
-                      to={`/lab-orders/${encodeURIComponent(r.order_no)}`}
-                      className="text-xs text-teal-600 hover:underline"
+                      to={`/lab-orders/${encodeURIComponent(r.order_no)}/report`}
+                      state={{
+                        from: `/?testwatch=${test.test_id}`,
+                        fromLabel: `Back to ${test.test_name}`,
+                      }}
+                      className="text-xs text-teal-600 hover:underline cursor-pointer"
                     >
                       Order {r.order_no} →
                     </Link>
@@ -88,7 +93,13 @@ function ResultsModal({ test, onClose }) {
 
 export default function TestWatch() {
   const { data, error, loading } = useInsight(() => getTestWatchApi(5));
-  const [selected, setSelected] = useState(null);
+
+  // NEW: the opened test lives in the URL (?testwatch=5), so Back can reopen the popup
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedId = searchParams.get("testwatch");
+  const selected = selectedId
+    ? (data?.tests || []).find((t) => String(t.test_id) === selectedId) || null
+    : null;
 
   let body;
   if (loading) {
@@ -110,8 +121,8 @@ export default function TestWatch() {
           <button
             key={t.test_id}
             type="button"
-            onClick={() => setSelected(t)}
-            className="w-full flex items-center justify-between py-3 first:pt-0 last:pb-0 text-left hover:bg-gray-50"
+            onClick={() => setSearchParams({ testwatch: String(t.test_id) })} // NEW
+            className="w-full flex items-center justify-between py-3 first:pt-0 last:pb-0 text-left hover:bg-gray-50 cursor-pointer" // NEW: cursor-pointer
           >
             <div>
               <p className="text-sm font-medium text-gray-900">{t.test_name}</p>
@@ -138,7 +149,8 @@ export default function TestWatch() {
       <AICard title="Test Watch" rightSlot={data?.title || "Most abnormal today"}>
         {body}
       </AICard>
-      {selected && <ResultsModal test={selected} onClose={() => setSelected(null)} />}
+      {/* NEW: closing clears the URL param */}
+      {selected && <ResultsModal test={selected} onClose={() => setSearchParams({})} />}
     </>
   );
 }

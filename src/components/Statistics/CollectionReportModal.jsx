@@ -1,16 +1,33 @@
 import { useState, useEffect } from "react";
 import { getStatisticsCollectionReportApi } from "../../api/api";
 
+
 const statusStyles = {
   pending: "bg-amber-50 text-amber-700",
   sample_collected: "bg-indigo-50 text-indigo-700",
   completed: "bg-green-50 text-green-700",
+  requested: "bg-gray-100 text-gray-600",
+  assigned: "bg-blue-50 text-blue-700",
+  en_route: "bg-sky-50 text-sky-700",
+  collected: "bg-teal-50 text-teal-700",
+  processing: "bg-indigo-50 text-indigo-700",
+  report_ready: "bg-green-50 text-green-700",   
+  sent: "bg-emerald-50 text-emerald-700",
+  cancelled: "bg-red-50 text-red-600",
 };
 
 const statusLabels = {
   pending: "Pending",
   sample_collected: "Sample Collected",
   completed: "Completed",
+  requested: "Requested",
+  assigned: "Assigned",
+  en_route: "En Route",
+  collected: "Collected",
+  processing: "Sample Collected",
+  report_ready: "Completed",                   
+  sent: "Sent",
+  cancelled: "Cancelled",
 };
 
 const formatDate = (value) => {

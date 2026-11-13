@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import { getOrdersApi } from "../../api/api";
 import { RANGES, getRangeBounds } from "../../utils/dateRange";
@@ -16,7 +15,7 @@ function statusLabel(s) {
 }
 
 export default function OrdersOverTimeModal({ initialRange = "Today", onClose }) {
-  const navigate = useNavigate();
+  
   const [range, setRange] = useState(initialRange);
   const [statusFilter, setStatusFilter] = useState("all");
   const [allOrders, setAllOrders] = useState([]);
@@ -146,10 +145,9 @@ export default function OrdersOverTimeModal({ initialRange = "Today", onClose })
               <tbody>
                 {visible.map((o) => (
                   <tr
-                    key={o.order_no}
-                    onClick={() => navigate(`/lab-orders/${o.order_no}`)}
-                    className="cursor-pointer border-b border-gray-100 hover:bg-gray-50"
-                  >
+                      key={o.order_no}
+                      className="border-b border-gray-100"
+                    >
                     <td className="px-6 py-3 text-gray-500">{o.order_no}</td>
                     <td className="py-3 font-medium text-gray-900">
                       {o.patient?.display_name || [o.patient?.first_name, o.patient?.last_name].filter(Boolean).join(" ")}

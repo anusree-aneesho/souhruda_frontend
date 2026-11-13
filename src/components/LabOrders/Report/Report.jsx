@@ -705,10 +705,10 @@ async function handleDownloadPdf() {
           <div className="flex flex-wrap items-center justify-between gap-3">
           <button
             type="button"
-           onClick={() => navigate(state?.from || "/lab-orders")}
+           onClick={() => navigate(location.state?.from || "/lab-orders", { state: location.state?.fromState })}
 className="text-sm font-medium text-teal-600 hover:underline cursor-pointer"
 >
-  ← {state?.fromLabel || "Back to orders"}
+   ← {location.state?.fromLabel || "Back to lab orders"}
           </button>
 
             <div className="flex flex-wrap items-center gap-2">

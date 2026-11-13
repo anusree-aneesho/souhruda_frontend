@@ -7,6 +7,9 @@ import {
   getCriticalAlertsApi,
   getCriticalAlertDetailApi,
   getTatAlertsApi,
+  getNotificationsApi,
+  markNotificationReadApi,
+  markAllNotificationsReadApi,
 } from "../../../api/insightsApi";
 
 const SEEN_KEY = "souhruda_critical_seen_ids";
@@ -149,6 +152,8 @@ export default function CriticalAlertsBell() {
   const [seenTick, setSeenTick] = useState(0);
   const panelRef = useRef(null);
   const [tat, setTat] = useState([]);
+  // Server-side bell feed: gives us read state that follows the user across devices.
+  const [notifs, setNotifs] = useState([]);
 
   const load = useCallback(async () => {
     try {
@@ -157,6 +162,15 @@ export default function CriticalAlertsBell() {
       setError("");
     } catch (err) {
       setError(err.message || "Failed to load alerts");
+    }
+    // Read state comes from the AI service. Fetched after critical-alerts, which is
+    // what records new critical results as notifications. Optional: if it fails we
+    // fall back to the browser-local "seen" list below.
+    try {
+      const n = await getNotificationsApi({ limit: 50 });
+      setNotifs(n?.notifications || []);
+    } catch {
+      setNotifs([]);
     }
     // Ops delays are secondary: if this fails the clinical alerts must still work.
     try {
@@ -190,7 +204,35 @@ export default function CriticalAlertsBell() {
 
   const alerts = data?.alerts || [];
   const seen = loadSeenIds();
-  const unreadClinical = alerts.filter((a) => !seen.has(String(a.order_item_id))).length;
+  const notifByItem = new Map(
+    notifs
+      .filter((n) => n.source === "critical_alert" && n.source_id != null)
+      .map((n) => [String(n.source_id), n])
+  );
+  const isClinicalRead = (a) => {
+    const n = notifByItem.get(String(a.order_item_id));
+    return n ? n.is_read : seen.has(String(a.order_item_id));
+  };
+  const markClinicalRead = (a) => {
+    markSeen([a.order_item_id]);
+    const n = notifByItem.get(String(a.order_item_id));
+    if (n && !n.is_read) {
+      setNotifs((list) =>
+        list.map((x) => (x.id === n.id ? { ...x, is_read: true } : x))
+      );
+      markNotificationReadApi(n.id).catch(() => {});
+    }
+  };
+  const markEverythingRead = () => {
+    markSeen([
+      ...alerts.map((a) => a.order_item_id),
+      ...tat.map(tatKey),
+    ]);
+    setNotifs((list) => list.map((x) => ({ ...x, is_read: true })));
+    setSeenTick((t) => t + 1);
+    markAllNotificationsReadApi().catch(() => {});
+  };
+  const unreadClinical = alerts.filter((a) => !isClinicalRead(a)).length;
   // Only critical delays raise the badge; "watch" delays are listed but stay quiet.
   const unreadOps = tat.filter((a) => a.severity === "critical" && !seen.has(tatKey(a))).length;
   const unread = unreadClinical + unreadOps;
@@ -220,10 +262,19 @@ export default function CriticalAlertsBell() {
             <span className="text-sm font-semibold text-gray-900">
               Critical results today
             </span>
-            <span className="text-xs text-gray-400">
+            <span className="flex items-center gap-2 text-xs text-gray-400">
               {unread > 0
                 ? `${unread} unread · ${data?.total ?? 0} today`
                 : `${data?.total ?? 0} today`}
+              {unread > 0 && (
+                <button
+                  type="button"
+                  onClick={markEverythingRead}
+                  className="text-teal-700 hover:underline"
+                >
+                  Mark all read
+                </button>
+              )}
             </span>
           </div>
 
@@ -245,7 +296,7 @@ export default function CriticalAlertsBell() {
 
           <ul className="max-h-80 overflow-y-auto py-1">
             {alerts.map((a) => {
-              const isRead = seen.has(String(a.order_item_id));
+              const isRead = isClinicalRead(a);
               const sentence =
                 a.message || a.insight || "Result needs attention.";
               return (
@@ -256,7 +307,7 @@ export default function CriticalAlertsBell() {
                       isRead ? "opacity-70" : ""
                     }`}
                     onClick={() => {
-                      markSeen([a.order_item_id]);
+                      markClinicalRead(a);
                       setSeenTick((t) => t + 1);
                       setOpen(false);
                       setDetailId(a.order_item_id);

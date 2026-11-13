@@ -9,7 +9,7 @@ import FollowUpDetailModal from "./modals/FollowUpDetailModal";
 import { getFollowUpRemindersApi } from "../../api/api";
 
 const PER_PAGE = 9;
-const TABS = ["All", "Pending", "Completed"];
+const TABS = ["Pending", "Completed"];
 
 function capitalize(str) {
   return str ? str.charAt(0).toUpperCase() + str.slice(1) : str;
@@ -27,6 +27,11 @@ function mapReminder(r) {
           day: "2-digit", month: "short", year: "numeric",
         })
       : "-",
+    completedAt: r.completed_at
+      ? new Date(r.completed_at).toLocaleDateString("en-GB", {
+          day: "2-digit", month: "short", year: "numeric",
+        })
+      : "-",
     status: capitalize(r.status),
   };
 }
@@ -34,7 +39,7 @@ function mapReminder(r) {
 export default function FollowUps() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [activeTab, setActiveTab] = useState("All");
+  const [activeTab, setActiveTab] = useState("Pending");
   const [followUps, setFollowUps] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -137,7 +142,8 @@ export default function FollowUps() {
           <>
             <FollowUpsTable
               followUps={followUps}
-              isFiltered={activeTab !== "All" || debouncedSearch !== ""}
+              showCompleted={activeTab === "Completed"}
+              isFiltered={debouncedSearch !== ""}
               onView={setViewingId}
               onViewPatient={(patientNumber) => navigate(`/follow-ups/patient/${patientNumber}`)}
             />

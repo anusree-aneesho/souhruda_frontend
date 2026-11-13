@@ -3,7 +3,7 @@ import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
 
 import { nameWithTitle } from "../../Patients/patientTitles";
 
-export default function FollowUpCard({ title, patient, test, due, status, onView, onViewPatient }) {
+export default function FollowUpCard({ title, patient, test, due, completedAt, showCompleted, status, onView, onViewPatient }) {
   return (
     <div className="border border-gray-100 rounded-lg p-4 space-y-2">
       <div className="flex items-center justify-between">
@@ -17,7 +17,7 @@ export default function FollowUpCard({ title, patient, test, due, status, onView
       </div>
       <p className="text-sm text-gray-700">{test}</p>
       <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-400">Due {due}</p>
+        <p className="text-xs text-gray-400">{showCompleted ? `Completed ${completedAt}` : `Due ${due}`}</p>
         <button
           onClick={onView}
           className="text-xs text-teal-600 font-medium cursor-pointer"

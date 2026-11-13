@@ -3,7 +3,7 @@ import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
 
 import { nameWithTitle } from "../../Patients/patientTitles";
 
-export default function FollowUpRow({ title, patient, patientNumber, test, due, status, onView, onViewPatient }) {
+export default function FollowUpRow({ title, patient, patientNumber, test, due, completedAt, showCompleted, status, onView, onViewPatient }) {
   return (
     <tr className="border-b border-gray-100 last:border-0">
       <td className="py-3 text-sm text-teal-600">{patientNumber}</td>
@@ -16,7 +16,7 @@ export default function FollowUpRow({ title, patient, patientNumber, test, due, 
         </button>
       </td>
       <td className="py-3 text-sm text-gray-700">{test}</td>
-      <td className="py-3 text-sm text-gray-500">{due}</td>
+      <td className="py-3 text-sm text-gray-500">{showCompleted ? completedAt : due}</td>
       <td className="py-3">
         <StatusBadge status={status} />
       </td>

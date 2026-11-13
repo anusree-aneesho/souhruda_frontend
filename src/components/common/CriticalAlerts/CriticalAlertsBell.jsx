@@ -1,7 +1,8 @@
 // src/components/common/CriticalAlerts/CriticalAlertsBell.jsx
 // Bell dropdown for today's critical results (replaces static HTML bell).
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell } from "lucide-react";
+import { Bell, X } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
   getCriticalAlertsApi,
@@ -13,7 +14,9 @@ import {
 } from "../../../api/insightsApi";
 
 const SEEN_KEY = "souhruda_critical_seen_ids";
-const REFRESH_MS = 60_000;
+const REFRESH_MS = 15_000; // short, so new notifications pop up within seconds
+const TOAST_MS = 8_000; // how long a pop-up box stays on screen
+const MAX_TOASTS = 3;
 
 // An ops alert is "seen" for the day it was shown, so it can come back tomorrow.
 function tatKey(a) {
@@ -35,6 +38,25 @@ function markSeen(ids) {
   for (const id of ids) seen.add(String(id));
   try {
     localStorage.setItem(SEEN_KEY, JSON.stringify([...seen].slice(-200)));
+  } catch {
+    /* ignore */
+  }
+}
+
+// Keys of pop-ups already shown in this browser tab, so a page refresh doesn't repeat them.
+const TOASTED_KEY = "souhruda_toasted_keys";
+function loadToasted() {
+  try {
+    const raw = sessionStorage.getItem(TOASTED_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+}
+function saveToasted(set) {
+  try {
+    sessionStorage.setItem(TOASTED_KEY, JSON.stringify([...set].slice(-200)));
   } catch {
     /* ignore */
   }
@@ -154,32 +176,97 @@ export default function CriticalAlertsBell() {
   const [tat, setTat] = useState([]);
   // Server-side bell feed: gives us read state that follows the user across devices.
   const [notifs, setNotifs] = useState([]);
+  // Pop-up boxes for notifications that arrive while the page is open.
+  const [toasts, setToasts] = useState([]);
+  const toastedRef = useRef(null);
+
+  const dismissToast = useCallback((id) => {
+    setToasts((list) => list.filter((t) => t.key !== id));
+  }, []);
 
   const load = useCallback(async () => {
+    let alertList = [];
+    let notifList = [];
+    let tatList = [];
     try {
       const res = await getCriticalAlertsApi(20);
       setData(res);
       setError("");
+      alertList = res?.alerts || [];
     } catch (err) {
       setError(err.message || "Failed to load alerts");
     }
     // Read state comes from the AI service. Fetched after critical-alerts, which is
     // what records new critical results as notifications. Optional: if it fails we
-    // fall back to the browser-local "seen" list below.
+    // fall back to the browser-local "seen" list.
     try {
       const n = await getNotificationsApi({ limit: 50 });
-      setNotifs(n?.notifications || []);
+      notifList = n?.notifications || [];
+      setNotifs(notifList);
     } catch {
       setNotifs([]);
     }
     // Ops delays are secondary: if this fails the clinical alerts must still work.
     try {
       const t = await getTatAlertsApi();
-      setTat(t?.alerts || []);
+      tatList = t?.alerts || [];
+      setTat(tatList);
     } catch {
       setTat([]);
     }
-  }, []);
+
+    // ---- Pop-up boxes: anything unread that hasn't been shown in this tab yet ----
+    if (toastedRef.current === null) toastedRef.current = loadToasted();
+    const seenLocal = loadSeenIds();
+    const notifByItem = new Map(
+      notifList
+        .filter((n) => n.source === "critical_alert" && n.source_id != null)
+        .map((n) => [String(n.source_id), n])
+    );
+    const candidates = [];
+    for (const a of alertList) {
+      const n = notifByItem.get(String(a.order_item_id));
+      const read = n ? n.is_read : seenLocal.has(String(a.order_item_id));
+      if (read) continue;
+      candidates.push({
+        key: `ci-${a.order_item_id}`,
+        kind: "critical",
+        severity: "critical",
+        title: n?.title || "Critical result",
+        body: n?.body || a.message || a.insight || "A result needs attention.",
+        itemId: a.order_item_id,
+        notifId: n?.id,
+      });
+    }
+    for (const a of tatList) {
+      if (a.severity !== "critical" || seenLocal.has(tatKey(a))) continue;
+      candidates.push({
+        key: tatKey(a),
+        kind: "tat",
+        severity: "critical",
+        title: "Turnaround delay",
+        body: a.message || `${a.test_name} is running slower than normal`,
+      });
+    }
+    for (const n of notifList) {
+      if (n.source === "critical_alert" || n.is_read) continue;
+      candidates.push({
+        key: `n-${n.id}`,
+        kind: "notif",
+        severity: n.severity,
+        title: n.title,
+        body: n.body,
+        notifId: n.id,
+      });
+    }
+    const fresh = candidates.filter((c) => !toastedRef.current.has(c.key));
+    if (fresh.length) {
+      fresh.forEach((c) => toastedRef.current.add(c.key));
+      saveToasted(toastedRef.current);
+      setToasts((cur) => [...cur, ...fresh].slice(-MAX_TOASTS));
+      fresh.forEach((c) => setTimeout(() => dismissToast(c.key), TOAST_MS));
+    }
+  }, [dismissToast]);
 
   useEffect(() => {
     // Deferred one tick so the first fetch doesn't set state synchronously
@@ -395,6 +482,62 @@ export default function CriticalAlertsBell() {
           <span className="hidden">{seenTick}</span>
         </div>
       )}
+
+      {toasts.length > 0 &&
+        createPortal(
+          <div className="fixed top-20 right-6 z-[70] flex flex-col gap-2 w-[min(22rem,calc(100vw-2rem))]">
+            {toasts.map((t) => {
+              const critical = t.severity === "critical";
+              return (
+                <div
+                  key={t.key}
+                  role="alert"
+                  className={`flex items-start gap-3 rounded-xl bg-white shadow-xl border border-gray-100 border-l-4 px-4 py-3 cursor-pointer ${
+                    critical ? "border-l-red-500" : "border-l-amber-400"
+                  }`}
+                  onClick={() => {
+                    dismissToast(t.key);
+                    if (t.kind === "critical") {
+                      markClinicalRead({ order_item_id: t.itemId });
+                      setSeenTick((x) => x + 1);
+                      setDetailId(t.itemId);
+                    } else if (t.kind === "tat") {
+                      markSeen([t.key]);
+                      setSeenTick((x) => x + 1);
+                      setOpen(true);
+                    } else {
+                      if (t.notifId) markNotificationReadApi(t.notifId).catch(() => {});
+                      setOpen(true);
+                    }
+                  }}
+                >
+                  <Bell
+                    size={16}
+                    className={`mt-0.5 shrink-0 ${critical ? "text-red-500" : "text-amber-500"}`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                      {t.title}
+                    </p>
+                    <p className="text-xs text-gray-600 line-clamp-2">{t.body}</p>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Dismiss"
+                    className="text-gray-400 hover:text-gray-600"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      dismissToast(t.key);
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>,
+          document.body
+        )}
 
       {detailId != null && (
         <DetailModal

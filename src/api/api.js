@@ -766,11 +766,16 @@ export async function getPatientTestHistoryApi({
   patientNumber,
   dateFrom,
   dateTo,
+  status,
 } = {}) {
   const params = new URLSearchParams();
 
   if (patientNumber) {
     params.append("patient_number", patientNumber);
+  }
+
+  if (status) {
+    params.append("status", status);
   }
 
   if (dateFrom) {

@@ -72,6 +72,7 @@ export default function PatientDetails() {
 
     getPatientTestHistoryApi({
       patientNumber,
+      status: "completed",
       dateFrom: selected?.days ? daysAgoIso(selected.days) : undefined,
     })
       .then((res) => {
@@ -262,11 +263,16 @@ export default function PatientDetails() {
                           <td className="px-6 py-4 text-right">
                             {/* NEW: goes to the report and remembers this page for the back button */}
                             <button
-                              onClick={() =>
-                                navigate(`/lab-orders/${order.orderId}/report`, {
+                              onClick={() => {
+                                // One test in the order -> open that test's result page directly.
+                                // Several tests -> open the order report so they can pick one.
+                                const mainTests = order.tests.filter((t) => t.parentItemId == null);
+                                const testQuery = mainTests.length === 1 ? `?test=${mainTests[0].id}` : "";
+
+                                navigate(`/lab-orders/${order.orderId}/report${testQuery}`, {
                                   state: { from: location.pathname, fromLabel: "Back to follow-ups", fromState: location.state, },
-                                })
-                              }
+                                });
+                              }}
                               className="px-4 py-1.5 rounded-lg border border-teal-200 bg-teal-50 text-xs font-medium text-teal-700 hover:bg-teal-100 cursor-pointer"
                             >
                               View Details

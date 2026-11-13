@@ -45,3 +45,30 @@ export function getDemandForecastApi({ horizon = 7, branchId } = {}, options = {
   if (branchId) params.set("branch_id", String(branchId));
   return request(`/forecast/daily-orders?${params.toString()}`, options);
 }
+
+// ---- Bell feed (read state lives on the AI service, not in localStorage) ----
+export function getNotificationsApi({ limit = 30, unreadOnly = false } = {}) {
+  return request(
+    `/insights/notifications?limit=${limit}&unread_only=${unreadOnly ? "true" : "false"}`
+  );
+}
+
+export function getUnreadNotificationCountApi() {
+  return request("/insights/notifications/unread-count");
+}
+
+export function markNotificationReadApi(id) {
+  return request(`/insights/notifications/${id}/read`, { method: "POST" });
+}
+
+export function markAllNotificationsReadApi() {
+  return request("/insights/notifications/read-all", { method: "POST" });
+}
+
+export function getCriticalReminderApi() {
+  return request("/insights/critical-reminder");
+}
+
+export function getTestQualityApi() {
+  return request("/insights/test-quality");
+}

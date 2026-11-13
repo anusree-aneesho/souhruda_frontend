@@ -110,7 +110,7 @@ export default function FollowUps() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search patient, test, reg no..."
+              placeholder="Search patient, test, reg no, date..."
               className="flex-1 text-sm outline-none placeholder:text-gray-400 min-w-0"
             />
           </div>

@@ -15,6 +15,8 @@ export default function TestDetailView({
   test,
   flag,
   parameters = [],
+  sections, // ADDED: several tests on one page -> [{ test, flag, parameters }]
+  backLabel, // ADDED: text of the back button
   flags = {},
   ageText,
   registered,
@@ -34,9 +36,8 @@ export default function TestDetailView({
   onPrint,
   onDownload,
 }) {
-  const hasRange = test.range && test.range !== "-";
-  // A group test (e.g. CBC) lists all its parameters; a plain test shows its own single row.
-  const isGroup = Boolean(test.isGroup);
+  // One test (old behaviour) or every test of the order on one page.
+  const items = sections || [{ test, flag, parameters }];
   const rangeOf = (t) => (t.range && t.range !== "-" ? t.range : null);
 
   const initials = (patient.name || "?")
@@ -56,7 +57,7 @@ export default function TestDetailView({
           onClick={onBack}
           className="text-sm font-medium text-teal-600 hover:underline cursor-pointer"
         >
-          ← Back to report
+          ← {backLabel || "Back to report"}
         </button>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -164,64 +165,72 @@ export default function TestDetailView({
         </div>
       </div>
 
-      {/* ── Test details card ──────────────────────────────────── */}
-      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h3 className="font-semibold text-sm text-gray-900 uppercase">{test.name}</h3>
-          <p className="text-xs text-gray-400">
-            {test.category}{isGroup ? ` · ${parameters.length} parameters` : ""}
-          </p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px]">
-            <thead>
-              <tr className="bg-gray-50 text-left">
-                <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide">{isGroup ? "TEST PARAMETERS" : "TEST PARAMETER"}</th>
-                <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">RESULT</th>
-                <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">REFERENCE RANGE</th>
-                <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide">FLAG</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isGroup && parameters.map((p) => (
-                <tr key={p.id} className="border-t border-gray-100 hover:bg-teal-50/30 transition-colors">
-                  <td className="px-6 py-3.5 text-sm font-medium text-gray-900">{p.name}</td>
-                  <td className="py-3.5 text-sm font-semibold text-gray-900">
-                    {p.result || "—"}
-                    {p.result && p.unit ? <span className="ml-1 text-xs font-normal text-gray-400">{p.unit}</span> : null}
-                  </td>
-                  <td className="py-3.5 text-sm text-gray-600">
-                    {rangeOf(p) || "—"}
-                    {rangeOf(p) && p.unit ? <span className="ml-1 text-gray-400">{p.unit}</span> : null}
-                  </td>
-                  <td className="px-6 py-3.5"><StatusBadge status={flags[p.id]} /></td>
-                </tr>
-              ))}
-              {!isGroup && (
-              <tr className="border-t border-gray-100 hover:bg-teal-50/30 transition-colors">
-                <td className="px-6 py-3.5">
-                  <p className="text-sm font-medium text-gray-900">{test.name}</p>
-                  <p className="text-xs text-gray-400">{test.category}</p>
-                </td>
-                <td className="py-3.5 text-sm font-semibold text-gray-900">
-                  {test.result || "—"}
-                  {test.result && test.unit ? (
-                    <span className="ml-1 text-xs font-normal text-gray-400">{test.unit}</span>
-                  ) : null}
-                </td>
-                <td className="py-3.5 text-sm text-gray-600">
-                  {hasRange ? test.range : "—"}
-                  {hasRange && test.unit ? <span className="ml-1 text-gray-400">{test.unit}</span> : null}
-                </td>
-                <td className="px-6 py-3.5">
-                  <StatusBadge status={flag} />
-                </td>
-              </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {items.map(({ test, flag, parameters = [] }) => {
+        const hasRange = test.range && test.range !== "-";
+        // A group test (e.g. CBC) lists all its parameters; a plain test shows its own single row.
+        const isGroup = Boolean(test.isGroup);
+
+        // ── Test details card ────────────────────────────────────
+        return (
+          <div key={test.id} className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h3 className="font-semibold text-sm text-gray-900 uppercase">{test.name}</h3>
+              <p className="text-xs text-gray-400">
+                {test.category}{isGroup ? ` · ${parameters.length} parameters` : ""}
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px]">
+                <thead>
+                  <tr className="bg-gray-50 text-left">
+                    <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide">{isGroup ? "TEST PARAMETERS" : "TEST PARAMETER"}</th>
+                    <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">RESULT</th>
+                    <th className="py-2.5 text-xs font-medium text-gray-400 tracking-wide">REFERENCE RANGE</th>
+                    <th className="px-6 py-2.5 text-xs font-medium text-gray-400 tracking-wide">FLAG</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isGroup && parameters.map((p) => (
+                    <tr key={p.id} className="border-t border-gray-100 hover:bg-teal-50/30 transition-colors">
+                      <td className="px-6 py-3.5 text-sm font-medium text-gray-900">{p.name}</td>
+                      <td className="py-3.5 text-sm font-semibold text-gray-900">
+                        {p.result || "—"}
+                        {p.result && p.unit ? <span className="ml-1 text-xs font-normal text-gray-400">{p.unit}</span> : null}
+                      </td>
+                      <td className="py-3.5 text-sm text-gray-600">
+                        {rangeOf(p) || "—"}
+                        {rangeOf(p) && p.unit ? <span className="ml-1 text-gray-400">{p.unit}</span> : null}
+                      </td>
+                      <td className="px-6 py-3.5"><StatusBadge status={flags[p.id]} /></td>
+                    </tr>
+                  ))}
+                  {!isGroup && (
+                  <tr className="border-t border-gray-100 hover:bg-teal-50/30 transition-colors">
+                    <td className="px-6 py-3.5">
+                      <p className="text-sm font-medium text-gray-900">{test.name}</p>
+                      <p className="text-xs text-gray-400">{test.category}</p>
+                    </td>
+                    <td className="py-3.5 text-sm font-semibold text-gray-900">
+                      {test.result || "—"}
+                      {test.result && test.unit ? (
+                        <span className="ml-1 text-xs font-normal text-gray-400">{test.unit}</span>
+                      ) : null}
+                    </td>
+                    <td className="py-3.5 text-sm text-gray-600">
+                      {hasRange ? test.range : "—"}
+                      {hasRange && test.unit ? <span className="ml-1 text-gray-400">{test.unit}</span> : null}
+                    </td>
+                    <td className="px-6 py-3.5">
+                      <StatusBadge status={flag} />
+                    </td>
+                  </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

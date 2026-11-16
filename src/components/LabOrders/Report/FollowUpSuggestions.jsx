@@ -2,7 +2,14 @@
 import { getFollowUpWeeks } from "../../../data/followUpConfig";
 import { addWeeksToDate } from "../../../utils/addWeeks";
 
-export default function FollowUpSuggestions({ tests, flags, reportDate, onSchedule }) {
+export default function FollowUpSuggestions({
+  tests,
+  flags,
+  reportDate,
+  onSchedule,
+  scheduledIds = [], // test ids that already have a reminder
+  busyId = null,     // test id currently being scheduled
+}) {
   const abnormal = tests.filter((t) => ["Low", "High", "Abnormal"].includes(flags[t.id]));
 
   return (
@@ -20,8 +27,10 @@ export default function FollowUpSuggestions({ tests, flags, reportDate, onSchedu
       ) : (
         <div className="divide-y divide-gray-100">
           {abnormal.map((test) => {
-            const weeks = getFollowUpWeeks(test.id);
+            const weeks = test.followUpWeeks ?? getFollowUpWeeks(test.id); // CHANGED: lab_tests.followup_weeks first
             const dueDate = addWeeksToDate(reportDate, weeks);
+            const isSet = scheduledIds.includes(test.id);
+            const isBusy = busyId === test.id;
             return (
               <div key={test.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
                 <div>
@@ -31,10 +40,15 @@ export default function FollowUpSuggestions({ tests, flags, reportDate, onSchedu
                   </p>
                 </div>
                 <button
-                  onClick={() => onSchedule(test)}
-                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 shrink-0"
+                  onClick={() => onSchedule(test, dueDate)}
+                  disabled={isBusy}
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-medium shrink-0 cursor-pointer disabled:opacity-50 ${
+                    isSet
+                      ? "border-teal-200 bg-teal-50 text-teal-700"
+                      : "border-gray-200 text-gray-700 hover:bg-gray-50"
+                  }`}
                 >
-                  Schedule Reminder
+                  {isBusy ? "Scheduling…" : isSet ? "Reminder set ✓" : "Schedule Reminder"}
                 </button>
               </div>
             );

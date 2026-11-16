@@ -45,7 +45,14 @@ export default function OutbreakWatch() {
             <span key={p.id}>
               {i > 0 && ", "}
               <Link
-                to={`/patients?search=${encodeURIComponent(p.display_name)}`}
+                // Open the order that holds the abnormal result; fall back to the
+                // patient search if the AI service didn't return an order number.
+                to={
+                  p.order_no
+                    ? `/lab-orders/${p.order_no}`
+                    : `/patients?search=${encodeURIComponent(p.display_name)}`
+                }
+                title={p.order_no ? `Open order ${p.order_no}` : "Find patient"}
                 className="text-teal-600 font-medium hover:underline"
               >
                 {p.display_name}

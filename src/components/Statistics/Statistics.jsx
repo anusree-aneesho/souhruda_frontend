@@ -65,6 +65,14 @@ const isUpcoming = (value) => {
   return due.getTime() >= startOfToday.getTime();
 };
 
+// Colors per result flag in the Abnormal Results list (critical, high, low, abnormal)
+const flagStyles = {
+  critical: { text: "text-red-600 font-bold", label: "text-red-500",    bg: "bg-red-50",    icon: "text-red-500" },
+  high:     { text: "text-orange-600",        label: "text-orange-500", bg: "bg-orange-50", icon: "text-orange-500" },
+  low:      { text: "text-blue-600",          label: "text-blue-500",   bg: "bg-blue-50",   icon: "text-blue-500" },
+  abnormal: { text: "text-amber-600",         label: "text-amber-500",  bg: "bg-amber-50",  icon: "text-amber-500" },
+};
+
 function StatCard({ label, value, icon: Icon, bg, color, onClick }) {
   return (
     <div
@@ -451,7 +459,7 @@ function RankingsModal({ type, data, loading, onClose }) {
 
 // ─────────────────────────────────────────────────────────────
 // AttentionModal — "View All" popup for Attention Needed
-// Tabs: Critical Results, Follow-ups Due, Samples Delayed
+// Tabs: Abnormal Results, Follow-ups Due, Samples Delayed
 // ─────────────────────────────────────────────────────────────
 function AttentionModal({ open, alerts, loading, initialTab = "critical", onClose }) {
   const [tab, setTab] = useState(initialTab);
@@ -489,7 +497,7 @@ const waitingFor = (value) => {
 };
 
   const tabs = [
-    { key: "critical", label: "Critical Results", count: criticalResults.length, active: "text-red-600 border-red-500" },
+    { key: "critical", label: "Abnormal Results", count: criticalResults.length, active: "text-red-600 border-red-500" },
     { key: "followups", label: "Follow-ups Due", count: followUps.length, active: "text-amber-600 border-amber-500" },
     { key: "samples", label: "Samples Delayed", count: samplesDelayedList.length, active: "text-orange-600 border-orange-500" },
   ];
@@ -499,36 +507,39 @@ const waitingFor = (value) => {
   const renderContent = () => {
     if (tab === "critical") {
       return criticalResults.length === 0 ? (
-        <Empty text="No critical results flagged today." />
+        <Empty text="No abnormal results flagged today." />
       ) : (
         <div className="space-y-1">
-          {criticalResults.map((row, index) => (
-            <div
-              key={`${row.order_id}-${row.test_name}-${index}`}
-              className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition"
-            >
-              <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
-                <AlertTriangle size={15} className="text-red-500" />
+          {criticalResults.map((row, index) => {
+            const s = flagStyles[row.flag] ?? flagStyles.abnormal;
+            return (
+              <div
+                key={`${row.order_id}-${row.test_name}-${index}`}
+                className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition"
+              >
+                <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center shrink-0`}>
+                  <AlertTriangle size={15} className={s.icon} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-800 truncate">
+                    {row.patient_name}
+                    {row.patient_number && (
+                      <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-400 truncate">
+                    {row.test_name} · Order ID:{row.order_no ?? row.order_id}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className={`text-sm font-semibold ${s.text}`}>
+                    {row.result} {row.result_unit || ""}
+                  </p>
+                  <p className={`text-[11px] uppercase ${s.label}`}>{row.flag}</p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-800 truncate">
-                  {row.patient_name}
-                  {row.patient_number && (
-                    <span className="text-gray-400 font-normal"> · PID {row.patient_number}</span>
-                  )}
-                </p>
-                <p className="text-xs text-gray-400 truncate">
-                  {row.test_name} · Order ID:{row.order_no ?? row.order_id}
-                </p>
-              </div>
-              <div className="text-right shrink-0">
-                <p className={`text-sm font-semibold ${row.flag === "high" ? "text-red-600" : "text-blue-600"}`}>
-                  {row.result} {row.result_unit || ""}
-                </p>
-                <p className="text-[11px] text-gray-400 uppercase">{row.flag}</p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       );
     }
@@ -1226,15 +1237,21 @@ export default function Statistics() {
           </div>
           <div className="space-y-3">
             {[
-              { label: "Critical results flagged today", value: alerts?.criticalResultsToday, icon: AlertTriangle, bg: "bg-red-50", color: "text-red-500" },
+              { label: "Abnormal results flagged today", value: alerts?.criticalResultsToday, icon: AlertTriangle, bg: "bg-red-50", color: "text-red-500",
+                note: alerts?.criticalOnlyToday > 0 ? `${alerts.criticalOnlyToday} critical` : null },
               { label: "Follow-ups due this week", value: alerts?.followUpsDueThisWeek, icon: Clock, bg: "bg-amber-50", color: "text-amber-500" },
               { label: "Samples delayed", value: alerts?.samplesDelayed, icon: Clock, bg: "bg-orange-50", color: "text-orange-500" },
-            ].map(({ label, value, icon: Icon, bg, color }) => (
+            ].map(({ label, value, icon: Icon, bg, color, note }) => (
               <div key={label} className="flex items-center gap-3 text-sm">
                 <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center shrink-0`}>
                   <Icon size={16} className={color} />
                 </div>
                 <span className="text-gray-600 flex-1">{label}</span>
+                {note && (
+                  <span className="text-[11px] font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+                    {note}
+                  </span>
+                )}
                 <span className="font-semibold text-gray-900">
                   {alertsLoading ? "…" : (value ?? 0)}
                 </span>

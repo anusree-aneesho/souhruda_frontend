@@ -487,6 +487,8 @@ export async function getOrdersApi(params = {}) {
   if (params.today) query.set("today", "1");
   if (!params.today && params.status && params.status !== "All") query.set("status", params.status);
   if (params.q) query.set("q", params.q);
+  if (params.flag) query.set("flag", params.flag);
+  if (params.entered) query.set("entered", params.entered);
   if (params.date_from) query.set("date_from", params.date_from);
   if (params.date_to) query.set("date_to", params.date_to);
   if (params.page) query.set("page", params.page);
@@ -560,8 +562,6 @@ export async function getFollowUpRemindersApi(params = 1) {
   if (opts.page) query.set("page", opts.page);
   if (opts.status && opts.status !== "All") query.set("status", opts.status);
   if (opts.q) query.set("q", opts.q);
-  if (opts.date_from) query.set("date_from", opts.date_from);
-  if (opts.date_to) query.set("date_to", opts.date_to);
   if (opts.per_page) query.set("per_page", opts.per_page);
 
   const qs = query.toString();
@@ -768,16 +768,11 @@ export async function getPatientTestHistoryApi({
   patientNumber,
   dateFrom,
   dateTo,
-  status,
 } = {}) {
   const params = new URLSearchParams();
 
   if (patientNumber) {
     params.append("patient_number", patientNumber);
-  }
-
-  if (status) {
-    params.append("status", status);
   }
 
   if (dateFrom) {

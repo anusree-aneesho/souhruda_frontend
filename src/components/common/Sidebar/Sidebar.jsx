@@ -3,7 +3,7 @@ import SidebarLogo from "./SidebarLogo";
 import SidebarNavItem from "./SidebarNavItem";
 import SidebarFooterHint from "./SidebarFooterHint";
 import SidebarNavDropdown from "./SidebarNavDropdown";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../Context/AuthContext";
 import { REPORT_CATEGORIES } from "../../Reports/reportConfig";
 import { LogOut } from "lucide-react";
@@ -81,6 +81,10 @@ const settingsSubItems = [
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { pathname, search } = useLocation();
+  const fromDashboard =
+    pathname.startsWith("/lab-orders") &&
+    new URLSearchParams(search).get("from") === "dashboard";
 
   // Normalise so "Super Admin", "super-admin" and "super_admin" all match
   const role = String(user?.role ?? "")
@@ -111,7 +115,11 @@ export default function Sidebar() {
 
       <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
         {navItems.map(({ roles, ...item }) => (
-          <SidebarNavItem key={item.path} {...item} />
+          <SidebarNavItem
+            key={item.path}
+            {...item}
+            forceActive={fromDashboard ? item.path === "/" : undefined}
+          />
         ))}
 
         <SidebarNavDropdown

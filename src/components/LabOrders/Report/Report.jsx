@@ -289,12 +289,17 @@ const order = existingOrder || (hasOrderState ? { orderId, ...state } : apiOrder
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedTestId = searchParams.get("test");
   const viewTest = selectedTestId
-    ? billTests.find((t) => String(t.id) === selectedTestId) || null
-    : null;
+  ? billTests.find(
+      (t) =>
+        String(t.id) === selectedTestId ||
+        (t.name || "").trim().toLowerCase() === selectedTestId.trim().toLowerCase()
+    ) || null
+  : null;
 
   // ADDED: ?test=all shows every test of the order together on one page
   // (used by "View Details" on the follow-up patient page).
   const showAll = selectedTestId === "all";
+  const fromDashboard = searchParams.get("from") === "dashboard";
 
   function openTest(t) {
     setSearchParams({ test: String(t.id) }, { state });
@@ -781,7 +786,13 @@ async function handleDownloadPdf() {
                 }))
               : undefined
           }
-          backLabel={showAll ? (location.state?.fromLabel || "Back to lab orders") : undefined}
+          backLabel={
+              fromDashboard
+                ? "Back to dashboard"
+                : showAll
+                  ? (location.state?.fromLabel || "Back to lab orders")
+                  : undefined
+            }
           flags={flags}
           ageText={ageText}
           registered={registered}
@@ -792,9 +803,11 @@ async function handleDownloadPdf() {
           letterheadOn={letterheadOn}
           onLetterheadChange={setLetterheadOn}
           onBack={
-            showAll
-              ? () => navigate(location.state?.from || "/lab-orders", { state: location.state?.fromState })
-              : closeTest
+            fromDashboard
+              ? () => navigate("/")
+              : showAll
+                ? () => navigate(location.state?.from || "/lab-orders", { state: location.state?.fromState })
+                : closeTest
           }
           onBill={() => setBillOpen(true)}
           onEditBill={() => setEditBillOpen(true)}

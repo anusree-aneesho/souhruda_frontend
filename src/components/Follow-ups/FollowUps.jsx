@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
+import SlotDateFilter from "../common/SlotDateFilter";
 import FollowUpsHeader from "./FollowUpsHeader";
 import { useSelectedBranch } from "../../utils/selectedBranch";
 import FollowUpsTable from "./FollowUpsTable/FollowUpsTable";
@@ -40,6 +41,10 @@ export default function FollowUps() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeTab, setActiveTab] = useState("Pending");
+  // Calendar range from SlotDateFilter: { date_from, date_to, label } or null
+  const [dates, setDates] = useState(null);
+  const dateFrom = dates?.date_from ?? "";
+  const dateTo = dates?.date_to ?? "";
   const [followUps, setFollowUps] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -60,7 +65,7 @@ export default function FollowUps() {
   // Back to page 1 whenever the filter or search changes.
   useEffect(() => {
     setPage(1);
-  }, [activeTab, debouncedSearch, branchId]);
+  }, [activeTab, debouncedSearch, dateFrom, dateTo, branchId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,6 +75,8 @@ export default function FollowUps() {
     getFollowUpRemindersApi({
       status: activeTab,
       q: debouncedSearch,
+      date_from: dateFrom,
+      date_to: dateTo,
       page,
       per_page: PER_PAGE,
     })
@@ -97,22 +104,28 @@ export default function FollowUps() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, debouncedSearch, page, refreshKey, branchId]);
+  }, [activeTab, debouncedSearch, dateFrom, dateTo, page, refreshKey, branchId]);
 
   return (
     <div className="space-y-6">
       <FollowUpsHeader />
 
       <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2.5 w-full sm:w-72">
-            <Search size={16} className="text-gray-400 shrink-0" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search patient, test, reg no, date..."
-              className="flex-1 text-sm outline-none placeholder:text-gray-400 min-w-0"
-            />
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2.5 w-full sm:w-72">
+              <Search size={16} className="text-gray-400 shrink-0" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search patient, test, reg no, date..."
+                className="flex-1 text-sm outline-none placeholder:text-gray-400 min-w-0"
+              />
+            </div>
+
+            {/* Date range (same calendar as Lab Orders): filters the date shown in the tab,
+                Due on Pending / Completed on Completed. Future dates allowed. */}
+            <SlotDateFilter onChange={setDates} futureYears={2} />
           </div>
 
           <div className="flex items-center gap-2 overflow-x-auto">
@@ -143,7 +156,7 @@ export default function FollowUps() {
             <FollowUpsTable
               followUps={followUps}
               showCompleted={activeTab === "Completed"}
-              isFiltered={debouncedSearch !== ""}
+              isFiltered={debouncedSearch !== "" || dateFrom !== "" || dateTo !== ""}
               onView={setViewingId}
               onViewPatient={(patientNumber) => navigate(`/follow-ups/patient/${patientNumber}`)}
             />

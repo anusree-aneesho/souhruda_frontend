@@ -11,6 +11,9 @@ import { useEffect, useRef, useState } from "react";
  * onChange receives { date_from, date_to, label } (YYYY-MM-DD) or null when cleared.
  *
  * <SlotDateFilter onChange={(v) => setDates(v)} />
+ *
+ * futureYears (default 0): how many years ahead can be picked, counted to 31 Dec of that year.
+ * 0 keeps the old behaviour (future blocked). Used by Follow-ups, where due dates are in the future.
  */
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -119,7 +122,7 @@ function MonthGrid({ y, m, ...rest }) {
   );
 }
 
-function RangeCalendar({ from, to, onPick, maxDate, mode, selY, selM, onSelectYear, onSelectMonth, anchor }) {
+function RangeCalendar({ from, to, onPick, maxDate, mode, selY, selM, onSelectYear, onSelectMonth, anchor, openOnToday }) {
   const today = startOfDay(new Date());
   const curYear = maxDate.getFullYear();
   const curMonth = maxDate.getMonth();
@@ -128,7 +131,9 @@ function RangeCalendar({ from, to, onPick, maxDate, mode, selY, selM, onSelectYe
   const maxIdx = curIdx - 1;
   const minIdx = idxOf(FLOOR_YEAR, 0);
 
-  const startIdx = Math.max(minIdx, Math.min(maxIdx, anchor ? idxOf(anchor.getFullYear(), anchor.getMonth()) : maxIdx));
+  // opens on the latest allowed month, or on the current month when future dates are allowed
+  const defaultIdx = openOnToday ? idxOf(today.getFullYear(), today.getMonth()) : maxIdx;
+  const startIdx = Math.max(minIdx, Math.min(maxIdx, anchor ? idxOf(anchor.getFullYear(), anchor.getMonth()) : defaultIdx));
   const [view, setView] = useState(startIdx); // index of the LEFT month
   const [level, setLevel] = useState("days");
   const [py, setPy] = useState(Math.floor(startIdx / 12)); // year shown in the month picker
@@ -159,7 +164,7 @@ function RangeCalendar({ from, to, onPick, maxDate, mode, selY, selM, onSelectYe
               dim={y < decade || y > decade + 9}
               off={y > curYear || y < FLOOR_YEAR}
               on={mode !== "range" && y === selY}
-              ring={y === curYear}
+              ring={y === today.getFullYear()}
               onClick={() => { onSelectYear(y); setPy(y); setLevel("months"); }}
             />
           ))}
@@ -170,7 +175,7 @@ function RangeCalendar({ from, to, onPick, maxDate, mode, selY, selM, onSelectYe
   }
 
   if (level === "months") {
-    const dayMonth = mode === "month" && selY === py ? selM : py === curYear ? curMonth : 0;
+    const dayMonth = mode === "month" && selY === py ? selM : py === today.getFullYear() ? today.getMonth() : 0;
     return (
       <div style={S.pickWrap}>
         <Header
@@ -188,7 +193,7 @@ function RangeCalendar({ from, to, onPick, maxDate, mode, selY, selM, onSelectYe
               label={n}
               off={idxOf(py, i) > curIdx || py < FLOOR_YEAR}
               on={mode === "month" && selY === py && selM === i}
-              ring={py === curYear && i === curMonth}
+              ring={py === today.getFullYear() && i === today.getMonth()}
               onClick={() => (mode === "month" && selY === py && selM === i ? onSelectYear(py) : onSelectMonth(py, i))}
             />
           ))}
@@ -235,8 +240,10 @@ function RangeCalendar({ from, to, onPick, maxDate, mode, selY, selM, onSelectYe
 
 /* ---------- the filter ---------- */
 
-export default function SlotDateFilter({ onChange, placeholder = "Select Date Range" }) {
+export default function SlotDateFilter({ onChange, placeholder = "Select Date Range", futureYears = 0 }) {
   const todayStart = startOfDay(new Date());
+  // latest day that can be picked: today, or 31 Dec of (this year + futureYears)
+  const maxDate = futureYears > 0 ? new Date(todayStart.getFullYear() + futureYears, 11, 31) : todayStart;
 
   const [open, setOpen] = useState(false);
   const [applied, setApplied] = useState(null);
@@ -334,7 +341,7 @@ export default function SlotDateFilter({ onChange, placeholder = "Select Date Ra
       {open && (
         <div style={S.pop}>
           <RangeCalendar
-            from={from} to={to} onPick={onDay} maxDate={todayStart}
+            from={from} to={to} onPick={onDay} maxDate={maxDate} openOnToday={futureYears > 0}
             mode={mode} selY={selY} selM={selM}
             onSelectYear={onSelectYear} onSelectMonth={onSelectMonth}
             anchor={anchor}

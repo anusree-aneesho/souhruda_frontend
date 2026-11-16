@@ -44,8 +44,7 @@ export default function FollowUpRadar() {
           {data.items.map((it) => (
             <Link
               key={it.reminder_id}
-              to={`/follow-ups/patient/${encodeURIComponent(it.patient_number)}`}
-              state={{ from: "/" }}
+              to={`/lab-orders/${encodeURIComponent(it.order_no)}/report?test=${encodeURIComponent(it.test_name)}&from=dashboard`}
               className="flex items-center justify-between py-3 first:pt-0 hover:bg-gray-50"
             >
               <div className="min-w-0">

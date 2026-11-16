@@ -1,18 +1,19 @@
 // src/components/common/Sidebar/SidebarNavItem.jsx
 import { NavLink } from "react-router-dom";
 
-export default function SidebarNavItem({ label, icon: Icon, path, badge }) {
+export default function SidebarNavItem({ label, icon: Icon, path, badge, forceActive }) {
   return (
     <NavLink
       to={path}
       end={path === "/"}
-      className={({ isActive }) =>
-        `flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-          isActive
+      className={({ isActive }) => {
+        const active = forceActive ?? isActive;
+        return `flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+          active
             ? "bg-teal-600 text-white"
             : "text-gray-600 hover:bg-gray-100"
-        }`
-      }
+        }`;
+      }}
     >
       <span className="flex items-center gap-3">
         <Icon size={18} />

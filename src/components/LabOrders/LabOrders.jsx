@@ -80,6 +80,12 @@ export default function LabOrders() {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isTodayFilter, setIsTodayFilter] = useState(initialToday);
+  // Daily Brief link: /lab-orders?flag=abnormal&date=today
+  const [abnormalFilter, setAbnormalFilter] = useState(
+    searchParams.get("flag") === "abnormal"
+      ? { today: searchParams.get("date") === "today" }
+      : null
+  );
   const [rawOrders, setRawOrders] = useState([]);
   const [gstInfo, setGstInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -130,6 +136,8 @@ export default function LabOrders() {
 
     getOrdersApi({
       today: isTodayFilter ? 1 : undefined,
+      flag: abnormalFilter ? "abnormal" : undefined,
+      entered: abnormalFilter?.today ? "today" : undefined,
       status: tabToStatus(activeTab),
       q: search,
       date_from: dates?.date_from,
@@ -139,19 +147,9 @@ export default function LabOrders() {
     })
       .then((res) => {
         if (!cancelled) {
-          const newLastPage = res.last_page ?? res.meta?.last_page ?? 1;
-          const newTotal = res.total ?? res.meta?.total ?? 0;
-
-          // Current page no longer exists (e.g. last order on the last page was
-          // deleted or cancelled) -> go back to the last valid page and refetch.
-          if (page > newLastPage && newTotal > 0) {
-            setPage(newLastPage);
-            return; // the page change triggers a new fetch
-          }
-
           setRawOrders(res.data || []);
-          setLastPage(newLastPage);
-          setTotal(newTotal);
+          setLastPage(res.last_page ?? res.meta?.last_page ?? 1);
+          setTotal(res.total ?? res.meta?.total ?? 0);
         }
       })
       .catch((err) => {
@@ -164,7 +162,7 @@ export default function LabOrders() {
     return () => {
       cancelled = true;
     };
- }, [activeTab, isTodayFilter, search, dates?.date_from, dates?.date_to, page, refreshKey, branchId]);
+ }, [activeTab, isTodayFilter, abnormalFilter, search, dates?.date_from, dates?.date_to, page, refreshKey, branchId]);
 
 
   // Map after both the orders and the GST rate are known, so the bill
@@ -177,7 +175,7 @@ export default function LabOrders() {
   // Reset to page 1 whenever the filter or search changes.
   useEffect(() => {
   setPage(1);
-}, [activeTab, isTodayFilter, search, dates?.date_from, dates?.date_to, branchId]);
+}, [activeTab, isTodayFilter, abnormalFilter, search, dates?.date_from, dates?.date_to, branchId]);
 
   function handleDateChange(v) {
   setDates(v);
@@ -195,6 +193,14 @@ export default function LabOrders() {
         setSearchParams(next, { replace: true });
       }
     }
+  }
+
+  function clearAbnormalFilter() {
+    setAbnormalFilter(null);
+    const next = new URLSearchParams(searchParams);
+    next.delete("flag");
+    next.delete("date");
+    setSearchParams(next, { replace: true });
   }
 
   function clearTodayFilter() {
@@ -241,6 +247,22 @@ export default function LabOrders() {
           dateFilter={<SlotDateFilter onChange={handleDateChange} />}
         />
 
+        {abnormalFilter && (
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-2 rounded-full bg-red-50 text-red-700 text-xs font-medium px-3 py-1">
+              Orders with abnormal results{abnormalFilter.today ? " today" : ""}
+              <button
+                type="button"
+                aria-label="Clear abnormal filter"
+                onClick={clearAbnormalFilter}
+                className="hover:text-red-900"
+              >
+                ✕
+              </button>
+            </span>
+          </div>
+        )}
+
         {loadError && (
           <p className="text-sm text-red-500 text-center py-2">{loadError}</p>
         )}
@@ -260,7 +282,7 @@ export default function LabOrders() {
 
             {filteredOrders.length === 0 && (
               <p className="text-sm text-gray-400 text-center py-6">
-                {isTodayFilter ? "No orders today." : dates ? `No orders for ${dates.label}.` : "No orders found."}
+                {abnormalFilter ? "No orders with abnormal results." : isTodayFilter ? "No orders today." : dates ? `No orders for ${dates.label}.` : "No orders found."}
               </p>
             )}
 

@@ -77,6 +77,10 @@ export default function OrderDetail() {
   const location = useLocation();
   const { toast, showToast, hideToast } = useToast();
 
+  // ADDED: where the user came from (dashboard, activity log...).
+  // Kept through every navigate below so the Back button always works.
+  const origin = { from: location.state?.from, fromLabel: location.state?.fromLabel };
+
   const [order, setOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -96,7 +100,7 @@ export default function OrderDetail() {
   useEffect(() => {
     if (location.state?.justCreated) {
       showToast(`Order #${orderId} created for ${location.state.patient?.name || "patient"}`);
-      navigate(location.pathname, { replace: true, state: {} });
+      navigate(location.pathname, { replace: true, state: origin }); // CHANGED: keep origin
     }
   }, [location.state, location.pathname, navigate, orderId, showToast]);
 
@@ -106,7 +110,7 @@ export default function OrderDetail() {
     if (location.state?.justCollected) {
       const { patientName } = location.state.justCollected;
       showToast(`Sample collected for ${patientName || "patient"}`);
-      navigate(location.pathname, { replace: true, state: {} });
+      navigate(location.pathname, { replace: true, state: origin }); // CHANGED: keep origin
     }
   }, [location.state, location.pathname, navigate, orderId, showToast]);
 
@@ -124,6 +128,7 @@ export default function OrderDetail() {
           navigate(`/lab-orders/${orderId}/report`, {
             replace: true,
             state: {
+              ...origin, // ADDED
               patient: mapped.patient,
               tests: mapped.tests,
               orderedAt: mapped.orderedAt,
@@ -214,6 +219,7 @@ export default function OrderDetail() {
 
       navigate(`/lab-orders/${orderId}/report`, {
         state: {
+          ...origin, // ADDED
           patient, tests, orderedAt,
           completedAt: justCompletedAt,
           results, paymentDone,
@@ -248,7 +254,7 @@ export default function OrderDetail() {
       }));
 
       await saveOrderResultsApi(orderId, resultsPayload);
-      navigate("/lab-orders");
+      navigate(origin.from || "/lab-orders"); // CHANGED: go back to where the user came from
     } catch (err) {
       setSaveError(err.message);
       setSavingAction(null);
@@ -269,6 +275,8 @@ export default function OrderDetail() {
   return (
     <div className="space-y-6 ">
       <OrderDetailHeader
+        backPath={origin.from || "/lab-orders"}           // ADDED
+        backLabel={origin.fromLabel || "Back to orders"}  // ADDED
         patientName={patient.name}
         orderId={orderId}
         regNo={patient.regNo}

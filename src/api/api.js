@@ -1075,3 +1075,14 @@ export async function askAssistantApi({ message, conversationId = null }) {
     body: JSON.stringify({ message, conversation_id: conversationId }),
   });
 }
+
+export async function getFollowUpsForOrderApi(orderNo) {
+  return request(`/follow-up-reminders/by-order/${encodeURIComponent(orderNo)}`);
+}
+
+export async function createFollowUpApi(payload) {
+  return request("/follow-up-reminders", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}

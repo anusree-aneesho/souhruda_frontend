@@ -116,7 +116,7 @@ function DetailModal({ orderItemId, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 hover:text-gray-600 cursor-pointer"
           >
             ✕
           </button>
@@ -136,7 +136,7 @@ function DetailModal({ orderItemId, onClose }) {
                 onClose();
                 navigate(`/lab-orders/${d.order_no}`);
               }}
-              className="font-medium text-gray-900 hover:text-teal-700 hover:underline text-left"
+              className="font-medium text-gray-900 hover:text-teal-700 hover:underline text-left cursor-pointer"
               title="Open patient report"
             >
               {d.patient_name}
@@ -345,7 +345,7 @@ export default function CriticalAlertsBell() {
 
       {open && (
         <div className="absolute right-0 top-9 w-[min(22rem,calc(100vw-2rem))] bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
+          <div className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition cursor-pointer">
             <span className="text-sm font-semibold text-gray-900">
               Critical results today
             </span>
@@ -357,7 +357,7 @@ export default function CriticalAlertsBell() {
                 <button
                   type="button"
                   onClick={markEverythingRead}
-                  className="text-teal-700 hover:underline"
+                  className="text-teal-700 hover:underline cursor-pointer"
                 >
                   Mark all read
                 </button>
@@ -390,7 +390,7 @@ export default function CriticalAlertsBell() {
                 <li key={a.order_item_id}>
                   <button
                     type="button"
-                    className={`w-full text-left px-4 py-2.5 flex gap-2.5 hover:bg-red-50/60 ${
+                    className={`w-full text-left px-4 py-2.5 flex gap-2.5 hover:bg-red-50/60 cursor-pointer ${
                       isRead ? "opacity-70" : ""
                     }`}
                     onClick={() => {
@@ -524,7 +524,7 @@ export default function CriticalAlertsBell() {
                   <button
                     type="button"
                     aria-label="Dismiss"
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-gray-400 hover:text-gray-600 cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
                       dismissToast(t.key);

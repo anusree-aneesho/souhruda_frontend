@@ -22,8 +22,17 @@ import { buildReportRowsByCategory } from "../../../utils/reportRows";
 import { buildQrText } from "../../../utils/qrDetails";
 import { orderBarcodeValue } from "../../../utils/sampleBarcode";
 import { qrSvgString } from "../../../utils/qrSvg";
-import { getOrderReportUrlApi, getOrderApi, getSettingsApi, getGstSettingsApi, markOrderPaidApi } from "../../../api/api";
+import {
+  getOrderReportUrlApi,
+  getOrderApi,
+  getSettingsApi,
+  getGstSettingsApi,
+  markOrderPaidApi,
+  createFollowUpApi,        // ADDED (follow-up): rename to match your api.js
+  getFollowUpsForOrderApi,  // ADDED (follow-up): rename to match your api.js
+} from "../../../api/api";
 import { calcBillTotals } from "../../../utils/orderPricing"; // ADDED (GST): same helper BillModal uses
+import { getFollowUpWeeks } from "../../../data/followUpConfig"; // ADDED (follow-up)
 
 // ADDED: payment mode options for the Confirm Payment popup
 const PAYMENT_MODES = [
@@ -118,6 +127,7 @@ function mapApiOrder(data) {
     tests: (data.items || []).map((it) => ({
       id: it.id,
       name: it.lab_test?.name || "",
+      followUpWeeks: it.lab_test?.followup_weeks ?? null, // ADDED: follow-up weeks from lab_tests
       category: it.lab_test?.category?.name || "",
       price: Number(it.price_at_order || 0),
       range: it.ref_range_display ?? "",
@@ -184,8 +194,26 @@ const order = existingOrder || (hasOrderState ? { orderId, ...state } : apiOrder
   const [savedPaymentMode, setSavedPaymentMode] = useState("");
   const [savingPayment, setSavingPayment] = useState(false);
 
+  // ADDED (follow-up): reminders already set, button busy state, and the popup
+  const [scheduledIds, setScheduledIds] = useState([]); // test ids that already have a reminder
+  const [busyId, setBusyId] = useState(null);
+  const [followUpPopup, setFollowUpPopup] = useState(null); // { type: "exists" | "error", text }
+
   useEffect(() => {
     setPaymentDone(Boolean(order?.paymentDone));
+  }, [orderId]);
+
+  // ADDED (follow-up): load existing reminders so buttons show "Reminder set ✓" on page open
+  useEffect(() => {
+    let cancelled = false;
+    setScheduledIds([]);
+    getFollowUpsForOrderApi(orderId)
+      .then((res) => {
+        const rows = res?.data ?? res ?? [];
+        if (!cancelled) setScheduledIds(rows.map((r) => r.result_id));
+      })
+      .catch((err) => console.error("Failed to load follow-ups:", err.message));
+    return () => { cancelled = true; };
   }, [orderId]);
 
   // Loads the discount and the collection / report dates from the order.
@@ -261,12 +289,17 @@ const order = existingOrder || (hasOrderState ? { orderId, ...state } : apiOrder
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedTestId = searchParams.get("test");
   const viewTest = selectedTestId
-    ? billTests.find((t) => String(t.id) === selectedTestId) || null
-    : null;
+  ? billTests.find(
+      (t) =>
+        String(t.id) === selectedTestId ||
+        (t.name || "").trim().toLowerCase() === selectedTestId.trim().toLowerCase()
+    ) || null
+  : null;
 
   // ADDED: ?test=all shows every test of the order together on one page
   // (used by "View Details" on the follow-up patient page).
   const showAll = selectedTestId === "all";
+  const fromDashboard = searchParams.get("from") === "dashboard";
 
   function openTest(t) {
     setSearchParams({ test: String(t.id) }, { state });
@@ -357,7 +390,15 @@ const order = existingOrder || (hasOrderState ? { orderId, ...state } : apiOrder
     [tests, results]
   );
 
-  const testsWithResults = resultTests.map((t) => ({ ...t, result: results[t.id] }));
+  // ADDED: follow-up weeks come from lab_tests.followup_weeks (via the API order)
+  const weeksById = Object.fromEntries(
+    (apiOrder?.tests || []).map((t) => [t.id, t.followUpWeeks])
+  );
+  const testsWithResults = resultTests.map((t) => ({
+    ...t,
+    result: results[t.id],
+    followUpWeeks: t.followUpWeeks ?? weeksById[t.id] ?? null,
+  }));
   const billTestsWithResults = billTests.map((t) => ({ ...t, result: results[t.id] }));
   const abnormalCount = testsWithResults.filter((t) =>
     ["low", "high", "abnormal"].includes(flags[t.id])
@@ -377,8 +418,60 @@ const order = existingOrder || (hasOrderState ? { orderId, ...state } : apiOrder
     url: `${window.location.origin}/scan/${encodeURIComponent(orderId)}`,
   });
 
-  function handleScheduleReminder(test) {
-    console.log("Schedule reminder for", test.name);
+  // CHANGED (follow-up): was a console.log stub.
+  // On click: ask the server if the reminder already exists.
+  //  - exists  -> do NOT add, show "already set"
+  //  - missing -> add it, show "set"
+  // Either way the popup has a "View Follow-ups" button.
+  async function handleScheduleReminder(test) {
+    const alreadyMsg = `The follow-up reminder for ${test.name} is already set.`;
+    const successMsg = `Follow-up reminder set for ${test.name}.`;
+
+    setBusyId(test.id);
+    try {
+      // 1) Ask the server: is it already added?
+      const listRes = await getFollowUpsForOrderApi(orderId);
+      const rows = listRes?.data ?? listRes ?? [];
+      const ids = rows.map((r) => r.result_id);
+      setScheduledIds(ids);
+
+      if (ids.includes(test.id)) {
+        setFollowUpPopup({ type: "exists", text: alreadyMsg });
+        return;
+      }
+
+      // 2) Not added: add it now
+      const weeks = test.followUpWeeks ?? getFollowUpWeeks(test.id); // CHANGED: lab_tests.followup_weeks first
+      const base = toDate(rawCompletedAt ?? orderDates.reported) || new Date();
+      const due = new Date(base.getTime() + weeks * 7 * 24 * 60 * 60 * 1000);
+      const dueDate = due.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+
+      const flag = String(flags[test.id] ?? "").toUpperCase();
+      const abnormalType = flag === "HIGH" || flag === "LOW" ? flag : null;
+
+      const res = await createFollowUpApi({
+        order_no: orderId,
+        order_item_id: test.id,
+        due_date: dueDate,
+        abnormal_type: abnormalType,
+      });
+
+      setScheduledIds((prev) => [...prev, test.id]);
+      setFollowUpPopup(
+        res?.alreadyExists
+          ? { type: "exists", text: alreadyMsg }
+          : { type: "success", text: successMsg }
+      );
+    } catch (err) {
+      if (err?.status === 409 || err?.response?.status === 409) {
+        setScheduledIds((prev) => [...prev, test.id]);
+        setFollowUpPopup({ type: "exists", text: alreadyMsg });
+      } else {
+        setFollowUpPopup({ type: "error", text: err.message || "Couldn't set the follow-up reminder." });
+      }
+    } finally {
+      setBusyId(null);
+    }
   }
 
 async function handleDownloadPdf() {
@@ -693,7 +786,13 @@ async function handleDownloadPdf() {
                 }))
               : undefined
           }
-          backLabel={showAll ? (location.state?.fromLabel || "Back to lab orders") : undefined}
+          backLabel={
+              fromDashboard
+                ? "Back to dashboard"
+                : showAll
+                  ? (location.state?.fromLabel || "Back to lab orders")
+                  : undefined
+            }
           flags={flags}
           ageText={ageText}
           registered={registered}
@@ -704,9 +803,11 @@ async function handleDownloadPdf() {
           letterheadOn={letterheadOn}
           onLetterheadChange={setLetterheadOn}
           onBack={
-            showAll
-              ? () => navigate(location.state?.from || "/lab-orders", { state: location.state?.fromState })
-              : closeTest
+            fromDashboard
+              ? () => navigate("/")
+              : showAll
+                ? () => navigate(location.state?.from || "/lab-orders", { state: location.state?.fromState })
+                : closeTest
           }
           onBill={() => setBillOpen(true)}
           onEditBill={() => setEditBillOpen(true)}
@@ -883,11 +984,14 @@ className="text-sm font-medium text-teal-600 hover:underline cursor-pointer"
             </div>
           </div>
 
+          {/* CHANGED (follow-up): passes scheduledIds + busyId */}
           <FollowUpSuggestions
             tests={testsWithResults}
             flags={flags}
             reportDate={reportDate}
             onSchedule={handleScheduleReminder}
+            scheduledIds={scheduledIds}
+            busyId={busyId}
           />
         </>
       )}
@@ -1261,6 +1365,41 @@ className="text-sm font-medium text-teal-600 hover:underline cursor-pointer"
             >
               {savingPayment ? "Saving…" : "Yes, mark as paid"}
             </button>
+          </div>
+        </ModalShell>
+      )}
+
+      {/* ADDED (follow-up): set / already set / error popup */}
+      {followUpPopup && (
+        <ModalShell
+          title={
+            followUpPopup.type === "success" ? "Follow-up set" :
+            followUpPopup.type === "exists" ? "Already set" :
+            "Something went wrong"
+          }
+          onClose={() => setFollowUpPopup(null)}
+          maxWidth="max-w-md"
+        >
+          <div className="px-6 py-5">
+            <p className="text-sm text-gray-600">{followUpPopup.text}</p>
+          </div>
+          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => setFollowUpPopup(null)}
+              className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+            >
+              Close
+            </button>
+            {followUpPopup.type !== "error" && (
+              <button
+                type="button"
+                onClick={() => navigate("/follow-ups")}
+                className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer"
+              >
+                View Follow-ups
+              </button>
+            )}
           </div>
         </ModalShell>
       )}

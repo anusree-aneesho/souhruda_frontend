@@ -66,6 +66,23 @@ function mapOrder(o, gstRate = 0) {
   };
 }
 
+// Daily Brief links -> which brief list to show (same conditions as the brief's counts).
+//   /lab-orders?status=pending            orders awaiting results today (pending + sample collected)
+//   /lab-orders?date=today                orders today (not cancelled)
+//   /lab-orders?flag=abnormal&date=today  orders with abnormal results entered today
+const BRIEF_LABELS = {
+  awaiting_results: "Orders awaiting results today",
+  orders_today: "Orders today",
+  abnormal_today: "Orders with abnormal results today",
+};
+
+function briefFromParams(sp) {
+  if (sp.get("flag") === "abnormal") return "abnormal_today";
+  if (sp.get("status") === "pending") return "awaiting_results";
+  if (sp.get("date") === "today") return "orders_today";
+  return null;
+}
+
 export default function LabOrders() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -80,12 +97,8 @@ export default function LabOrders() {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isTodayFilter, setIsTodayFilter] = useState(initialToday);
-  // Daily Brief link: /lab-orders?flag=abnormal&date=today
-  const [abnormalFilter, setAbnormalFilter] = useState(
-    searchParams.get("flag") === "abnormal"
-      ? { today: searchParams.get("date") === "today" }
-      : null
-  );
+  // Daily Brief link filter (null when the page was opened normally)
+  const [briefFilter, setBriefFilter] = useState(() => briefFromParams(searchParams));
   const [rawOrders, setRawOrders] = useState([]);
   const [gstInfo, setGstInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -136,8 +149,7 @@ export default function LabOrders() {
 
     getOrdersApi({
       today: isTodayFilter ? 1 : undefined,
-      flag: abnormalFilter ? "abnormal" : undefined,
-      entered: abnormalFilter?.today ? "today" : undefined,
+      brief: briefFilter || undefined,
       status: tabToStatus(activeTab),
       q: search,
       date_from: dates?.date_from,
@@ -162,7 +174,7 @@ export default function LabOrders() {
     return () => {
       cancelled = true;
     };
- }, [activeTab, isTodayFilter, abnormalFilter, search, dates?.date_from, dates?.date_to, page, refreshKey, branchId]);
+ }, [activeTab, isTodayFilter, briefFilter, search, dates?.date_from, dates?.date_to, page, refreshKey, branchId]);
 
 
   // Map after both the orders and the GST rate are known, so the bill
@@ -175,7 +187,7 @@ export default function LabOrders() {
   // Reset to page 1 whenever the filter or search changes.
   useEffect(() => {
   setPage(1);
-}, [activeTab, isTodayFilter, abnormalFilter, search, dates?.date_from, dates?.date_to, branchId]);
+}, [activeTab, isTodayFilter, briefFilter, search, dates?.date_from, dates?.date_to, branchId]);
 
   function handleDateChange(v) {
   setDates(v);
@@ -185,6 +197,7 @@ export default function LabOrders() {
   // returns to normal tab-driven browsing.
   function handleTabChange(tab) {
     setActiveTab(tab);
+    if (briefFilter) clearBriefFilter();
     if (isTodayFilter) {
       setIsTodayFilter(false);
       if (searchParams.get("today")) {
@@ -195,11 +208,12 @@ export default function LabOrders() {
     }
   }
 
-  function clearAbnormalFilter() {
-    setAbnormalFilter(null);
+  function clearBriefFilter() {
+    setBriefFilter(null);
     const next = new URLSearchParams(searchParams);
     next.delete("flag");
     next.delete("date");
+    next.delete("status");
     setSearchParams(next, { replace: true });
   }
 
@@ -242,20 +256,24 @@ export default function LabOrders() {
         <LabOrdersFilters
           search={search}
           onSearchChange={setSearch}
-          activeTab={isTodayFilter ? null : activeTab}
+          activeTab={isTodayFilter || briefFilter ? null : activeTab}
           onTabChange={handleTabChange}
           dateFilter={<SlotDateFilter onChange={handleDateChange} />}
         />
 
-        {abnormalFilter && (
+        {briefFilter && (
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full bg-red-50 text-red-700 text-xs font-medium px-3 py-1">
-              Orders with abnormal results{abnormalFilter.today ? " today" : ""}
+            <span
+              className={`inline-flex items-center gap-2 rounded-full text-xs font-medium px-3 py-1 ${
+                briefFilter === "abnormal_today" ? "bg-red-50 text-red-700" : "bg-teal-50 text-teal-700"
+              }`}
+            >
+              {BRIEF_LABELS[briefFilter]}
               <button
                 type="button"
-                aria-label="Clear abnormal filter"
-                onClick={clearAbnormalFilter}
-                className="hover:text-red-900"
+                aria-label="Clear filter"
+                onClick={clearBriefFilter}
+                className="hover:opacity-70"
               >
                 ✕
               </button>
@@ -282,7 +300,7 @@ export default function LabOrders() {
 
             {filteredOrders.length === 0 && (
               <p className="text-sm text-gray-400 text-center py-6">
-                {abnormalFilter ? "No orders with abnormal results." : isTodayFilter ? "No orders today." : dates ? `No orders for ${dates.label}.` : "No orders found."}
+                {briefFilter ? `No matching orders (${BRIEF_LABELS[briefFilter].toLowerCase()}).` : isTodayFilter ? "No orders today." : dates ? `No orders for ${dates.label}.` : "No orders found."}
               </p>
             )}
 

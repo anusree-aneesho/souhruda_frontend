@@ -73,6 +73,21 @@ function mapRequest(r) {
   };
 }
 
+// Daily Brief links -> which brief list to show (same conditions as the brief's counts).
+//   /home-collection?status=in_progress  -> requests in progress today
+//   /home-collection?status=requested    -> requests awaiting assignment today
+const BRIEF_LABELS = {
+  in_progress: "In progress today",
+  awaiting_assignment: "Awaiting assignment today",
+};
+
+function briefFromParams(sp) {
+  const s = sp.get("status");
+  if (s === "in_progress") return "in_progress";
+  if (s === "requested") return "awaiting_assignment";
+  return null;
+}
+
 // Same 4 buckets as the stat cards, for the "Showing: X" chip's label.
 const FILTER_LABELS = {
   requested: "Requested",
@@ -134,6 +149,8 @@ export default function HomeCollection() {
   const [dateFilter, setDateFilter] = useState(
     searchParams.get("filter") === "today" ? "today" : null
   );
+  // Daily Brief link filter (null when the page was opened normally)
+  const [briefFilter, setBriefFilter] = useState(() => briefFromParams(searchParams));
   const { activeId } = useHomeCollectionModal();
   const prevActiveIdRef = useRef(null);
   const branchId = useSelectedBranch()?.id ?? null; // refetch when branch changes
@@ -160,7 +177,7 @@ export default function HomeCollection() {
   // an active filter is re-run after a reload (e.g. when the branch changes).
   useEffect(() => {
     const q = search.trim();
-    if (!q && !dates) {
+    if (!q && !dates && !briefFilter) {
       setSearchResults(null);
       return;
     }
@@ -169,6 +186,7 @@ export default function HomeCollection() {
     const timer = setTimeout(async () => {
       try {
         const params = {};
+        if (briefFilter) params.brief = briefFilter;
         if (q) params.q = q;
         if (dates) {
           params.date_from = dates.date_from;
@@ -185,7 +203,7 @@ export default function HomeCollection() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [search, dates, rawRequests]);
+  }, [search, dates, rawRequests, briefFilter]);
 
   // NewOrderModal navigates back here with { justBooked: created } right
   // after a successful booking (same route, so React Router won't remount
@@ -235,6 +253,14 @@ export default function HomeCollection() {
     setPage(1);
   }
 
+  function clearBriefFilter() {
+    setBriefFilter(null);
+    setPage(1);
+    const next = new URLSearchParams(searchParams);
+    next.delete("status");
+    setSearchParams(next, { replace: true });
+  }
+
   function clearDateFilter() {
     setDateFilter(null);
     setPage(1);
@@ -268,7 +294,7 @@ export default function HomeCollection() {
   // stranded on a now-empty page.
   useEffect(() => {
     setPage(1);
-  }, [search, dateFilter, dates, branchId]);
+  }, [search, dateFilter, dates, branchId, briefFilter]);
 
   return (
     <div className="space-y-6">
@@ -299,6 +325,16 @@ export default function HomeCollection() {
           </button>
         )}
 
+        {briefFilter && (
+          <button
+            onClick={clearBriefFilter}
+            className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-700 text-xs font-medium pl-3 pr-2 py-1.5 hover:bg-teal-100"
+          >
+            Showing: {BRIEF_LABELS[briefFilter]}
+            <X size={14} />
+          </button>
+        )}
+
         {dateFilter && (
           <button
             onClick={clearDateFilter}
@@ -318,7 +354,9 @@ export default function HomeCollection() {
         )}
         {!isLoading && !error && rawRequests.length > 0 && filteredRequests.length === 0 && (
           <p className="text-sm text-gray-400">
-            {term && (statusFilter || dateFilter || dates)
+            {briefFilter && !term
+              ? `No requests ${BRIEF_LABELS[briefFilter].toLowerCase()}.`
+              : term && (statusFilter || dateFilter || dates || briefFilter)
               ? `No requests match "${search}" in this category.`
               : term
               ? `No requests match "${search}".`

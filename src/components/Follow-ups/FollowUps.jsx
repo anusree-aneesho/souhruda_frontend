@@ -1,7 +1,7 @@
 // src/components/FollowUps/FollowUps.jsx
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Search } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Search, X } from "lucide-react";
 import SlotDateFilter from "../common/SlotDateFilter";
 import FollowUpsHeader from "./FollowUpsHeader";
 import { useSelectedBranch } from "../../utils/selectedBranch";
@@ -41,6 +41,9 @@ export default function FollowUps() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeTab, setActiveTab] = useState("Pending");
+  // Daily Brief link: /follow-ups?status=due -> pending follow-ups due today or earlier
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [dueBrief, setDueBrief] = useState(searchParams.get("status") === "due");
   // Calendar range from SlotDateFilter: { date_from, date_to, label } or null
   const [dates, setDates] = useState(null);
   const dateFrom = dates?.date_from ?? "";
@@ -65,7 +68,7 @@ export default function FollowUps() {
   // Back to page 1 whenever the filter or search changes.
   useEffect(() => {
     setPage(1);
-  }, [activeTab, debouncedSearch, dateFrom, dateTo, branchId]);
+  }, [activeTab, debouncedSearch, dateFrom, dateTo, branchId, dueBrief]);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +77,7 @@ export default function FollowUps() {
 
     getFollowUpRemindersApi({
       status: activeTab,
+      brief: dueBrief ? "due" : undefined,
       q: debouncedSearch,
       date_from: dateFrom,
       date_to: dateTo,
@@ -104,7 +108,14 @@ export default function FollowUps() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, debouncedSearch, dateFrom, dateTo, page, refreshKey, branchId]);
+  }, [activeTab, debouncedSearch, dateFrom, dateTo, page, refreshKey, branchId, dueBrief]);
+
+  function clearDueBrief() {
+    setDueBrief(false);
+    const next = new URLSearchParams(searchParams);
+    next.delete("status");
+    setSearchParams(next, { replace: true });
+  }
 
   return (
     <div className="space-y-6">
@@ -132,7 +143,10 @@ export default function FollowUps() {
             {TABS.map((tab) => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => {
+                  setActiveTab(tab);
+                  if (dueBrief) clearDueBrief();
+                }}
                 className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors cursor-pointer ${
                   activeTab === tab
                     ? "bg-teal-600 text-white"
@@ -144,6 +158,19 @@ export default function FollowUps() {
             ))}
           </div>
         </div>
+
+        {dueBrief && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={clearDueBrief}
+              className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-700 text-xs font-medium pl-3 pr-2 py-1.5 hover:bg-teal-100"
+            >
+              Showing: Follow-ups due
+              <X size={14} />
+            </button>
+          </div>
+        )}
 
         {loadError && (
           <p className="text-sm text-red-500 text-center py-2">{loadError}</p>

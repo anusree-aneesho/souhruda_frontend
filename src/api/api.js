@@ -106,9 +106,10 @@ export async function deleteTechnicianApi(id) {
 
 // ── Patients ───────────────────────────────────────────────
 
-export async function getPatientsApi(query = "", page = 1) {
+export async function getPatientsApi(query = "", page = 1, brief = "") {
   const params = new URLSearchParams();
   if (query) params.append("q", query);
+  if (brief) params.append("brief", brief); // Daily Brief filter, e.g. "new_today"
   params.append("page", page);
   return request(`/patients?${params.toString()}`);
 }
@@ -268,8 +269,9 @@ export function deleteTestCategory(id) {
 
 // ── Home Collection ──────────────────────────────
 
-export async function getHomeCollectionRequestsApi({ q, status, slotDate, date_from, date_to } = {}) {
+export async function getHomeCollectionRequestsApi({ q, status, slotDate, date_from, date_to, brief } = {}) {
   const params = new URLSearchParams();
+  if (brief) params.append("brief", brief); // Daily Brief filter: in_progress | awaiting_assignment
   if (q) params.append("q", q);
   if (status) params.append("status", status);
   if (slotDate) params.append("slot_date", slotDate);
@@ -485,7 +487,8 @@ export async function createOrderApi(payload) {
 export async function getOrdersApi(params = {}) {
   const query = new URLSearchParams();
   if (params.today) query.set("today", "1");
-  if (!params.today && params.status && params.status !== "All") query.set("status", params.status);
+  if (!params.brief && !params.today && params.status && params.status !== "All") query.set("status", params.status);
+  if (params.brief) query.set("brief", params.brief); // Daily Brief filter (see OrderController)
   if (params.q) query.set("q", params.q);
   if (params.flag) query.set("flag", params.flag);
   if (params.entered) query.set("entered", params.entered);
@@ -562,6 +565,9 @@ export async function getFollowUpRemindersApi(params = 1) {
   if (opts.page) query.set("page", opts.page);
   if (opts.status && opts.status !== "All") query.set("status", opts.status);
   if (opts.q) query.set("q", opts.q);
+  if (opts.brief) query.set("brief", opts.brief); // Daily Brief filter: "due"
+  if (opts.date_from) query.set("date_from", opts.date_from); // calendar range (YYYY-MM-DD)
+  if (opts.date_to) query.set("date_to", opts.date_to);
   if (opts.per_page) query.set("per_page", opts.per_page);
 
   const qs = query.toString();

@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
+import { X } from "lucide-react";
 import PatientsHeader from "./PatientsHeader";
 import { useSelectedBranch } from "../../utils/selectedBranch";
 import PatientsSearch from "./PatientsSearch";
@@ -41,6 +43,9 @@ function mapPatient(p) {
 export default function Patients() {
   const [patients, setPatients] = useState([]);
   const [search, setSearch] = useState("");
+  // Daily Brief link: /patients?registered=today -> only patients registered today
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [newToday, setNewToday] = useState(searchParams.get("registered") === "today");
   const [isModalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [viewingPatient, setViewingPatient] = useState(null);
@@ -58,7 +63,7 @@ export default function Patients() {
   const loadPatients = useCallback(async (query = "") => {
     setLoading(true);
     try {
-      const res = await getPatientsApi(query);
+      const res = await getPatientsApi(query, 1, newToday ? "new_today" : "");
       setPatients(res.data.map(mapPatient));
       setPage(1);
     } catch (err) {
@@ -66,7 +71,14 @@ export default function Patients() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [newToday]);
+
+  function clearNewToday() {
+    setNewToday(false);
+    const next = new URLSearchParams(searchParams);
+    next.delete("registered");
+    setSearchParams(next, { replace: true });
+  }
 
   // Refetch when a super admin switches branch (see common/BranchFilter).
   const branchId = useSelectedBranch()?.id ?? null;
@@ -186,6 +198,19 @@ export default function Patients() {
         <div className="space-y-5">
           <PatientsSearch value={search} onChange={setSearch} />
 
+          {newToday && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={clearNewToday}
+                className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-700 text-xs font-medium pl-3 pr-2 py-1.5 hover:bg-teal-100"
+              >
+                Showing: New patients today
+                <X size={14} />
+              </button>
+            </div>
+          )}
+
           {loading ? (
             <p className="text-sm text-gray-400 text-center py-6">Loading...</p>
           ) : (
@@ -210,7 +235,9 @@ export default function Patients() {
                 ))}
               </div>
               {patients.length === 0 && (
-                <p className="text-sm text-gray-400 text-center py-6">No patients found.</p>
+                <p className="text-sm text-gray-400 text-center py-6">
+                  {newToday && !search ? "No new patients today." : "No patients found."}
+                </p>
               )}
             </>
           )}

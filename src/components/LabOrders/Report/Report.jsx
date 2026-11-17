@@ -288,13 +288,8 @@ const order = existingOrder || (hasOrderState ? { orderId, ...state } : apiOrder
   // ADDED (refresh fix): the opened test lives in the URL (?test=620), so a refresh keeps it
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedTestId = searchParams.get("test");
-  const viewTest = selectedTestId
-  ? billTests.find(
-      (t) =>
-        String(t.id) === selectedTestId ||
-        (t.name || "").trim().toLowerCase() === selectedTestId.trim().toLowerCase()
-    ) || null
-  : null;
+  // CHANGED: viewTest is now built below, after billTestsWithResults, so the result
+  // typed in Order Detail shows straight away (billTests alone has the old empty result).
 
   // ADDED: ?test=all shows every test of the order together on one page
   // (used by "View Details" on the follow-up patient page).
@@ -400,6 +395,17 @@ const order = existingOrder || (hasOrderState ? { orderId, ...state } : apiOrder
     followUpWeeks: t.followUpWeeks ?? weeksById[t.id] ?? null,
   }));
   const billTestsWithResults = billTests.map((t) => ({ ...t, result: results[t.id] }));
+
+  // CHANGED: viewTest is built from billTestsWithResults so the result typed in Order Detail
+  // shows straight away. billTests alone still has the old empty result from before saving.
+  const viewTest = selectedTestId
+    ? billTestsWithResults.find(
+        (t) =>
+          String(t.id) === selectedTestId ||
+          (t.name || "").trim().toLowerCase() === selectedTestId.trim().toLowerCase()
+      ) || null
+    : null;
+
   const abnormalCount = testsWithResults.filter((t) =>
     ["low", "high", "abnormal"].includes(flags[t.id])
   ).length;

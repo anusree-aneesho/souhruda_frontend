@@ -1,6 +1,6 @@
 // src/components/Dashboard/ActivityItem.jsx
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { usePatientModal } from "../../Context/PatientModalContext";
 import {
   Activity,
@@ -40,8 +40,21 @@ function getIconMeta(text = "") {
   return { Icon: Activity, bg: "bg-gray-100", color: "text-gray-500" };
 }
 
-export default function ActivityItem({ date, text, type, targetId, isLatest, hideDate = false }) {
+// ADDED: patientNumber is used by type "followUpReminder" to open Follow-ups for that patient
+export default function ActivityItem({ date, text, type, targetId, patientNumber, fromDashboard = false, isLatest, hideDate = false }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  // ADDED: tells the next page where we came from, so it can show a "Back" button
+  // that returns here (the dashboard, or the Activity Log page).
+  const backState = {
+    from: location.pathname,
+    fromLabel:
+      location.pathname === "/"
+        ? "Back to dashboard"
+        : location.pathname.startsWith("/activity-logs")
+          ? "Back to activity log"
+          : "Back",
+  };
   const { open } = useHomeCollectionModal();
   const { open: openPatient } = usePatientModal();
   const [modalOrder, setModalOrder] = useState(null);
@@ -74,13 +87,16 @@ export default function ActivityItem({ date, text, type, targetId, isLatest, hid
             tests: o.items?.length || 0,
             testNames: (o.items || []).map((item) => item.lab_test?.name).filter(Boolean),
           });
+        } else if (o.status === "completed") {
+          // ADDED: completed orders ("Report ready") open the report page directly
+          navigate(`/lab-orders/${targetId}/report`, { state: backState });
         } else {
-          navigate(`/lab-orders/${targetId}`);
+          navigate(`/lab-orders/${targetId}`, { state: backState });
         }
       } catch (err) {
         // If the status check fails for any reason, fall back to
         // navigating straight through rather than blocking the click.
-        navigate(`/lab-orders/${targetId}`);
+        navigate(`/lab-orders/${targetId}`, { state: backState });
       } finally {
         setCheckingOrder(false);
       }
@@ -89,13 +105,23 @@ export default function ActivityItem({ date, text, type, targetId, isLatest, hid
       } else if (type === "patient") {
   openPatient(targetId);
 
+    } else if (type === "followUpReminder") {
+      // ADDED: open the Follow-ups page filtered to this patient,
+      // with this exact reminder highlighted (targetId = reminder id).
+      const params = new URLSearchParams();
+      if (patientNumber) params.set("q", patientNumber);
+      if (targetId) params.set("highlight", String(targetId));
+      if (fromDashboard) params.set("from", "dashboard"); // ADDED: Follow-ups page shows "Back to dashboard"
+      const qs = params.toString();
+      navigate(qs ? `/follow-ups?${qs}` : "/follow-ups", { state: backState });
+
     } else if (type === "followUp") {
       // New entries carry the order number -> open that order's report.
       // Old entries have no order number -> open the Follow-ups page.
       if (targetId) {
-        navigate(`/lab-orders/${targetId}/report`);
+        navigate(`/lab-orders/${targetId}/report`, { state: backState });
       } else {
-        navigate(`/follow-ups`);
+        navigate(`/follow-ups`, { state: backState });
       }
     }
   }
@@ -103,7 +129,7 @@ export default function ActivityItem({ date, text, type, targetId, isLatest, hid
   function handleSampleCollected(orderId) {
     setModalOrder(null);
     navigate(`/lab-orders/${orderId}`, {
-      state: { justCollected: { orderId, patientName: modalOrder?.patient } },
+      state: { justCollected: { orderId, patientName: modalOrder?.patient }, ...backState },
     });
   }
 
@@ -115,7 +141,8 @@ export default function ActivityItem({ date, text, type, targetId, isLatest, hid
     type === "order" ||
     type === "homeCollection" ||
     type === "patient" ||
-    type === "followUp";
+    type === "followUp" ||
+    type === "followUpReminder"; // ADDED
   const { Icon, bg, color } = getIconMeta(text);
 
   return (

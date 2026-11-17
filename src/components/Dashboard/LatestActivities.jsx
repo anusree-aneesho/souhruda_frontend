@@ -72,6 +72,10 @@ export default function LatestActivities() {
             /follow-up reminder/i.test(log.description || "") ||
             log.subject_type === "follow_up_reminder";
 
+          // ADDED: new follow-up logs point at the reminder itself
+          const isFollowUpReminderLog =
+            log.subject_type === "follow_up_reminder" && log.subject_exists !== false;
+
           // New entries get the order number from the backend (subject_reference);
           // old ones borrow it from a nearby log.
           const followUpOrderNo = isFollowUpEntry
@@ -88,12 +92,15 @@ export default function LatestActivities() {
 
           let type = null;
           if (isOrderDeletedEntry) type = "order";
-          // With an order number, behave exactly like "Report ready" (order flow).
+          // ADDED: open Follow-ups filtered to the patient, with this reminder highlighted
+          else if (isFollowUpReminderLog) type = "followUpReminder";
+          // Old entries with an order number behave like "Report ready" (order flow).
           else if (isFollowUpEntry) type = followUpOrderNo ? "order" : "followUp";
           else if (clickable) type = mapSubjectType(log.subject_type);
 
           let targetId;
           if (isOrderDeletedEntry) targetId = orderNoFromText;
+          else if (isFollowUpReminderLog) targetId = log.subject_id; // ADDED: the reminder id
           else if (isFollowUpEntry) targetId = followUpOrderNo;
           else targetId = log.subject_reference ?? log.subject_id;
 
@@ -102,6 +109,7 @@ export default function LatestActivities() {
             text: log.description,
             type,
             targetId,
+            patientNumber: log.follow_up_patient_number ?? null, // ADDED
           };
         });
 

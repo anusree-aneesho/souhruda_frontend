@@ -86,6 +86,10 @@ export default function ActivityLogPage() {
             /follow-up reminder/i.test(log.description || "") ||
             log.subject_type === "follow_up_reminder";
 
+          // ADDED: new follow-up logs point at the reminder itself
+          const isFollowUpReminderLog =
+            log.subject_type === "follow_up_reminder" && log.subject_exists !== false;
+
           const followUpOrderNo = isFollowUpEntry
             ? (log.subject_type === "follow_up_reminder"
                 ? (log.subject_reference ?? findNearbyOrderNo(rawLogs, index))
@@ -100,11 +104,13 @@ export default function ActivityLogPage() {
 
           let type = null;
           if (isOrderDeletedEntry) type = "order";
+          else if (isFollowUpReminderLog) type = "followUpReminder"; // ADDED: open Follow-ups + highlight
           else if (isFollowUpEntry) type = followUpOrderNo ? "order" : "followUp";
           else if (clickable) type = mapSubjectType(log.subject_type);
 
           let targetId;
           if (isOrderDeletedEntry) targetId = orderNoFromText;
+          else if (isFollowUpReminderLog) targetId = log.subject_id; // ADDED: the reminder id
           else if (isFollowUpEntry) targetId = followUpOrderNo;
           else targetId = log.subject_reference ?? log.subject_id;
 
@@ -115,6 +121,7 @@ export default function ActivityLogPage() {
             userName: log.user_name,
             type,
             targetId,
+            patientNumber: log.follow_up_patient_number ?? null, // ADDED
           };
         });
 
@@ -181,6 +188,7 @@ export default function ActivityLogPage() {
                       text={log.text}
                       type={log.type}
                       targetId={log.targetId}
+                      patientNumber={log.patientNumber} // ADDED
                       isLatest={false}
                       hideDate
                     />

@@ -4,6 +4,8 @@ import Barcode from "../../common/Barcode";
 import { orderBarcodeValue } from "../../../utils/sampleBarcode";
 
 export default function OrderDetailHeader({
+  backPath = "/lab-orders",          // ADDED
+  backLabel = "Back to orders",      // ADDED
   patientName,
   orderId,
   regNo,
@@ -18,8 +20,9 @@ export default function OrderDetailHeader({
 }) {
   return (
     <div>
-      <Link to="/lab-orders" className="text-sm text-teal-600 font-medium hover:underline cursor-pointer">
-        ← Back to orders
+      {/* CHANGED: goes back to where the user came from (dashboard, activity log...) */}
+      <Link to={backPath} className="text-sm text-teal-600 font-medium hover:underline cursor-pointer">
+        ← {backLabel}
       </Link>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-2">
         <div className="min-w-0">

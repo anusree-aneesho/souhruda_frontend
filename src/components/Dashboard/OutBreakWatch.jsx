@@ -49,10 +49,10 @@ export default function OutbreakWatch() {
                 // patient search if the AI service didn't return an order number.
                 to={
                   p.order_no
-                    ? `/lab-orders/${p.order_no}`
+                    ? `/lab-orders/${p.order_no}/report?test=${encodeURIComponent(c.test_name)}&from=dashboard`
                     : `/patients?search=${encodeURIComponent(p.display_name)}`
                 }
-                title={p.order_no ? `Open order ${p.order_no}` : "Find patient"}
+                title={p.order_no ? `Open ${c.test_name} result` : "Find patient"}
                 className="text-teal-600 font-medium hover:underline"
               >
                 {p.display_name}

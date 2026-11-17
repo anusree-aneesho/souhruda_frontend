@@ -182,7 +182,7 @@ export default function FollowUps() {
             <button
               type="button"
               onClick={clearDueBrief}
-              className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-700 text-xs font-medium pl-3 pr-2 py-1.5 hover:bg-teal-100"
+              className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-700 text-xs font-medium pl-3 pr-2 py-1.5 hover:bg-teal-100 cursor-pointer"
             >
               Showing: Follow-ups due
               <X size={14} />

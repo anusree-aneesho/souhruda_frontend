@@ -273,7 +273,7 @@ export default function LabOrders() {
                 type="button"
                 aria-label="Clear filter"
                 onClick={clearBriefFilter}
-                className="hover:opacity-70"
+                className="cursor-pointer hover:opacity-70"
               >
                 ✕
               </button>

@@ -1,10 +1,20 @@
 // src/components/FollowUps/FollowUpsTable/FollowUpsTable.jsx
+import { useEffect } from "react"; // ADDED
 import FollowUpRow from "./FollowUpRow";
 import FollowUpCard from "./FollowUpCard";
 import EmptyState from "./EmptyState";
 
-export default function FollowUpsTable({ followUps, isFiltered, showCompleted = false, onView, onViewPatient }) {
+export default function FollowUpsTable({ followUps, isFiltered, showCompleted = false, highlightId = null, onView, onViewPatient }) {
   const dateHeader = showCompleted ? "COMPLETED" : "DUE";
+
+  // ADDED: scroll the highlighted reminder into view once the rows are shown
+  useEffect(() => {
+    if (!highlightId) return;
+    document
+      .getElementById(`reminder-${highlightId}`)
+      ?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [highlightId, followUps]);
+
   if (followUps.length === 0) {
     return (
       <div>
@@ -36,7 +46,14 @@ export default function FollowUpsTable({ followUps, isFiltered, showCompleted = 
           </thead>
           <tbody>
             {followUps.map((f) => (
-              <FollowUpRow key={f.id} {...f} showCompleted={showCompleted} onView={() => onView(f.id)} onViewPatient={() => onViewPatient(f.patientNumber)} />
+              <FollowUpRow
+                key={f.id}
+                {...f}
+                showCompleted={showCompleted}
+                highlight={highlightId != null && String(f.id) === String(highlightId)} // ADDED
+                onView={() => onView(f.id)}
+                onViewPatient={() => onViewPatient(f.patientNumber)}
+              />
             ))}
           </tbody>
         </table>

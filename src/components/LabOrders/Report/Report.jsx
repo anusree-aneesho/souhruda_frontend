@@ -436,7 +436,8 @@ const order = existingOrder || (hasOrderState ? { orderId, ...state } : apiOrder
       setScheduledIds(ids);
 
       if (ids.includes(test.id)) {
-        setFollowUpPopup({ type: "exists", text: alreadyMsg });
+        const hit = rows.find((r) => r.result_id === test.id);
+        setFollowUpPopup({ type: "exists", text: alreadyMsg, reminderId: hit?.id });
         return;
       }
 
@@ -457,11 +458,11 @@ const order = existingOrder || (hasOrderState ? { orderId, ...state } : apiOrder
       });
 
       setScheduledIds((prev) => [...prev, test.id]);
-      setFollowUpPopup(
-        res?.alreadyExists
-          ? { type: "exists", text: alreadyMsg }
-          : { type: "success", text: successMsg }
-      );
+        setFollowUpPopup(
+          res?.alreadyExists
+            ? { type: "exists", text: alreadyMsg, reminderId: res?.data?.id }
+            : { type: "success", text: successMsg, reminderId: res?.data?.id }
+        );
     } catch (err) {
       if (err?.status === 409 || err?.response?.status === 409) {
         setScheduledIds((prev) => [...prev, test.id]);
@@ -1394,7 +1395,11 @@ className="text-sm font-medium text-teal-600 hover:underline cursor-pointer"
             {followUpPopup.type !== "error" && (
               <button
                 type="button"
-                onClick={() => navigate("/follow-ups")}
+                onClick={() =>
+                          navigate(
+                            `/follow-ups?q=${encodeURIComponent(patient.regNo)}&highlight=${followUpPopup.reminderId ?? ""}`
+                          )
+                        }
                 className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer"
               >
                 View Follow-ups

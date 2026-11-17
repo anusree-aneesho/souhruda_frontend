@@ -38,11 +38,15 @@ function mapReminder(r) {
 }
 
 export default function FollowUps() {
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  // CHANGED: moved up so the search box can start from ?q= in the address
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialQ = searchParams.get("q") ?? ""; // ADDED: patient reg no sent from the report page
+  const highlightId = searchParams.get("highlight") || null; // ADDED: reminder to highlight
+
+  const [search, setSearch] = useState(initialQ); // CHANGED: starts from ?q=
+  const [debouncedSearch, setDebouncedSearch] = useState(initialQ.trim()); // CHANGED: first load is already filtered
   const [activeTab, setActiveTab] = useState("Pending");
   // Daily Brief link: /follow-ups?status=due -> pending follow-ups due today or earlier
-  const [searchParams, setSearchParams] = useSearchParams();
   const [dueBrief, setDueBrief] = useState(searchParams.get("status") === "due");
   // Calendar range from SlotDateFilter: { date_from, date_to, label } or null
   const [dates, setDates] = useState(null);
@@ -55,6 +59,7 @@ export default function FollowUps() {
   const [lastPage, setLastPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [viewingId, setViewingId] = useState(null);
+  const [highlightDone, setHighlightDone] = useState(!highlightId); // ADDED: false until the highlighted row has been found
   const navigate = useNavigate();
   const [refreshKey, setRefreshKey] = useState(0);
   const branchId = useSelectedBranch()?.id ?? null; // refetch when branch changes
@@ -87,9 +92,22 @@ export default function FollowUps() {
       .then((res) => {
         if (cancelled) return;
         const last = res.last_page ?? res.meta?.last_page ?? 1;
-        setFollowUps((res.data || []).map(mapReminder));
+        const rows = (res.data || []).map(mapReminder);
+        setFollowUps(rows);
         setLastPage(last);
         setTotal(res.total ?? res.meta?.total ?? 0);
+
+        // ADDED: if we came here to show one reminder, keep paging until it is on screen
+        if (highlightId && !highlightDone) {
+          if (rows.some((r) => String(r.id) === String(highlightId))) {
+            setHighlightDone(true);
+          } else if (page < last) {
+            setPage(page + 1);
+            return;
+          } else {
+            setHighlightDone(true); // not in this list (e.g. it is under the Completed tab)
+          }
+        }
 
         // If the last item on the final page was just actioned, the page
         // no longer exists, so step back instead of showing an empty list.
@@ -184,6 +202,7 @@ export default function FollowUps() {
               followUps={followUps}
               showCompleted={activeTab === "Completed"}
               isFiltered={debouncedSearch !== "" || dateFrom !== "" || dateTo !== ""}
+              highlightId={highlightId} // ADDED: row to highlight + scroll to
               onView={setViewingId}
               onViewPatient={(patientNumber) => navigate(`/follow-ups/patient/${patientNumber}`)}
             />

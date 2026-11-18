@@ -27,6 +27,9 @@ const HC_PENDING_STATUSES = ["requested", "assigned", "en_route", "collected", "
 // Lab order statuses that count as pending (Sample Collected is still waiting for results)
 const LAB_PENDING_STATUSES = ["pending", "sample_collected"];
 
+// ADDED: tells the order page where we came from, so its Back button returns to the dashboard
+const BACK_TO_DASHBOARD = { from: "/", fromLabel: "Back to dashboard" };
+
 export default function DashboardStats() {
   const navigate = useNavigate();
   const [todaysOrders, setTodaysOrders] = useState([]);
@@ -162,7 +165,8 @@ export default function DashboardStats() {
         tests: item.testsCount,
       });
     } else {
-      navigate(`/lab-orders/${item.orderNo}`);
+      // CHANGED: the order page now shows "Back to dashboard"
+      navigate(`/lab-orders/${item.orderNo}`, { state: BACK_TO_DASHBOARD });
     }
   }
 
@@ -170,7 +174,7 @@ export default function DashboardStats() {
     const patientName = modalOrder?.patientName;
     setModalOrder(null);
     navigate(`/lab-orders/${orderId}`, {
-      state: { justCollected: { orderId, patientName } },
+      state: { justCollected: { orderId, patientName }, ...BACK_TO_DASHBOARD }, // CHANGED
     });
   }
 

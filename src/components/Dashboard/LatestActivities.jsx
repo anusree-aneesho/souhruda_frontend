@@ -110,6 +110,7 @@ export default function LatestActivities() {
             type,
             targetId,
             patientNumber: log.follow_up_patient_number ?? null, // ADDED
+            branchName: log.branch_name ?? "",
           };
         });
 

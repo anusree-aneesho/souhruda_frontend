@@ -54,6 +54,7 @@ export default function HomeCollectionSchedule() {
             slot: r.slot_label,
             person: withTitle(r.technician) || "Unassigned",
             status: formatStatus(r.status),
+            branchName: r.branch_name || "",
           }));
 
         if (!cancelled) setSchedule(todaysRows);

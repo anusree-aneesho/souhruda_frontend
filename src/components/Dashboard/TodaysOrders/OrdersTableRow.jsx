@@ -1,11 +1,13 @@
 // src/components/Dashboard/TodaysOrders/OrdersTableRow.jsx
-import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
+import StatusBadge, { BranchTag } from "../../Dashboard/TodaysOrders/StatusBadge";
 
-export default function OrdersTableRow({ order, patient, tests, status, time, rawStatus, regNo, testNames, onOpen }) {
+export default function OrdersTableRow({ order, patient, tests, status, time, rawStatus, regNo, testNames, branchName, onOpen }) {
   return (
     <tr className="border-b border-gray-100 last:border-0">
       <td className="py-3 text-sm text-gray-500">{order}</td>
-      <td className="py-3 text-sm font-medium text-gray-900">{patient}</td>
+      <td className="py-3 text-sm font-medium text-gray-900">
+        {patient} <BranchTag name={branchName} className="ml-1 align-middle" />
+      </td>
       <td className="py-3 text-sm text-gray-500">{tests} {tests === 1 ? "test" : "tests"}</td>
       <td className="py-3">
         <StatusBadge status={status} />

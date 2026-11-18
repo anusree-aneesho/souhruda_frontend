@@ -1,32 +1,76 @@
-// src/components/LabOrders/TodaysOrders.jsx
-import { useState, useEffect, useMemo } from "react";
-import LabOrdersTable from "./LabOrdersTable/LabOrdersTable";
-import LabOrderCard from "./LabOrdersTable/LabOrderCard";
-import { getTodaysOrdersApi } from "../../api/api";
-import { mapOrder } from "../../utils/orders";
+// src/components/Dashboard/TodaysOrders/TodaysOrders.jsx
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import OrdersTableRow from "./OrdersTableRow";
+import SampleCollectionModal from "../../LabOrders/SampleCollectionModal";
+import { getTodaysOrdersApi } from "../../../api/api";
+import CancelledOrderModal from "../../LabOrders/CancelledOrderModal";
 
-const PAGE_SIZE = 10;
+function capitalize(str) {
+  return str ? str.charAt(0).toUpperCase() + str.slice(1) : str;
+}
+
+function statusLabel(status) {
+  if (status === "sample_collected") return "Sample Collected";
+  return capitalize(status);
+}
+
+const ABBREVIATED_TITLES = ["mr", "mrs", "ms", "dr", "prof"];
+
+function formatTitle(title) {
+  if (!title) return "";
+  const t = title.trim();
+  if (ABBREVIATED_TITLES.includes(t.toLowerCase().replace(/\.$/, ""))) {
+    return t.replace(/\.$/, "") + ".";
+  }
+  return t;
+}
+
+function mapOrder(o) {
+  return {
+    order: o.order_no,
+    patient: [formatTitle(o.patient?.title), o.patient?.first_name, o.patient?.last_name]
+      .filter(Boolean)
+      .join(" "),
+    regNo: o.patient?.patient_number || "",
+    tests: o.items_count ?? o.items?.length ?? 0,
+    testNames: (o.items || []).map((item) => item.lab_test?.name).filter(Boolean),
+    status: statusLabel(o.status),
+    rawStatus: o.status,
+    branchName: o.branch?.name || "",
+    time: o.ordered_at
+      ? new Date(o.ordered_at).toLocaleTimeString("en-US", {
+          hour: "numeric", minute: "2-digit",
+        })
+      : "",
+  };
+}
 
 export default function TodaysOrders() {
-  const [search, setSearch] = useState("");
-  const [allTodays, setAllTodays] = useState([]);
+  const navigate = useNavigate();
+  const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState(null);
-  const [page, setPage] = useState(1);
+  const [modalOrder, setModalOrder] = useState(null);
+  const [cancelledOrder, setCancelledOrder] = useState(null);
+
+  async function loadOrders() {
+    try {
+      const res = await getTodaysOrdersApi();
+      setOrders((res.data || []).map(mapOrder));
+    } catch {
+      setOrders([]);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
-    setIsLoading(true);
-    setLoadError(null);
 
     getTodaysOrdersApi()
       .then((res) => {
-        // res.data if paginated by Laravel, else res itself if it's a plain array
-        const rows = res.data ?? res ?? [];
-        if (!cancelled) setAllTodays(rows.map(mapOrder));
+        if (!cancelled) setOrders((res.data || []).map(mapOrder));
       })
-      .catch((err) => {
-        if (!cancelled) setLoadError(err.message);
+      .catch(() => {
+        if (!cancelled) setOrders([]);
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -37,91 +81,87 @@ export default function TodaysOrders() {
     };
   }, []);
 
-  useEffect(() => {
-    setPage(1);
-  }, [search]);
+  function handleOpenOrder(order) {
+    if (order.rawStatus === "pending") {
+      setModalOrder(order);
+    } else if (order.rawStatus === "cancelled") {
+      setCancelledOrder({
+        orderId: order.order,
+        patient: order.patient,
+        regNo: order.regNo,
+        tests: order.tests,
+      });
+    } else {
+      navigate(`/lab-orders/${order.order}`);
+    }
+  }
 
-  const filteredOrders = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return allTodays;
-    return allTodays.filter(
-      (o) =>
-        o.patient.toLowerCase().includes(q) ||
-        o.regNo.toLowerCase().includes(q) ||
-        String(o.orderId).toLowerCase().includes(q)
-    );
-  }, [allTodays, search]);
+  function handleSampleCollected(orderId) {
+    setModalOrder(null);
+    navigate(`/lab-orders/${orderId}`, {
+      state: { justCollected: { orderId, patientName: modalOrder?.patient } },
+    });
+  }
 
-  const total = filteredOrders.length;
-  const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const pagedOrders = useMemo(
-    () => filteredOrders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    [filteredOrders, page]
-  );
+  // Called by the popup after the order was cancelled successfully.
+  // Close the popup and reload the list so the order's status updates.
+  function handleOrderCancelled() {
+    setModalOrder(null);
+    loadOrders();
+  }
+
+  if (isLoading || orders.length === 0) {
+    return null;
+  }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Lab Orders</h1>
-        <p className="text-sm text-gray-500 mt-1">All orders placed today.</p>
+    <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold text-sm text-gray-900">Today's Orders</h3>
+        <Link to="/lab-orders" className="text-sm text-teal-600 font-medium hover:underline">
+          View all orders →
+        </Link>
       </div>
 
-      <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] space-y-5">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search order, patient, ID..."
-          className="w-full max-w-xs rounded-lg border border-gray-200 pl-4 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+      <table className="w-full">
+        <thead>
+          <tr className="text-left border-b border-gray-100">
+            <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">ORDER</th>
+            <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">PATIENT</th>
+            <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">TESTS</th>
+            <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">STATUS</th>
+            <th className="pb-2 text-xs font-medium text-gray-400 tracking-wide">TIME</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {orders.map((o) => (
+            <OrdersTableRow key={o.order} {...o} onOpen={handleOpenOrder} />
+          ))}
+        </tbody>
+      </table>
+
+      {modalOrder && (
+        <SampleCollectionModal
+          order={{
+            orderId: modalOrder.order,
+            patient: modalOrder.patient,
+            regNo: modalOrder.regNo,
+            tests: modalOrder.tests,
+            testNames: modalOrder.testNames,
+          }}
+          onClose={() => setModalOrder(null)}
+          onConfirmed={handleSampleCollected}
+          onCancelled={handleOrderCancelled}
         />
+      )}
 
-        {loadError && (
-          <p className="text-sm text-red-500 text-center py-2">{loadError}</p>
-        )}
-
-        {isLoading ? (
-          <p className="text-sm text-gray-400 text-center py-6">Loading orders…</p>
-        ) : (
-          <>
-            <div className="hidden md:block">
-              <LabOrdersTable orders={pagedOrders} />
-            </div>
-            <div className="md:hidden space-y-3">
-              {pagedOrders.map((order) => (
-                <LabOrderCard key={order.orderId} {...order} />
-              ))}
-            </div>
-
-            {total === 0 && (
-              <p className="text-sm text-gray-400 text-center py-6">No orders today.</p>
-            )}
-
-            {total > 0 && lastPage > 1 && (
-              <div className="flex items-center justify-between !mt-2">
-                <p className="text-sm text-gray-500">
-                  Page {page} of {lastPage} · {total} orders
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page <= 1}
-                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    ← Prev
-                  </button>
-                  <button
-                    onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
-                    disabled={page >= lastPage}
-                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    Next →
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+      {cancelledOrder && (
+        <CancelledOrderModal
+          order={cancelledOrder}
+          onClose={() => setCancelledOrder(null)}
+        />
+      )}
     </div>
   );
 }

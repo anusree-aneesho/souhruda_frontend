@@ -15,6 +15,7 @@ import { useHomeCollectionModal } from "../../Context/HomeCollectionModalContext
 import SampleCollectionModal from "../LabOrders/SampleCollectionModal";
 import CancelledOrderModal from "../LabOrders/CancelledOrderModal";
 import { getOrderApi } from "../../api/api";
+import { BranchTag } from "./TodaysOrders/StatusBadge";
 
 function getIconMeta(text = "") {
   const t = text.toLowerCase();
@@ -41,7 +42,7 @@ function getIconMeta(text = "") {
 }
 
 // ADDED: patientNumber is used by type "followUpReminder" to open Follow-ups for that patient
-export default function ActivityItem({ date, text, type, targetId, patientNumber, fromDashboard = false, isLatest, hideDate = false }) {
+export default function ActivityItem({ date, text, type, targetId, patientNumber, branchName, fromDashboard = false, isLatest, hideDate = false }) {
   const navigate = useNavigate();
   const location = useLocation();
   // ADDED: tells the next page where we came from, so it can show a "Back" button
@@ -170,6 +171,7 @@ export default function ActivityItem({ date, text, type, targetId, patientNumber
         ) : (
           <span className="text-sm font-medium text-gray-900">{text}</span>
         )}
+        <BranchTag name={branchName} className="mt-1" />
       </div>
 
       {!hideDate && (

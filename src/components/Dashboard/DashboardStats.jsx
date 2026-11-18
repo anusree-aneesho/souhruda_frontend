@@ -3,7 +3,9 @@ import { useState, useEffect } from "react";
 import StatCard from "../common/StatCard";
 import TodaysRevenueCard from "./TodaysRevenueCard";
 import { FileText, Clock, MapPin } from "lucide-react";
-import { getOrdersApi, getHomeCollectionRequestsApi, getGstSettingsApi } from "../../api/api";
+import { getOrdersApi, getHomeCollectionRequestsApi, getGstSettingsApi, getAllBranchesGstApi } from "../../api/api";
+import { useViewBranch } from "../../utils/selectedBranch";
+import { useAuth } from "../../Context/AuthContext";
 import { calcBillTotals } from "../../utils/orderPricing";
 import { useNavigate } from "react-router-dom";
 import SampleCollectionModal from "../LabOrders/SampleCollectionModal";
@@ -38,6 +40,12 @@ export default function DashboardStats() {
   // earlier days (an old pending payment that is paid today counts as today's revenue).
   const [paidTodayOrders, setPaidTodayOrders] = useState([]);
   const [gstInfo, setGstInfo] = useState(null);
+  // "All branches": GST rate of every branch, { [branch_id]: rate }. Each branch has its own
+  // GST setting, so one order must use the rate of the branch it belongs to.
+  const [branchGstRates, setBranchGstRates] = useState(null);
+  const { user } = useAuth();
+  const view = useViewBranch();
+  const showAllBranches = ["super_admin", "admin"].includes(user?.role) && view === "all";
   const [homeCollectionStat, setHomeCollectionStat] = useState({
     value: 0,
     sublabel: "0 awaiting assignment",
@@ -91,13 +99,28 @@ export default function DashboardStats() {
       });
 
     // GST setting — needed so revenue uses the same payable total as the bill.
-    getGstSettingsApi()
-      .then((res) => {
-        if (!cancelled) setGstInfo(res.data);
-      })
-      .catch(() => {
-        if (!cancelled) setGstInfo(null);
-      });
+    if (showAllBranches) {
+      getAllBranchesGstApi()
+        .then((res) => {
+          if (cancelled) return;
+          const rates = {};
+          (res.data || []).forEach((b) => {
+            rates[b.branch_id] = b.is_gst_registered ? Number(b.gst_rate) || 0 : 0;
+          });
+          setBranchGstRates(rates);
+        })
+        .catch(() => {
+          if (!cancelled) setBranchGstRates({});
+        });
+    } else {
+      getGstSettingsApi()
+        .then((res) => {
+          if (!cancelled) setGstInfo(res.data);
+        })
+        .catch(() => {
+          if (!cancelled) setGstInfo(null);
+        });
+    }
 
     return () => {
       cancelled = true;
@@ -120,6 +143,9 @@ export default function DashboardStats() {
   // the same calculation the bill uses. Paid = payment received; everything
   // else is Pending.
   const gstRate = gstInfo?.is_gst_registered ? Number(gstInfo.gst_rate) || 0 : 0;
+  // One branch: its GST rate for every order. All branches: the rate of each order's own branch.
+  const gstRateFor = (o) =>
+    showAllBranches ? Number(branchGstRates?.[o.branch_id]) || 0 : gstRate;
   const revenue = todaysOrders
     .filter((o) => !o.home_collection_id && !o.is_cancelled && o.status !== "cancelled")
     .reduce(
@@ -129,7 +155,7 @@ export default function DashboardStats() {
           discountType: o.discount_type || "percentage",
           discountValue: Number(o.discount_value) || 0,
           homeVisitFee: 0,
-          gstRate,
+          gstRate: gstRateFor(o),
         });
         const bucket = o.payment_status === "paid" ? acc.paid : acc.pending;
         bucket.amount += grandTotal;
@@ -167,7 +193,7 @@ export default function DashboardStats() {
       discountType: o.discount_type || "percentage",
       discountValue: Number(o.discount_value) || 0,
       homeVisitFee: Number(o.home_visit_fee) || 0,
-      gstRate,
+      gstRate: gstRateFor(o),
     });
     revenue.paid.amount += grandTotal;
     revenue.paid.orders += 1;

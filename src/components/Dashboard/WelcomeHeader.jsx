@@ -2,18 +2,22 @@
 import { Home, Plus } from "lucide-react";
 import { useOrderModal } from "../../Context/OrderModalContext";
 import { useAuth } from "../../Context/AuthContext";
+import { useViewBranch } from "../../utils/selectedBranch";
 
 export default function WelcomeHeader() {
   const { open } = useOrderModal();
   const { user } = useAuth();
   const displayName = user?.name || "there";
+  const view = useViewBranch(); // "all" | { id, name }
+  const isAdmin = ["super_admin", "admin"].includes(user?.role);
+  const scope = !isAdmin ? "the lab" : view === "all" ? "all branches" : view.name;
 
   return (
     <div className="flex items-center justify-between">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Welcome, {displayName}</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Here's what's moving through the lab today.
+          {`Here's what's moving through ${scope} today.`}
         </p>
       </div>
 

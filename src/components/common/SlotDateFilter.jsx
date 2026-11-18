@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Calendar } from "lucide-react";
 
 /**
  * Range calendar in the style of the Windows taskbar calendar.
@@ -333,7 +334,7 @@ export default function SlotDateFilter({ onChange, placeholder = "Select Date Ra
         onClick={() => (open ? closePanel() : setOpen(true))}
         style={{ ...S.trigger, borderColor: open ? TEAL : "#e2e8f0" }}
       >
-        <span>📅</span>
+        <Calendar size={16} color="#64748b" style={{ flexShrink: 0 }} />
         <span style={{ fontWeight: 600 }}>{applied ? applied.label : placeholder}</span>
         <span style={{ marginLeft: "auto", color: "#64748b" }}>{open ? "▴" : "▾"}</span>
       </button>

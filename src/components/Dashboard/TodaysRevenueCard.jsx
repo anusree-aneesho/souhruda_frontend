@@ -34,7 +34,7 @@ const statusLabel = (s) =>
 
 /**
  * revenue = {
- *   paid:    { amount, orders, items: [{ orderNo, patientName, orderedAt, status, amount }] },
+ *   paid:    { amount, orders, items: [{ orderNo, patientName, orderedAt, paidAt?, earlierOrder?, status, amount }] },
  *   pending: { amount, orders, items: [...] },
  *   total
  * }
@@ -50,9 +50,12 @@ export default function TodaysRevenueCard({ revenue, onOpenOrder }) {
   const isPaidView = tab === "paid";
   const group = isPaidView ? paid : pending;
 
-  // newest first, then keep only the latest 10
+  // newest first (by payment time when known), then keep only the latest 10
   const latestItems = [...group.items]
-    .sort((a, b) => toTime(b.orderedAt) - toTime(a.orderedAt))
+    .sort(
+      (a, b) =>
+        toTime(b.paidAt || b.orderedAt) - toTime(a.paidAt || a.orderedAt)
+    )
     .slice(0, LIMIT);
 
   return (
@@ -151,7 +154,14 @@ export default function TodaysRevenueCard({ revenue, onOpenOrder }) {
                       >
                         <td className="px-4 py-3 text-sm font-medium text-teal-700">{item.orderNo}</td>
                         <td className="py-3 text-sm text-gray-900">{item.patientName || "—"}</td>
-                        <td className="py-3 text-sm text-gray-500">{formatTime(item.orderedAt)}</td>
+                        <td className="py-3 text-sm text-gray-500">
+                          {formatTime(item.paidAt || item.orderedAt)}
+                          {item.earlierOrder && (
+                            <span className="ml-2 rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-medium text-violet-700">
+                              Earlier order
+                            </span>
+                          )}
+                        </td>
                         <td className="py-3 text-sm text-gray-500">{statusLabel(item.status)}</td>
                         <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">
                           {money(item.amount)}

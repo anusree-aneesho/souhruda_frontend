@@ -33,6 +33,9 @@ const BACK_TO_DASHBOARD = { from: "/", fromLabel: "Back to dashboard" };
 export default function DashboardStats() {
   const navigate = useNavigate();
   const [todaysOrders, setTodaysOrders] = useState([]);
+  // ADDED: orders whose payment was collected today, including orders placed on
+  // earlier days (an old pending payment that is paid today counts as today's revenue).
+  const [paidTodayOrders, setPaidTodayOrders] = useState([]);
   // Today's pending home collections (requested / assigned / en route / collected / processing)
   const [pendingHome, setPendingHome] = useState(0);
   const [gstInfo, setGstInfo] = useState(null);
@@ -53,7 +56,14 @@ export default function DashboardStats() {
         const rows = res.data || [];
         setTodaysOrders(rows.filter((o) => toLocalDateString(o.ordered_at) === today));
       })
-      .catch(() => setTodaysOrders([]));
+      .catch(() => setTodaysOrders([]))
+      // ADDED: orders paid today (any order date). Needs the paid_today filter in
+      // OrderController::index.
+      .then(() =>
+        getOrdersApi({ paid_today: 1, per_page: 100 })
+          .then((res) => setPaidTodayOrders(res.data || []))
+          .catch(() => setPaidTodayOrders([]))
+      );
   }
 
   useEffect(() => {
@@ -149,6 +159,38 @@ export default function DashboardStats() {
         pending: { amount: 0, orders: 0, items: [] },
       }
     );
+
+  // ADDED: orders from earlier days whose payment was collected today. The money
+  // came in today, so it counts as paid revenue today (home visit fee included for
+  // home collection orders). Orders already counted above are skipped.
+  const countedOrderNos = new Set(todaysOrders.map((o) => String(o.order_no)));
+  for (const o of paidTodayOrders) {
+    if (countedOrderNos.has(String(o.order_no))) continue;
+    if (o.is_cancelled || o.status === "cancelled") continue;
+    const { grandTotal } = calcBillTotals({
+      testsTotal: Number(o.bill_total) || 0,
+      discountType: o.discount_type || "percentage",
+      discountValue: Number(o.discount_value) || 0,
+      homeVisitFee: Number(o.home_visit_fee) || 0,
+      gstRate,
+    });
+    revenue.paid.amount += grandTotal;
+    revenue.paid.orders += 1;
+    revenue.paid.items.push({
+      orderNo: o.order_no,
+      patientName: [o.patient?.title, o.patient?.first_name, o.patient?.last_name]
+        .filter(Boolean)
+        .join(" "),
+      regNo: o.patient?.patient_number || "",
+      testsCount: o.items_count ?? o.items?.length ?? 0,
+      testNames: (o.items || []).map((i) => i.lab_test?.name).filter(Boolean),
+      orderedAt: o.ordered_at,
+      paidAt: o.paid_at,
+      earlierOrder: true,
+      status: o.status,
+      amount: grandTotal,
+    });
+  }
   revenue.total = revenue.paid.amount + revenue.pending.amount;
 
   // Same behaviour as the Today's Orders list:

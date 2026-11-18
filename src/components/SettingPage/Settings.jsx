@@ -9,9 +9,10 @@ import AddBranchModal from "./modals/AddBranchModal";
 
 export default function Settings() {
   const { user } = useAuth();
-  const isSuperAdmin = user?.role === "super_admin";
+  // Super admin and admin can view all branches and switch between them.
+  const canViewAllBranches = ["super_admin", "admin"].includes(user?.role);
   const [showAddBranch, setShowAddBranch] = useState(false);
-  // The branch the super admin is working in. Shared app-wide (see
+  // The branch the user is working in. Shared app-wide (see
   // utils/selectedBranch.js): new orders, home collections and patients are
   // created under it, and the settings below are for it.
   const selectedBranch = useSelectedBranch();
@@ -44,7 +45,7 @@ export default function Settings() {
     <div className="space-y-6">
       <SettingsHeader onAddBranch={() => setShowAddBranch(true)} />
 
-      {isSuperAdmin && (
+      {canViewAllBranches && (
         <div
           className={`flex items-start gap-3 rounded-xl px-4 py-3 text-sm ${
             selectedBranch
@@ -76,7 +77,7 @@ export default function Settings() {
           onSelectBranch={handleSelectBranch}
           onBranchUpdated={handleBranchUpdated}
         />
-        {isSuperAdmin && !selectedBranch ? (
+        {canViewAllBranches && !selectedBranch ? (
           // Lab settings belong to one branch, so there's nothing to edit while
           // "All branches" is chosen.
           <div className="bg-white rounded-xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.06)] flex items-center justify-center text-center text-sm text-gray-500 min-h-[200px]">

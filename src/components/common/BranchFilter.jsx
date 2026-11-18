@@ -1,6 +1,6 @@
 // src/components/common/BranchFilter.jsx
 //
-// Super admin only: the branch switcher, shown in the topbar (in place of the
+// Super admin and admin: the branch switcher, shown in the topbar (in place of the
 // old static branch badge). It offers "All branches" + every branch.
 //
 // It reads and writes the app-wide selected branch (utils/selectedBranch.js),
@@ -51,7 +51,8 @@ export default function BranchFilter() {
   const selected = view === "all" ? null : view;
   const { pathname } = useLocation();
   const [branches, setBranches] = useState([]);
-  const isSuperAdmin = user?.role === "super_admin";
+  // Super admin and admin can switch between branches.
+  const canSwitchBranch = ["super_admin", "admin"].includes(user?.role);
 
   const loadBranches = useCallback(() => {
     let cancelled = false;
@@ -69,18 +70,18 @@ export default function BranchFilter() {
 
   // The topbar stays mounted across pages, so refetch on navigation...
   useEffect(() => {
-    if (!isSuperAdmin) return;
+    if (!canSwitchBranch) return;
     return loadBranches();
-  }, [isSuperAdmin, pathname, loadBranches]);
+  }, [canSwitchBranch, pathname, loadBranches]);
 
   // ...and whenever a branch is added / edited / deleted in Settings.
   useEffect(() => {
-    if (!isSuperAdmin) return;
+    if (!canSwitchBranch) return;
     window.addEventListener(BRANCHES_CHANGED_EVENT, loadBranches);
     return () => window.removeEventListener(BRANCHES_CHANGED_EVENT, loadBranches);
-  }, [isSuperAdmin, loadBranches]);
+  }, [canSwitchBranch, loadBranches]);
 
-  if (!isSuperAdmin) return null;
+  if (!canSwitchBranch) return null;
 
   const pillColors = selected
     ? "bg-teal-50 text-teal-700"

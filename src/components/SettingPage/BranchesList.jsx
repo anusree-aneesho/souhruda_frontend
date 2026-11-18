@@ -68,10 +68,8 @@ const BranchesList = forwardRef(function BranchesList(
   const firstActiveId = [...(branches || [])]
     .filter((b) => b.is_active !== false)
     .sort((a, b) => a.id - b.id)[0]?.id;
-  const activeBranchId = isSuperAdmin
+  const activeBranchId = canManageBranches
     ? selectedBranchId ?? null
-    : canManageBranches
-    ? selectedBranchId ?? user?.branchId ?? firstActiveId ?? null
     : user?.branchId ?? firstActiveId ?? null;
 
   return (
@@ -86,7 +84,7 @@ const BranchesList = forwardRef(function BranchesList(
         <p className="text-sm text-gray-500 px-3 py-2">No branches added yet.</p>
       ) : (
         <div className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible">
-          {isSuperAdmin && (
+          {canManageBranches && (
             <button
               type="button"
               onClick={() => onSelectBranch?.(null)}

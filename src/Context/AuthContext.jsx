@@ -62,9 +62,10 @@ export function AuthProvider({ children }) {
 
         // The branch remembered in this browser may have been deleted since —
         // the backend reports what it actually resolved; drop a stale selection.
+        // Super admin and admin can switch branches, so only they keep a selection.
         if (
           getSelectedBranch() &&
-          (backendUser.role !== "super_admin" || !data.active_branch_id)
+          (!["super_admin", "admin"].includes(backendUser.role) || !data.active_branch_id)
         ) {
           clearSelectedBranch();
         }

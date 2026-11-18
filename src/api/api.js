@@ -2,12 +2,12 @@ import { getSelectedBranch } from "../utils/selectedBranch";
 
 export const API_BASE_URL  = "http://localhost:8000/api/v1";
 
-// A super admin works "inside" the branch picked in Settings; tell the backend
-// which one on every call. (The backend ignores this header for everyone else.)
+// A super admin or admin works "inside" the branch picked in the top bar or Settings;
+// tell the backend which one on every call. (The backend ignores this header for everyone else.)
 export function activeBranchHeader() {
   try {
     const user = JSON.parse(localStorage.getItem("souhruda_auth_user") || "null");
-    if (user?.role !== "super_admin") return {};
+    if (!["super_admin", "admin"].includes(user?.role)) return {};
   } catch {
     return {};
   }

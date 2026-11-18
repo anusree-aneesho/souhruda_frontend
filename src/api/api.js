@@ -487,7 +487,7 @@ export async function createOrderApi(payload) {
 export async function getOrdersApi(params = {}) {
   const query = new URLSearchParams();
   if (params.today) query.set("today", "1");
-  if (!params.brief && !params.today && params.status && params.status !== "All") query.set("status", params.status);
+  if (!params.brief && params.status && params.status !== "All") query.set("status", params.status);
   if (params.brief) query.set("brief", params.brief); // Daily Brief filter (see OrderController)
   if (params.q) query.set("q", params.q);
   if (params.flag) query.set("flag", params.flag);

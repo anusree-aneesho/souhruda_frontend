@@ -22,16 +22,15 @@ function toLocalDateString(dateInput) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// Home collection statuses that count as pending for today's card
-const HC_PENDING_STATUSES = ["requested", "assigned", "en_route", "collected", "processing"];
+// Home collection statuses that are still pending today (shown on the Home Collections card).
+// "requested" is counted separately as "awaiting assignment".
+const HC_PENDING_STATUSES = ["assigned", "en_route", "collected", "processing"];
 // Lab order statuses that count as pending (Sample Collected is still waiting for results)
 const LAB_PENDING_STATUSES = ["pending", "sample_collected"];
 
 export default function DashboardStats() {
   const navigate = useNavigate();
   const [todaysOrders, setTodaysOrders] = useState([]);
-  // Today's pending home collections (requested / assigned / en route / collected / processing)
-  const [pendingHome, setPendingHome] = useState(0);
   const [gstInfo, setGstInfo] = useState(null);
   const [homeCollectionStat, setHomeCollectionStat] = useState({
     value: 0,
@@ -64,18 +63,17 @@ export default function DashboardStats() {
         if (cancelled) return;
         const todaysRows = (rows || []).filter((r) => r.slot_date === today);
         const awaitingAssignment = todaysRows.filter((r) => r.status === "requested").length;
-        setPendingHome(
-          todaysRows.filter((r) => HC_PENDING_STATUSES.includes(r.status)).length
-        );
+        const pendingHome = todaysRows.filter((r) =>
+          HC_PENDING_STATUSES.includes(r.status)
+        ).length;
         setHomeCollectionStat({
           value: todaysRows.length,
-          sublabel: `${awaitingAssignment} awaiting assignment`,
+          sublabel: `${awaitingAssignment} awaiting assignment · ${pendingHome} pending`,
         });
       })
       .catch(() => {
         if (!cancelled) {
           setHomeCollectionStat({ value: "—", sublabel: "couldn't load" });
-          setPendingHome(0);
         }
       });
 
@@ -97,15 +95,12 @@ export default function DashboardStats() {
   const totalToday = todaysOrders.length;
   const completedToday = todaysOrders.filter((o) => o.status === "completed").length;
 
-  // Pending Results = TODAY only:
-  //   lab orders that are Pending or Sample Collected
-  //   + home collections that are Requested, Assigned, En Route, Collected or Processing.
-  // Lab side = every order in today's Lab Orders list, so it matches that page
-  // (including an order that came from a home collection once its sample is collected).
+  // Pending Results = TODAY's lab orders that are Pending or Sample Collected.
+  // Home collection requests are NOT counted here (they are on the Home Collections
+  // card). This is the same set the Lab Orders page shows when the card is clicked.
   const pendingLab = todaysOrders.filter(
     (o) => !o.is_cancelled && LAB_PENDING_STATUSES.includes(o.status)
   ).length;
-  const pendingTotal = pendingLab + pendingHome;
 
   // Today's Revenue — lab orders only, cancelled orders left out.
   // Each order counts at its real payable total (tests − discount + GST),
@@ -190,11 +185,11 @@ export default function DashboardStats() {
     },
     {
       label: "Pending Results",
-      value: pendingTotal,
-      sublabel: `${pendingLab} lab · ${pendingHome} home collection`,
+      value: pendingLab,
+      sublabel: "awaiting results",
       icon: Clock,
       color: "amber",
-      onClick: () => navigate("/lab-orders?tab=pending&today=1"),
+      onClick: () => navigate("/lab-orders?status=pending"),
     },
     {
       label: "Home Collections",

@@ -191,7 +191,7 @@ export default function LabOrders() {
 
   function handleDateChange(v) {
   setDates(v);
-  if (v && isTodayFilter) clearTodayFilter();
+  if ((v?.date_from || v?.date_to) && isTodayFilter) clearTodayFilter();
 }
   // Clicking any of All / Pending / Completed drops the "Today" filter and
   // returns to normal tab-driven browsing.

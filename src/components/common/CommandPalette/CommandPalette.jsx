@@ -42,6 +42,13 @@ export default function CommandPalette() {
     setActiveIndex(0);
   }, [query]);
 
+  const listRef = useRef(null);
+
+  useEffect(() => {
+    const el = listRef.current?.querySelector(`[data-index="${activeIndex}"]`);
+    el?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex]);
+
   function handleSelect(path) {
     navigate(path);
     close();
@@ -82,20 +89,21 @@ export default function CommandPalette() {
           />
         </div>
 
-        <div className="max-h-80 overflow-y-auto p-2">
+        <div ref={listRef} className="max-h-80 overflow-y-auto p-2">
           {results.length === 0 && (
             <p className="text-sm text-gray-400 text-center py-6">No results found.</p>
           )}
           {results.map((item, index) => (
-            <CommandPaletteItem
-              key={item.path}
-              icon={item.icon}
-              title={item.title}
-              subtitle="View"
-              isActive={index === activeIndex}
-              onClick={() => handleSelect(item.path)}
-              onMouseEnter={() => setActiveIndex(index)}
-            />
+            <div key={item.path} data-index={index}>
+              <CommandPaletteItem
+                icon={item.icon}
+                title={item.title}
+                subtitle="View"
+                isActive={index === activeIndex}
+                onClick={() => handleSelect(item.path)}
+                onMouseMove={() => setActiveIndex(index)}
+              />
+            </div>
           ))}
         </div>
 

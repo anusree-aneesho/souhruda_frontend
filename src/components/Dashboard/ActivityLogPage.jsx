@@ -122,6 +122,8 @@ export default function ActivityLogPage() {
             type,
             targetId,
             patientNumber: log.follow_up_patient_number ?? null, // ADDED
+            // ADDED: branch tag. Use the same field LatestActivities.jsx uses.
+            branchName: log.branch_name ?? log.branch?.name ?? null,
           };
         });
 
@@ -189,6 +191,7 @@ export default function ActivityLogPage() {
                       type={log.type}
                       targetId={log.targetId}
                       patientNumber={log.patientNumber} // ADDED
+                      branchName={log.branchName} // ADDED
                       isLatest={false}
                       hideDate
                     />

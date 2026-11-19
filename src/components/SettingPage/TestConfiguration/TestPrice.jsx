@@ -409,17 +409,33 @@ export default function TestPrice() {
             />
           </div>
 
-          <select
-            value={priceRange}
-            onChange={(e) => resetPage(setPriceRange)(e.target.value)}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-teal-500 cursor-pointer"
-          >
-            {PRICE_RANGES.map((r) => (
-              <option key={r.key} value={r.key}>
-                {r.label}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+              <select
+                value={priceRange}
+                onChange={(e) => resetPage(setPriceRange)(e.target.value)}
+                className={`rounded-lg border bg-white px-3 py-2 text-sm outline-none focus:border-teal-500 cursor-pointer ${
+                  priceRange !== "all"
+                    ? "border-teal-500 text-teal-700"
+                    : "border-gray-200 text-gray-700"
+                }`}
+              >
+                {PRICE_RANGES.map((r) => (
+                  <option key={r.key} value={r.key}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+
+              {priceRange !== "all" && (
+                <button
+                  onClick={() => resetPage(setPriceRange)("all")}
+                  title="Clear price filter"
+                  className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-red-500 cursor-pointer"
+                >
+                  <X size={14} /> Clear
+                </button>
+              )}
+            </div>
 
           <div className="ml-auto flex overflow-hidden rounded-lg border border-gray-200">
             {[

@@ -46,7 +46,7 @@ export default function FollowUps() {
   const [search, setSearch] = useState(initialQ); // CHANGED: starts from ?q=
   const [debouncedSearch, setDebouncedSearch] = useState(initialQ.trim()); // CHANGED: first load is already filtered
   const [activeTab, setActiveTab] = useState("Pending");
-  // Daily Brief link: /follow-ups?status=due -> pending follow-ups due today or earlier
+  // Daily Brief link: /follow-ups?status=due -> pending follow-ups due today only
   const [dueBrief, setDueBrief] = useState(searchParams.get("status") === "due");
   // Calendar range from SlotDateFilter: { date_from, date_to, label } or null
   const [dates, setDates] = useState(null);
@@ -184,7 +184,7 @@ export default function FollowUps() {
               onClick={clearDueBrief}
               className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-700 text-xs font-medium pl-3 pr-2 py-1.5 hover:bg-teal-100 cursor-pointer"
             >
-              Showing: Follow-ups due
+              Showing: Follow-ups due today
               <X size={14} />
             </button>
           </div>

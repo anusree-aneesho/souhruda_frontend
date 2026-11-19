@@ -1,8 +1,10 @@
 // src/components/common/Sidebar/Sidebar.jsx
+import { useState } from "react";
 import SidebarLogo from "./SidebarLogo";
 import SidebarNavItem from "./SidebarNavItem";
 import SidebarFooterHint from "./SidebarFooterHint";
 import SidebarNavDropdown from "./SidebarNavDropdown";
+import ConfirmModal from "../Modal/ConfirmModal";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../Context/AuthContext";
 import { REPORT_CATEGORIES } from "../../Reports/reportConfig";
@@ -82,6 +84,8 @@ export default function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { pathname, search } = useLocation();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
   const fromDashboard =
     pathname.startsWith("/lab-orders") &&
     new URLSearchParams(search).get("from") === "dashboard";
@@ -105,6 +109,7 @@ export default function Sidebar() {
   );
 
   function handleLogout() {
+    setShowLogoutConfirm(false);
     logout();
     navigate("/login", { replace: true });
   }
@@ -139,7 +144,7 @@ export default function Sidebar() {
 
       <div className="px-3 pb-2">
         <button
-          onClick={handleLogout}
+          onClick={() => setShowLogoutConfirm(true)}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
         >
           <LogOut size={18} />
@@ -148,6 +153,17 @@ export default function Sidebar() {
       </div>
 
       <SidebarFooterHint />
+
+      {showLogoutConfirm && (
+        <ConfirmModal
+          variant="simple"
+          title="Log Out"
+          message="Are you sure you want to log out?"
+          confirmLabel="Log Out"
+          onConfirm={handleLogout}
+          onClose={() => setShowLogoutConfirm(false)}
+        />
+      )}
     </aside>
   );
 }

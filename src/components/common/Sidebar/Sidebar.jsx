@@ -27,6 +27,9 @@ import {
   FileText,
 } from "lucide-react";
 
+// Roles that can see Statistics and Reports in the sidebar
+const ANALYTICS_ROLES = ["super_admin", "superadmin", "admin", "accountant", "lab_incharge"];
+
 const allNavItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
   { label: "Patients", icon: Users, path: "/patients" },
@@ -36,7 +39,7 @@ const allNavItems = [
   // { label: "Lab Assistant", icon: Beaker, path: "/lab-assistants" },
   { label: "Test Master", icon: FlaskConical, path: "/test-master" },
   { label: "Follow-ups", icon: Clock, path: "/follow-ups" },
-  { label: "Statistics", icon: BarChart3, path: "/statistics" },
+  { label: "Statistics", icon: BarChart3, path: "/statistics", roles: ANALYTICS_ROLES },
   { label: "Demand Forecast", icon: TrendingUp, path: "/demand-forecast", roles: ["admin", "super_admin", "superadmin"] },
   // Reports is rendered separately below as a dropdown, not a flat link.
 ];
@@ -97,6 +100,7 @@ export default function Sidebar() {
     .replace(/[\s-]+/g, "_");
 
   const isFrontOffice = role === "front_office";
+  const canSeeReports = ANALYTICS_ROLES.includes(role);
 
   const navItems = (
     isFrontOffice
@@ -127,12 +131,14 @@ export default function Sidebar() {
           />
         ))}
 
-        <SidebarNavDropdown
-          label="Reports"
-          icon={FileText}
-          basePath="/reports"
-          children={reportSubItems}
-        />
+        {canSeeReports && (
+          <SidebarNavDropdown
+            label="Reports"
+            icon={FileText}
+            basePath="/reports"
+            children={reportSubItems}
+          />
+        )}
 
         <SidebarNavDropdown
           label="Settings"

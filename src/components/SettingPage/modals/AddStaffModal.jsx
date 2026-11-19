@@ -7,7 +7,7 @@ import { useAuth } from "../../../Context/AuthContext";
 import { STAFF_TITLES } from "../../Patients/patientTitles";
 
 
-const ALL_ROLES = ["Front Office", "Lab Technician", "Lab Assistant", "Lab Incharge", "Admin"];
+const ALL_ROLES = ["Front Office", "Lab Technician", "Lab Assistant", "Lab Incharge", "Accountant", "Admin"];
 
 const SIGNATURE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const SIGNATURE_MAX_BYTES = 2 * 1024 * 1024; // 2 MB

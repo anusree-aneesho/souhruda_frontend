@@ -338,6 +338,27 @@ export default function NewOrderModal() {
     };
   }, [patientType, selectedPatient?.id, createdPatient?.id]);
 
+  // If a test that has a pending follow-up is ticked in the list,
+// automatically link (tick) that follow-up too.
+useEffect(() => {
+  if (patientReminders.length === 0) return;
+
+  const idsToLink = patientReminders
+    .filter(
+      (r) =>
+        selectedTests.some((t) => t.id === r.lab_test_id) &&
+        !selectedReminderIds.includes(r.id)
+    )
+    .map((r) => r.id);
+
+  if (idsToLink.length > 0) {
+    setSelectedReminderIds((prev) => [...prev, ...idsToLink]);
+  }
+  // Only react to test/reminder changes, not to reminder ticks,
+  // so manually unlinking a follow-up isn't instantly undone.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [selectedTests, patientReminders]);
+
   // If a test is unticked in the list, unlink any reminder that depended on it,
   // so an order can never claim to complete a follow-up for a test it lacks.
   useEffect(() => {
@@ -419,14 +440,25 @@ export default function NewOrderModal() {
     );
   }
 
-  // Clicking a follow-up in the yellow card adds its test to the order (if it
-  // isn't already there) and links the reminder to the order.
+  
   async function handleSelectReminder(reminder) {
-    // Clicking an already-linked follow-up unlinks it (the test stays in the order)
-    if (selectedReminderIds.includes(reminder.id)) {
-      setSelectedReminderIds((prev) => prev.filter((id) => id !== reminder.id));
-      return;
+  // Clicking an already-linked follow-up unlinks it AND removes its test
+  if (selectedReminderIds.includes(reminder.id)) {
+    const remainingIds = selectedReminderIds.filter((id) => id !== reminder.id);
+
+    // Is another still-linked reminder depending on the same test?
+    const testStillNeeded = remainingIds.some((id) => {
+      const r = patientReminders.find((x) => x.id === id);
+      return r && r.lab_test_id === reminder.lab_test_id;
+    });
+
+    setSelectedReminderIds(remainingIds);
+
+    if (!testStillNeeded) {
+      setSelectedTests((prev) => prev.filter((t) => t.id !== reminder.lab_test_id));
     }
+    return;
+  }
 
     // Test already in the order: just link
     if (selectedTests.some((t) => t.id === reminder.lab_test_id)) {

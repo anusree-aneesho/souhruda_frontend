@@ -99,14 +99,9 @@ export default function Sidebar() {
     .trim()
     .replace(/[\s-]+/g, "_");
 
-  const isFrontOffice = role === "front_office";
   const canSeeReports = ANALYTICS_ROLES.includes(role);
 
-  const navItems = (
-    isFrontOffice
-      ? allNavItems.filter((item) => item.path !== "/home-collection")
-      : allNavItems
-  ).filter((item) => !item.roles || item.roles.includes(role));
+  const navItems = allNavItems.filter((item) => !item.roles || item.roles.includes(role));
 
   const visibleSettingsItems = settingsSubItems.filter(
     (item) => !item.roles || item.roles.includes(role)

@@ -14,6 +14,10 @@ const STORAGE_KEY = "souhruda_selected_branch";
 const CHANGE_EVENT = "souhruda:selected-branch-changed";
 
 export function getSelectedBranch() {
+  // Only super admin / admin can pick a branch. Anyone else is locked to the
+  // branch assigned to them, so a leftover pick from an earlier login in this
+  // browser is ignored (and never sent as X-Branch-Id).
+  if (!isSuperAdminUser()) return null;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const branch = raw ? JSON.parse(raw) : null;
@@ -52,6 +56,9 @@ const VIEW_KEY = "souhruda_view_branch";
 const VIEW_EVENT = "souhruda:view-branch-changed";
 
 export function getViewBranch() {
+  // Same rule as getSelectedBranch(): staff roles have no branch dropdown, so a
+  // stale "all" left in storage must never be used (or sent as a header).
+  if (!isSuperAdminUser()) return undefined;
   try {
     const raw = localStorage.getItem(VIEW_KEY);
     if (!raw) return undefined;
@@ -84,8 +91,11 @@ export function viewBranchHeader() {
 // so list pages default to it until the dropdown is used.
 function isSuperAdminUser() {
   try {
-    const role = JSON.parse(localStorage.getItem("souhruda_auth_user") || "null")?.role;
-    return role === "super_admin" || role === "admin";
+    const role = String(JSON.parse(localStorage.getItem("souhruda_auth_user") || "null")?.role ?? "")
+      .toLowerCase()
+      .trim()
+      .replace(/[\s-]+/g, "_");
+    return role === "super_admin" || role === "superadmin" || role === "admin";
   } catch {
     return false;
   }

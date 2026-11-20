@@ -13,6 +13,8 @@ import { calculateFlag } from "../../../utils/calculateFlag";
 import ConfirmCompleteOrderModal from "./ConfirmCompleteOrderModal";
 import PrintOrderLabelModal from "./PrintOrderLabelModal";
 import EditRangeModal from "./EditRangeModal";
+import { useAuth } from "../../../Context/AuthContext";
+import { canEnterResults } from "../../../utils/permissions";
 
 function mapOrder(o) {
   return {
@@ -76,6 +78,9 @@ export default function OrderDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast, showToast, hideToast } = useToast();
+  const { user } = useAuth();
+  // Front Office can view the order but not enter, save or complete results.
+  const canEdit = canEnterResults(user?.role);
 
   // ADDED: where the user came from (dashboard, activity log...).
   // Kept through every navigate below so the Back button always works.
@@ -201,6 +206,7 @@ export default function OrderDetail() {
   }
 
   async function handleMarkCompleted() {
+    if (!canEdit) return;
     setSavingAction("complete");
     setSaveError(null);
 
@@ -242,6 +248,7 @@ export default function OrderDetail() {
   }
 
   async function handleSaveClose() {
+    if (!canEdit) return;
     setSavingAction("close");
     setSaveError(null);
 
@@ -303,11 +310,12 @@ export default function OrderDetail() {
         onSaveClose={handleSaveClose}
         onMarkCompleted={() => setConfirmingComplete(true)}
         savingAction={savingAction}
-        onEditRange={setEditingRange}
+        onEditRange={canEdit ? setEditingRange : undefined}
+        readOnly={!canEdit}
       />
       <ResultInsights tests={resultTests} flags={flags} />
 
-      {confirmingComplete && (
+      {confirmingComplete && canEdit && (
         <ConfirmCompleteOrderModal
           tests={resultTests}
           results={results}

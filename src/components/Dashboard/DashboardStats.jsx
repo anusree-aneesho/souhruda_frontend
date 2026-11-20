@@ -48,7 +48,7 @@ export default function DashboardStats() {
   const showAllBranches = ["super_admin", "admin"].includes(user?.role) && view === "all";
   const [homeCollectionStat, setHomeCollectionStat] = useState({
     value: 0,
-    sublabel: "0 awaiting assignment",
+    sublabel: "0 awaiting assignment · 0 pending · 0 cancelled",
   });
   const [modalOrder, setModalOrder] = useState(null);
   const [cancelledOrder, setCancelledOrder] = useState(null);
@@ -87,9 +87,11 @@ export default function DashboardStats() {
         const pendingHome = todaysRows.filter((r) =>
           HC_PENDING_STATUSES.includes(r.status)
         ).length;
+        // ADDED: cancelled home collections for today
+        const cancelledHome = todaysRows.filter((r) => r.status === "cancelled").length;
         setHomeCollectionStat({
           value: todaysRows.length,
-          sublabel: `${awaitingAssignment} awaiting assignment · ${pendingHome} pending`,
+          sublabel: `${awaitingAssignment} awaiting assignment · ${pendingHome} pending · ${cancelledHome} cancelled`,
         });
       })
       .catch(() => {
@@ -130,6 +132,10 @@ export default function DashboardStats() {
 
   const totalToday = todaysOrders.length;
   const completedToday = todaysOrders.filter((o) => o.status === "completed").length;
+  // ADDED: cancelled lab orders for today (cancelled orders are soft-deleted, so check both)
+  const cancelledToday = todaysOrders.filter(
+    (o) => o.is_cancelled || o.status === "cancelled"
+  ).length;
 
   // Pending Results = TODAY's lab orders that are Pending or Sample Collected.
   // Home collection requests are NOT counted here (they are on the Home Collections
@@ -250,7 +256,7 @@ export default function DashboardStats() {
     {
       label: "Today's Orders",
       value: totalToday,
-      sublabel: `${completedToday} completed`,
+      sublabel: `${completedToday} completed · ${cancelledToday} cancelled`,
       icon: FileText,
       color: "teal",
       onClick: () => navigate("/lab-orders?today=1"),

@@ -2,7 +2,7 @@
 import { Pencil } from "lucide-react";
 import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
 
-export default function ResultRow({ test, result, flag, onResultChange, onEditRange }) {
+export default function ResultRow({ test, result, flag, onResultChange, onEditRange, readOnly = false }) {
   // A parameter of a group test (e.g. Haemoglobin under CBC). The group's heading
   // row carries the price, so a parameter shows none of its own.
   const isParameter = test.parentItemId != null;
@@ -17,7 +17,7 @@ export default function ResultRow({ test, result, flag, onResultChange, onEditRa
       <td className="py-3 text-sm text-teal-600">
         <div className="flex items-center gap-2">
           <span>{test.range}</span>
-          {onEditRange && (
+          {onEditRange && !readOnly && (
             <button
               type="button"
               onClick={() => onEditRange(test)}
@@ -34,8 +34,13 @@ export default function ResultRow({ test, result, flag, onResultChange, onEditRa
         <input
           value={result}
           onChange={(e) => onResultChange(test.id, e.target.value)}
-          placeholder="Enter result"
-          className="w-32 rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+          readOnly={readOnly}
+          placeholder={readOnly ? "-" : "Enter result"}
+          className={`w-32 rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none ${
+            readOnly
+              ? "bg-gray-50 text-gray-500 cursor-not-allowed"
+              : "focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+          }`}
         />
       </td>
       <td className="py-3"><StatusBadge status={flag} /></td>

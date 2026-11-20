@@ -1,12 +1,9 @@
 // src/components/LabOrders/LabOrdersHeader.jsx
 import { Plus } from "lucide-react";
 import { useOrderModal } from "../../Context/OrderModalContext";
-import { useAuth } from "../../Context/AuthContext";
 
 export default function LabOrdersHeader() {
   const { open } = useOrderModal();
-  const { user } = useAuth();
-  const canCreateOrders = user?.role !== "front_office";
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -17,12 +14,10 @@ export default function LabOrdersHeader() {
         </p>
       </div>
       <div className="flex flex-col sm:flex-row gap-3">
-      {canCreateOrders && (
         <button onClick={open} className="flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors w-full sm:w-auto cursor-pointer">
           <Plus size={16} />
           New Order
         </button>
-      )}
       </div>
     </div>
   );

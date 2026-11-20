@@ -19,6 +19,7 @@ export default function ResultsTable({
   onMarkCompleted,
   savingAction,
   onEditRange,
+  readOnly = false,
 }) {
   // Group tests (e.g. CBC) come with one child row per parameter. The group row
   // carries the price; its parameters carry the results.
@@ -74,8 +75,12 @@ export default function ResultsTable({
   return (
     <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-4">
-        <h3 className="font-semibold text-sm text-gray-900">Enter Results</h3>
-        <p className="text-xs text-gray-400">Flags calculate automatically from the normal range set in Test Master</p>
+        <h3 className="font-semibold text-sm text-gray-900">{readOnly ? "Results" : "Enter Results"}</h3>
+        <p className="text-xs text-gray-400">
+          {readOnly
+            ? "You don't have permission to enter results"
+            : "Flags calculate automatically from the normal range set in Test Master"}
+        </p>
       </div>
 
       <div className="overflow-x-auto">
@@ -99,8 +104,9 @@ export default function ResultsTable({
                     test={test}
                     result={results[test.id] || ""}
                     flag={flags[test.id]}
-                    onResultChange={onResultChange}
+                    onResultChange={readOnly ? () => {} : onResultChange}
                     onEditRange={onEditRange}
+                    readOnly={readOnly}
                   />
                 );
               }
@@ -115,8 +121,9 @@ export default function ResultsTable({
                       test={parameter}
                       result={results[parameter.id] || ""}
                       flag={flags[parameter.id]}
-                      onResultChange={onResultChange}
+                      onResultChange={readOnly ? () => {} : onResultChange}
                       onEditRange={onEditRange}
+                    readOnly={readOnly}
                     />
                   ))}
                 </Fragment>
@@ -210,6 +217,7 @@ export default function ResultsTable({
         </div>
       )}
 
+      {!readOnly && (
       <div className="flex justify-end gap-3 mt-4">
         <button
           onClick={onSaveClose}
@@ -226,6 +234,7 @@ export default function ResultsTable({
           {savingAction === "complete" ? "Saving…" : "Mark Completed & View Report"}
         </button>
       </div>
+      )}
     </div>
   );
 }

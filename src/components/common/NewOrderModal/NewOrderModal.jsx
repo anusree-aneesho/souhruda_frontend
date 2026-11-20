@@ -649,9 +649,13 @@ useEffect(() => {
           ...pricing.appliedPackages.flatMap((pkg) =>
             pkg.tests.map((t) => ({
               ...t,
+              // both naming styles, so groupTestsByPackage finds them either way
               package_id: pkg.id,
               package_name: pkg.name,
-              package_price: pkg.price,
+              package_price: Number(pkg.price),
+              packageId: pkg.id,
+              packageName: pkg.name,
+              packagePrice: Number(pkg.price),
             }))
           ),
           ...pricing.individualTests,

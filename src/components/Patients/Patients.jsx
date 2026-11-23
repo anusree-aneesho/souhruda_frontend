@@ -22,7 +22,7 @@ import {
   deletePatientApi,
 } from "../../api/api";
 
-const PAGE_SIZE = 9;
+const PAGE_SIZE = 10;
 
 function mapPatient(p) {
   return {

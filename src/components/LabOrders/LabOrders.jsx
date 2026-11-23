@@ -15,7 +15,7 @@ import { calcBillTotals } from "../../utils/orderPricing";
 import CancelledOrderModal from "./CancelledOrderModal";
 import SlotDateFilter from "../common/SlotDateFilter";
 
-const PER_PAGE = 9;
+const PER_PAGE = 10;
 // The default list shows only the latest 100 orders. A search or a calendar
 // range is not capped, so it finds every match in the database.
 const MAX_DISPLAYED = 100;

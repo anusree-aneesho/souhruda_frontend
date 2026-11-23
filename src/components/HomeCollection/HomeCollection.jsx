@@ -51,7 +51,7 @@ function todayLocalDate() {
 // The cap only applies to the default list; a search or calendar range shows
 // every match from the database.
 const MAX_DISPLAYED = 100;
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 10;
 
 function mapRequest(r) {
   return {

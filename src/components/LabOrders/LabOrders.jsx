@@ -16,6 +16,9 @@ import CancelledOrderModal from "./CancelledOrderModal";
 import SlotDateFilter from "../common/SlotDateFilter";
 
 const PER_PAGE = 9;
+// The default list shows only the latest 100 orders. A search or a calendar
+// range is not capped, so it finds every match in the database.
+const MAX_DISPLAYED = 100;
 
 function capitalize(str) {
   return str ? str.charAt(0).toUpperCase() + str.slice(1) : str;
@@ -159,9 +162,21 @@ export default function LabOrders() {
     })
       .then((res) => {
         if (!cancelled) {
-          setRawOrders(res.data || []);
-          setLastPage(res.last_page ?? res.meta?.last_page ?? 1);
-          setTotal(res.total ?? res.meta?.total ?? 0);
+          const rows = res.data || [];
+          const serverTotal = res.total ?? res.meta?.total ?? 0;
+          const serverLastPage = res.last_page ?? res.meta?.last_page ?? 1;
+          const capped = !search.trim() && !dates?.date_from && !dates?.date_to;
+
+          if (capped && serverTotal > MAX_DISPLAYED) {
+            // newest first, so the first 100 rows overall are the latest 100
+            setRawOrders(rows.slice(0, Math.max(0, MAX_DISPLAYED - (page - 1) * PER_PAGE)));
+            setLastPage(Math.ceil(MAX_DISPLAYED / PER_PAGE));
+            setTotal(MAX_DISPLAYED);
+          } else {
+            setRawOrders(rows);
+            setLastPage(serverLastPage);
+            setTotal(serverTotal);
+          }
         }
       })
       .catch((err) => {

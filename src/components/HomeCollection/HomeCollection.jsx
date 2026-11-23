@@ -48,7 +48,9 @@ function todayLocalDate() {
 
 // Backend already returns requests newest-first (`->latest()`), so no
 // re-sorting is needed here — just cap and paginate what comes in.
-const MAX_DISPLAYED = 50;
+// The cap only applies to the default list; a search or calendar range shows
+// every match from the database.
+const MAX_DISPLAYED = 100;
 const PAGE_SIZE = 8;
 
 function mapRequest(r) {
@@ -279,9 +281,13 @@ export default function HomeCollection() {
     if (dateFilter) clearDateFilter();
   }
 
-  // Newest-first, 8 per page. Capped to the latest 50 — except while a
-  // calendar range is chosen, so "2026" really shows every slot in 2026.
-  const displayedRequests = filteredRequests.slice(0, dates ? Infinity : MAX_DISPLAYED);
+  // Newest-first, 8 per page. Capped to the latest 100 — except while a search
+  // or a calendar range is active, so those show every match in the database
+  // (e.g. "2026" really shows every slot in 2026).
+  const displayedRequests = filteredRequests.slice(
+    0,
+    dates || search.trim() ? Infinity : MAX_DISPLAYED
+  );
   const totalPages = Math.max(1, Math.ceil(displayedRequests.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pageRequests = displayedRequests.slice(

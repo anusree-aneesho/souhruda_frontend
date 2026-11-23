@@ -5,8 +5,17 @@ import { getLabTests, getTestPackages } from "../../../api/api";
 import AddPackageModal from "./modals/AddPackageModal";
 import Toast from "../../common/Toast/Toast";
 import { useToast } from "../../common/Toast/useToast";
+import { useAuth } from "../../../Context/AuthContext";
 
-function PackageCard({ pkg, onEdit }) {
+// Roles that can only view packages (no Add / Edit).
+// Compared after lower-casing and turning spaces/hyphens into underscores.
+const READ_ONLY_ROLES = ["front_office"];
+
+function normalizeRole(role) {
+  return String(role || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+}
+
+function PackageCard({ pkg, onEdit, canEdit }) {
   const labTests = pkg.lab_tests || [];
 
   // Actual ("marked") price = what the tests cost one by one. Shown faded and
@@ -17,15 +26,17 @@ function PackageCard({ pkg, onEdit }) {
 
   return (
     <div className="group relative bg-white rounded-xl border border-gray-200 shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-5 hover:border-teal-300 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all">
-      <button
-        onClick={() => onEdit(pkg)}
-        title="Edit package"
-        className="absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 bg-white border border-gray-200 opacity-0 group-hover:opacity-100 hover:text-teal-600 hover:border-teal-300 transition-all cursor-pointer"
-      >
-        <Pencil size={14} />
-      </button>
+      {canEdit && (
+        <button
+          onClick={() => onEdit(pkg)}
+          title="Edit package"
+          className="absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 bg-white border border-gray-200 opacity-0 group-hover:opacity-100 hover:text-teal-600 hover:border-teal-300 transition-all cursor-pointer"
+        >
+          <Pencil size={14} />
+        </button>
+      )}
 
-      <div className="flex items-start justify-between mb-3 pr-9">
+      <div className={`flex items-start justify-between mb-3 ${canEdit ? "pr-9" : ""}`}>
         <div className="w-10 h-10 rounded-lg bg-teal-50 flex items-center justify-center shrink-0">
           <Package2 size={18} className="text-teal-600" />
         </div>
@@ -79,6 +90,10 @@ function PackageCard({ pkg, onEdit }) {
 }
 
 export default function TestPackage() {
+  const { user } = useAuth();
+  // Front office can view packages but not add or edit them.
+  const canManage = !READ_ONLY_ROLES.includes(normalizeRole(user?.role));
+
   const [tests, setTests] = useState([]);
   const [packages, setPackages] = useState([]);
   const [loadingPackages, setLoadingPackages] = useState(true);
@@ -161,13 +176,15 @@ export default function TestPackage() {
               : `${visiblePackages.length} of ${packages.length} packages`}
           </p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 transition-colors cursor-pointer"
-        >
-          <Plus size={16} />
-          Add Package
-        </button>
+        {canManage && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 transition-colors cursor-pointer"
+          >
+            <Plus size={16} />
+            Add Package
+          </button>
+        )}
       </div>
 
       {/* Active / Inactive filter — the list below is always newest first */}
@@ -205,9 +222,11 @@ export default function TestPackage() {
             <Package2 size={22} className="text-teal-600" />
           </div>
           <h3 className="text-base font-semibold text-gray-900">No packages yet</h3>
-          <p className="text-sm text-gray-500 mt-1 max-w-sm">
-            Click "Add Package" to bundle tests together under a single price.
-          </p>
+          {canManage && (
+            <p className="text-sm text-gray-500 mt-1 max-w-sm">
+              Click "Add Package" to bundle tests together under a single price.
+            </p>
+          )}
         </div>
       ) : visiblePackages.length === 0 ? (
         <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] text-center py-10">
@@ -225,12 +244,17 @@ export default function TestPackage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {visiblePackages.map((pkg) => (
-            <PackageCard key={pkg.id} pkg={pkg} onEdit={setEditingPackage} />
+            <PackageCard
+              key={pkg.id}
+              pkg={pkg}
+              onEdit={setEditingPackage}
+              canEdit={canManage}
+            />
           ))}
         </div>
       )}
 
-      {(showAddModal || editingPackage) && (
+      {canManage && (showAddModal || editingPackage) && (
         <AddPackageModal
           tests={tests}
           editingPackage={editingPackage}

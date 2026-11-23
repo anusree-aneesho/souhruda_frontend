@@ -14,6 +14,15 @@ import { useToast } from "../common/Toast/useToast";
 import { getHomeCollectionRequestsApi } from "../../api/api";
 import { formatNameWithTitle } from "../Patients/patientTitles";
 import { useHomeCollectionModal } from "../../Context/HomeCollectionModalContext";
+import { useAuth } from "../../Context/AuthContext";
+
+// Roles that can book home collections but only see requests whose status is "report_ready".
+// Compared after lower-casing and turning spaces/hyphens into underscores.
+const REPORT_READY_ONLY_ROLES = ["front_office"];
+
+function normalizeRole(role) {
+  return String(role || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+}
 
 // Backend enum -> display label, e.g. "en_route" -> "En Route"
 function formatStatus(status) {
@@ -136,6 +145,10 @@ function computePendingPayment(rows) {
 }
 
 export default function HomeCollection() {
+  const { user } = useAuth();
+  // Front office can book, but only sees requests that are Report Ready.
+  const reportReadyOnly = REPORT_READY_ONLY_ROLES.includes(normalizeRole(user?.role));
+
   const [rawRequests, setRawRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -158,16 +171,22 @@ export default function HomeCollection() {
   const branchId = useSelectedBranch()?.id ?? null; // refetch when branch changes
   const [searchResults, setSearchResults] = useState(null); // null = no search/calendar filter active
 
+  // Keeps only Report Ready requests for restricted roles; leaves the list alone for everyone else.
+  const restrictRows = useCallback(
+    (list) => (reportReadyOnly ? list.filter((r) => r.status === "report_ready") : list),
+    [reportReadyOnly]
+  );
+
   const load = useCallback(async () => {
     try {
       const data = await getHomeCollectionRequestsApi();
-      setRawRequests(Array.isArray(data) ? data : data.data || []);
+      setRawRequests(restrictRows(Array.isArray(data) ? data : data.data || []));
     } catch (err) {
       setError(err.message || "Couldn't load home collection requests.");
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [restrictRows]);
 
   useEffect(() => {
     load();
@@ -195,7 +214,7 @@ export default function HomeCollection() {
           params.date_to = dates.date_to;
         }
         const data = await getHomeCollectionRequestsApi(params);
-        if (!cancelled) setSearchResults(Array.isArray(data) ? data : data.data || []);
+        if (!cancelled) setSearchResults(restrictRows(Array.isArray(data) ? data : data.data || []));
       } catch {
         if (!cancelled) setSearchResults([]);
       }
@@ -205,7 +224,7 @@ export default function HomeCollection() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [search, dates, rawRequests, briefFilter]);
+  }, [search, dates, rawRequests, briefFilter, restrictRows]);
 
   // NewOrderModal navigates back here with { justBooked: created } right
   // after a successful booking (same route, so React Router won't remount
@@ -356,7 +375,9 @@ export default function HomeCollection() {
         {isLoading && <p className="text-sm text-gray-400">Loading home collection requests…</p>}
         {!isLoading && error && <p className="text-sm text-red-600">{error}</p>}
         {!isLoading && !error && rawRequests.length === 0 && (
-          <p className="text-sm text-gray-400">No home collection requests yet.</p>
+          <p className="text-sm text-gray-400">
+            {reportReadyOnly ? "No report-ready home collection requests." : "No home collection requests yet."}
+          </p>
         )}
         {!isLoading && !error && rawRequests.length > 0 && filteredRequests.length === 0 && (
           <p className="text-sm text-gray-400">

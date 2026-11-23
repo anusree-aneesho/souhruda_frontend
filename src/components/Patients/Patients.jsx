@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { X } from "lucide-react";
 import PatientsHeader from "./PatientsHeader";
 import { useSelectedBranch } from "../../utils/selectedBranch";
+import { useOrderModal } from "../../Context/OrderModalContext";
 import PatientsSearch from "./PatientsSearch";
 import PatientsTable from "./PatientsTable/PatientsTable";
 import PatientCard from "./PatientsTable/PatientCard";
@@ -21,7 +22,7 @@ import {
   deletePatientApi,
 } from "../../api/api";
 
-const PAGE_SIZE = 9;
+const PAGE_SIZE = 10;
 
 function mapPatient(p) {
   return {
@@ -82,6 +83,7 @@ export default function Patients() {
 
   // Refetch when a super admin switches branch (see common/BranchFilter).
   const branchId = useSelectedBranch()?.id ?? null;
+  const { requireBranch } = useOrderModal();
 
   useEffect(() => {
     const timer = setTimeout(() => loadPatients(search), 300);
@@ -192,7 +194,12 @@ export default function Patients() {
 
   return (
     <div className="space-y-6">
-      <PatientsHeader onAddPatient={() => setModalOpen(true)} />
+      <PatientsHeader
+        onAddPatient={() => {
+          // "All branches" -> alert asking to pick a branch instead of the form
+          if (requireBranch("patient")) setModalOpen(true);
+        }}
+      />
 
       <div className="bg-white rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
         <div className="space-y-5">

@@ -9,7 +9,7 @@ import FollowUpsTable from "./FollowUpsTable/FollowUpsTable";
 import FollowUpDetailModal from "./modals/FollowUpDetailModal";
 import { getFollowUpRemindersApi } from "../../api/api";
 
-const PER_PAGE = 9;
+const PER_PAGE = 10;
 const TABS = ["Pending", "Completed"];
 
 function capitalize(str) {

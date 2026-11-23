@@ -1,6 +1,5 @@
 // src/components/LabOrders/LabOrdersFilters.jsx
 import { Search } from "lucide-react";
-import { useAuth } from "../../Context/AuthContext";
 
 const tabs = ["All", "Pending", "Sample Collected", "Completed", "Cancelled"];
 
@@ -11,9 +10,6 @@ export default function LabOrdersFilters({
   onTabChange,
   dateFilter,
 }) {
-  const { user } = useAuth();
-  const showTabs = user?.role !== "front_office";
-
   return (
     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -30,23 +26,21 @@ export default function LabOrdersFilters({
         {dateFilter}
       </div>
 
-      {showTabs && (
-        <div className="flex items-center gap-2 overflow-x-auto">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => onTabChange(tab)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors cursor-pointer ${
-                activeTab === tab
-                  ? "bg-teal-600 text-white"
-                  : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="flex items-center gap-2 overflow-x-auto">
+        {tabs.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => onTabChange(tab)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors cursor-pointer ${
+              activeTab === tab
+                ? "bg-teal-600 text-white"
+                : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

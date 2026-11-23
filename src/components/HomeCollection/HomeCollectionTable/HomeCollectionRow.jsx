@@ -8,7 +8,8 @@ import Toast from "../../common/Toast/Toast";
 import { useToast } from "../../common/Toast/useToast";
 import { updateHomeCollectionStatusApi } from "../../../api/api";
 
-export default function HomeCollectionRow({ requestId, patient, tests, distance, date, slot, queueNo, payment, technician, status, onCancelled }) {
+// canOpen=false dims and disables the Open button (e.g. front office on non-Report-Ready requests).
+export default function HomeCollectionRow({ requestId, patient, tests, distance, date, slot, queueNo, payment, technician, status, onCancelled, canOpen = true }) {
   const paymentStyles = {
     Card: "bg-amber-100 text-amber-700",
     Cash: "bg-orange-100 text-orange-700",
@@ -82,7 +83,17 @@ export default function HomeCollectionRow({ requestId, patient, tests, distance,
         </button>
       </td>
       <td className="py-3 text-right">
-        <button onClick={()=>open(requestId)} className="text-sm text-teal-600 font-medium hover:underline cursor-pointer">
+        <button
+          type="button"
+          onClick={() => canOpen && open(requestId)}
+          disabled={!canOpen}
+          title={canOpen ? undefined : "Only report-ready requests can be opened"}
+          className={`text-sm font-medium ${
+            canOpen
+              ? "text-teal-600 hover:underline cursor-pointer"
+              : "text-gray-300 cursor-not-allowed"
+          }`}
+        >
           Open →
         </button>
       </td>

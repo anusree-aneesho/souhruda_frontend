@@ -21,12 +21,9 @@ const PER_PAGE = 10;
 // range is not capped, so it finds every match in the database.
 const MAX_DISPLAYED = 100;
 
-// Roles that can only see completed orders. Compared after lower-casing and turning
-// spaces/hyphens into underscores, so "Front Officer" and "front-officer" also match.
-const COMPLETED_ONLY_ROLES = ["front_office"];
-
-// Set to true to show only completed orders to EVERY role.
-const COMPLETED_ONLY_FOR_ALL = false;
+// Roles that see every order but can only open the ones that are Completed.
+// Compared after lower-casing and turning spaces/hyphens into underscores.
+const OPEN_COMPLETED_ONLY_ROLES = ["front_office"];
 
 function normalizeRole(role) {
   return String(role || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
@@ -104,9 +101,9 @@ export default function LabOrders() {
   const { toast, showToast, hideToast } = useToast();
   const { user } = useAuth();
 
-  // Front officers can only see completed orders.
-  const isCompletedOnly =
-    COMPLETED_ONLY_FOR_ALL || COMPLETED_ONLY_ROLES.includes(normalizeRole(user?.role));
+  // Front office sees every order, but can only open Completed ones.
+  const isOpenRestricted = OPEN_COMPLETED_ONLY_ROLES.includes(normalizeRole(user?.role));
+  const canOpenOrder = (order) => !isOpenRestricted || order.rawStatus === "completed";
 
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") === "pending" ? "Pending" : "All";
@@ -130,11 +127,6 @@ export default function LabOrders() {
   const [cancelledOrder, setCancelledOrder] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const branchId = useSelectedBranch()?.id ?? null; // refetch when branch changes
-
-  // What is actually applied. For completed-only roles the tab is locked to
-  // "Completed" and Daily Brief filters (pending / awaiting results) are ignored.
-  const effectiveTab = isCompletedOnly ? "Completed" : activeTab;
-  const effectiveBrief = isCompletedOnly ? null : briefFilter;
 
   // GST setting — needed so the BILL column matches the payable total.
   useEffect(() => {
@@ -174,8 +166,8 @@ export default function LabOrders() {
 
     getOrdersApi({
       today: isTodayFilter ? 1 : undefined,
-      brief: effectiveBrief || undefined,
-      status: tabToStatus(effectiveTab),
+      brief: briefFilter || undefined,
+      status: tabToStatus(activeTab),
       q: search,
       date_from: dates?.date_from,
       date_to: dates?.date_to,
@@ -211,7 +203,7 @@ export default function LabOrders() {
     return () => {
       cancelled = true;
     };
-  }, [effectiveTab, isTodayFilter, effectiveBrief, search, dates?.date_from, dates?.date_to, page, refreshKey, branchId]);
+  }, [activeTab, isTodayFilter, briefFilter, search, dates?.date_from, dates?.date_to, page, refreshKey, branchId]);
 
 
   // Map after both the orders and the GST rate are known, so the bill
@@ -224,7 +216,7 @@ export default function LabOrders() {
   // Reset to page 1 whenever the filter or search changes.
   useEffect(() => {
     setPage(1);
-  }, [effectiveTab, isTodayFilter, effectiveBrief, search, dates?.date_from, dates?.date_to, branchId]);
+  }, [activeTab, isTodayFilter, briefFilter, search, dates?.date_from, dates?.date_to, branchId]);
 
   function handleDateChange(v) {
     setDates(v);
@@ -234,7 +226,6 @@ export default function LabOrders() {
   // Clicking any of All / Pending / Completed drops the "Today" filter and
   // returns to normal tab-driven browsing.
   function handleTabChange(tab) {
-    if (isCompletedOnly) return; // tab is locked to Completed
     setActiveTab(tab);
     if (briefFilter) clearBriefFilter();
     if (isTodayFilter) {
@@ -268,7 +259,10 @@ export default function LabOrders() {
   // Pending orders need a "sample collected" confirmation step before
   // opening the order detail / results page. Anything past pending
   // (sample_collected, completed) opens straight through, as before.
+  // Restricted roles (front office) can only open Completed orders.
   function handleOpenOrder(order) {
+    if (!canOpenOrder(order)) return;
+
     if (order.rawStatus === "pending") {
       setModalOrder(order);
     } else if (order.rawStatus === "cancelled") {
@@ -295,19 +289,19 @@ export default function LabOrders() {
         <LabOrdersFilters
           search={search}
           onSearchChange={setSearch}
-          activeTab={isTodayFilter || effectiveBrief ? null : effectiveTab}
+          activeTab={isTodayFilter || briefFilter ? null : activeTab}
           onTabChange={handleTabChange}
           dateFilter={<SlotDateFilter onChange={handleDateChange} />}
         />
 
-        {effectiveBrief && (
+        {briefFilter && (
           <div className="flex items-center gap-2">
             <span
               className={`inline-flex items-center gap-2 rounded-full text-xs font-medium px-3 py-1 ${
-                effectiveBrief === "abnormal_today" ? "bg-red-50 text-red-700" : "bg-teal-50 text-teal-700"
+                briefFilter === "abnormal_today" ? "bg-red-50 text-red-700" : "bg-teal-50 text-teal-700"
               }`}
             >
-              {BRIEF_LABELS[effectiveBrief]}
+              {BRIEF_LABELS[briefFilter]}
               <button
                 type="button"
                 aria-label="Clear filter"
@@ -329,20 +323,23 @@ export default function LabOrders() {
         ) : (
           <>
             <div className="hidden md:block">
-              <LabOrdersTable orders={filteredOrders} onOpen={handleOpenOrder} />
+              <LabOrdersTable orders={filteredOrders} onOpen={handleOpenOrder} canOpen={canOpenOrder} />
             </div>
             <div className="md:hidden space-y-3">
               {filteredOrders.map((order) => (
-                <LabOrderCard key={order.orderId} {...order} onOpen={handleOpenOrder} />
+                <LabOrderCard
+                  key={order.orderId}
+                  {...order}
+                  onOpen={handleOpenOrder}
+                  canOpen={canOpenOrder(order)}
+                />
               ))}
             </div>
 
             {filteredOrders.length === 0 && (
               <p className="text-sm text-gray-400 text-center py-6">
-                {effectiveBrief
-                  ? `No matching orders (${BRIEF_LABELS[effectiveBrief].toLowerCase()}).`
-                  : isCompletedOnly
-                  ? "No completed orders found."
+                {briefFilter
+                  ? `No matching orders (${BRIEF_LABELS[briefFilter].toLowerCase()}).`
                   : isTodayFilter
                   ? "No orders today."
                   : dates

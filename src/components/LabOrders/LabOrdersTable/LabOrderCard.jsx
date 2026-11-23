@@ -1,7 +1,10 @@
 // src/components/LabOrders/LabOrdersTable/LabOrderCard.jsx
 import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
 
-export default function LabOrderCard({ orderId, patient, regNo, tests, status, date, bill }) {
+// onOpen receives the whole order object; canOpen=false dims and disables the Open button.
+export default function LabOrderCard({ onOpen, canOpen = true, ...order }) {
+  const { orderId, patient, regNo, tests, status, date, bill } = order;
+
   return (
     <div className="border border-gray-100 rounded-lg p-4 space-y-2">
       <div className="flex items-center justify-between">
@@ -17,7 +20,17 @@ export default function LabOrderCard({ orderId, patient, regNo, tests, status, d
       </div>
       <div className="flex items-center justify-between pt-1">
         <span className="text-sm font-medium text-gray-900">₹{bill}</span>
-        <button className="text-sm text-teal-600 font-medium hover:underline">
+        <button
+          type="button"
+          onClick={() => canOpen && onOpen?.({ orderId, ...order })}
+          disabled={!canOpen}
+          title={canOpen ? undefined : "Only completed orders can be opened"}
+          className={`text-sm font-medium ${
+            canOpen
+              ? "text-teal-600 hover:underline cursor-pointer"
+              : "text-gray-300 cursor-not-allowed"
+          }`}
+        >
           Open →
         </button>
       </div>

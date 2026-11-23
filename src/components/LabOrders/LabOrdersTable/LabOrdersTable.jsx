@@ -1,7 +1,8 @@
 // src/components/LabOrders/LabOrdersTable/LabOrdersTable.jsx
 import LabOrderRow from "./LabOrderRow";
 
-export default function LabOrdersTable({ orders, onOpen }) {
+// canOpen(order) -> true/false. Rows that return false should show a dimmed, disabled Open button.
+export default function LabOrdersTable({ orders, onOpen, canOpen = () => true }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[720px]">
@@ -19,7 +20,12 @@ export default function LabOrdersTable({ orders, onOpen }) {
         </thead>
         <tbody>
           {orders.map((order) => (
-            <LabOrderRow key={order.orderId} {...order} onOpen={onOpen} />
+            <LabOrderRow
+              key={order.orderId}
+              {...order}
+              onOpen={onOpen}
+              canOpen={canOpen(order)}
+            />
           ))}
         </tbody>
       </table>

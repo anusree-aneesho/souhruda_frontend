@@ -16,9 +16,9 @@ import { formatNameWithTitle } from "../Patients/patientTitles";
 import { useHomeCollectionModal } from "../../Context/HomeCollectionModalContext";
 import { useAuth } from "../../Context/AuthContext";
 
-// Roles that can book home collections but only see requests whose status is "report_ready".
+// Roles that see every request but can only open the ones whose status is "report_ready".
 // Compared after lower-casing and turning spaces/hyphens into underscores.
-const REPORT_READY_ONLY_ROLES = ["front_office"];
+const OPEN_REPORT_READY_ONLY_ROLES = ["front_office"];
 
 function normalizeRole(role) {
   return String(role || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
@@ -75,6 +75,8 @@ function mapRequest(r) {
     payment: formatPayment(r.payment_mode),
     technician: r.technician?.name ? formatNameWithTitle(r.technician.title, r.technician.name) : "Unassigned",
     status: formatStatus(r.status),
+    // Raw backend status (e.g. "report_ready"), used to decide whether Open is allowed.
+    rawStatus: r.status,
     // Which stat card this row belongs to, so clicking a card can filter
     // the table by the same grouping the counts already use — null for
     // anything not shown on a card (e.g. cancelled).
@@ -146,8 +148,9 @@ function computePendingPayment(rows) {
 
 export default function HomeCollection() {
   const { user } = useAuth();
-  // Front office can book, but only sees requests that are Report Ready.
-  const reportReadyOnly = REPORT_READY_ONLY_ROLES.includes(normalizeRole(user?.role));
+  // Front office sees every request, but can only open Report Ready ones.
+  const isOpenRestricted = OPEN_REPORT_READY_ONLY_ROLES.includes(normalizeRole(user?.role));
+  const canOpenRequest = (req) => !isOpenRestricted || req.rawStatus === "report_ready";
 
   const [rawRequests, setRawRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -171,22 +174,16 @@ export default function HomeCollection() {
   const branchId = useSelectedBranch()?.id ?? null; // refetch when branch changes
   const [searchResults, setSearchResults] = useState(null); // null = no search/calendar filter active
 
-  // Keeps only Report Ready requests for restricted roles; leaves the list alone for everyone else.
-  const restrictRows = useCallback(
-    (list) => (reportReadyOnly ? list.filter((r) => r.status === "report_ready") : list),
-    [reportReadyOnly]
-  );
-
   const load = useCallback(async () => {
     try {
       const data = await getHomeCollectionRequestsApi();
-      setRawRequests(restrictRows(Array.isArray(data) ? data : data.data || []));
+      setRawRequests(Array.isArray(data) ? data : data.data || []);
     } catch (err) {
       setError(err.message || "Couldn't load home collection requests.");
     } finally {
       setIsLoading(false);
     }
-  }, [restrictRows]);
+  }, []);
 
   useEffect(() => {
     load();
@@ -214,7 +211,7 @@ export default function HomeCollection() {
           params.date_to = dates.date_to;
         }
         const data = await getHomeCollectionRequestsApi(params);
-        if (!cancelled) setSearchResults(restrictRows(Array.isArray(data) ? data : data.data || []));
+        if (!cancelled) setSearchResults(Array.isArray(data) ? data : data.data || []);
       } catch {
         if (!cancelled) setSearchResults([]);
       }
@@ -224,7 +221,7 @@ export default function HomeCollection() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [search, dates, rawRequests, briefFilter, restrictRows]);
+  }, [search, dates, rawRequests, briefFilter]);
 
   // NewOrderModal navigates back here with { justBooked: created } right
   // after a successful booking (same route, so React Router won't remount
@@ -300,7 +297,7 @@ export default function HomeCollection() {
     if (dateFilter) clearDateFilter();
   }
 
-  // Newest-first, 8 per page. Capped to the latest 100 — except while a search
+  // Newest-first, 10 per page. Capped to the latest 100 — except while a search
   // or a calendar range is active, so those show every match in the database
   // (e.g. "2026" really shows every slot in 2026).
   const displayedRequests = filteredRequests.slice(
@@ -375,9 +372,7 @@ export default function HomeCollection() {
         {isLoading && <p className="text-sm text-gray-400">Loading home collection requests…</p>}
         {!isLoading && error && <p className="text-sm text-red-600">{error}</p>}
         {!isLoading && !error && rawRequests.length === 0 && (
-          <p className="text-sm text-gray-400">
-            {reportReadyOnly ? "No report-ready home collection requests." : "No home collection requests yet."}
-          </p>
+          <p className="text-sm text-gray-400">No home collection requests yet.</p>
         )}
         {!isLoading && !error && rawRequests.length > 0 && filteredRequests.length === 0 && (
           <p className="text-sm text-gray-400">
@@ -406,11 +401,20 @@ export default function HomeCollection() {
         {!isLoading && !error && pageRequests.length > 0 && (
           <>
             <div className="hidden md:block">
-              <HomeCollectionTable requests={pageRequests} onCancelled={load} />
+              <HomeCollectionTable
+                requests={pageRequests}
+                onCancelled={load}
+                canOpen={canOpenRequest}
+              />
             </div>
             <div className="md:hidden space-y-3">
               {pageRequests.map((req) => (
-                <HomeCollectionCard key={req.requestId} {...req} onCancelled={load} />
+                <HomeCollectionCard
+                  key={req.requestId}
+                  {...req}
+                  onCancelled={load}
+                  canOpen={canOpenRequest(req)}
+                />
               ))}
             </div>
 

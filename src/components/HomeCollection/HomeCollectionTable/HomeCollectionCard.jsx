@@ -1,7 +1,11 @@
 // src/components/HomeCollection/HomeCollectionTable/HomeCollectionCard.jsx
 import StatusBadge from "../../Dashboard/TodaysOrders/StatusBadge";
+import { useHomeCollectionModal } from "../../../Context/HomeCollectionModalContext";
 
-export default function HomeCollectionCard({ requestId, patient, tests, distance, date, slot, queueNo, payment, technician, status }) {
+// canOpen=false dims and disables the Open button (e.g. front office on non-Report-Ready requests).
+export default function HomeCollectionCard({ requestId, patient, tests, distance, date, slot, queueNo, payment, technician, status, canOpen = true }) {
+  const { open } = useHomeCollectionModal();
+
   return (
     <div className="border border-gray-100 rounded-lg p-4 space-y-2">
       <div className="flex items-center justify-between">
@@ -28,7 +32,17 @@ export default function HomeCollectionCard({ requestId, patient, tests, distance
 
       <div className="flex items-center justify-between pt-1">
         <span className="text-xs text-gray-500">{technician} · {payment}</span>
-        <button className="text-sm text-teal-600 font-medium hover:underline">
+        <button
+          type="button"
+          onClick={() => canOpen && open(requestId)}
+          disabled={!canOpen}
+          title={canOpen ? undefined : "Only report-ready requests can be opened"}
+          className={`text-sm font-medium ${
+            canOpen
+              ? "text-teal-600 hover:underline cursor-pointer"
+              : "text-gray-300 cursor-not-allowed"
+          }`}
+        >
           Open →
         </button>
       </div>

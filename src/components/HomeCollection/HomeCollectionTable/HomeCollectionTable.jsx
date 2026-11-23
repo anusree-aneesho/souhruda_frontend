@@ -1,7 +1,8 @@
 // src/components/HomeCollection/HomeCollectionTable/HomeCollectionTable.jsx
 import HomeCollectionRow from "./HomeCollectionRow";
 
-export default function HomeCollectionTable({ requests, onCancelled }) {
+// canOpen(request) -> true/false. Rows that return false show a dimmed, disabled Open button.
+export default function HomeCollectionTable({ requests, onCancelled, canOpen = () => true }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[860px]">
@@ -21,7 +22,12 @@ export default function HomeCollectionTable({ requests, onCancelled }) {
         </thead>
         <tbody>
           {requests.map((req) => (
-            <HomeCollectionRow key={req.requestId} {...req} onCancelled={onCancelled} />
+            <HomeCollectionRow
+              key={req.requestId}
+              {...req}
+              onCancelled={onCancelled}
+              canOpen={canOpen(req)}
+            />
           ))}
         </tbody>
       </table>

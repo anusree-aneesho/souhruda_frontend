@@ -101,6 +101,17 @@ function isSuperAdminUser() {
   }
 }
 
+/**
+ * True when a super admin / admin is on "All branches" (or has no working branch
+ * picked), i.e. there is no single branch a new patient / order / home
+ * collection could be saved under. Branch staff are always locked to their own
+ * branch, so this is always false for them.
+ */
+export function needsBranchSelection() {
+  if (!isSuperAdminUser()) return false;
+  return getViewBranch() === "all" || !getSelectedBranch();
+}
+
 /** React hook: effective branch for list pages -> "all" | {id,name}. */
 export function useViewBranch() {
   const settings = useSelectedBranch();

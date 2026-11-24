@@ -171,6 +171,7 @@ export default function HomeCollection() {
   const [briefFilter, setBriefFilter] = useState(() => briefFromParams(searchParams));
   const { activeId } = useHomeCollectionModal();
   const prevActiveIdRef = useRef(null);
+  const searchInputRef = useRef(null);
   const branchId = useSelectedBranch()?.id ?? null; // refetch when branch changes
   const [searchResults, setSearchResults] = useState(null); // null = no search/calendar filter active
 
@@ -271,6 +272,11 @@ export default function HomeCollection() {
     setPage(1);
   }
 
+  function clearSearch() {
+  setSearch("");
+  searchInputRef.current?.focus();
+  }
+
   function clearBriefFilter() {
     setBriefFilter(null);
     setPage(1);
@@ -324,15 +330,29 @@ export default function HomeCollection() {
       <HomeCollectionStats counts={counts} pendingPayment={pendingPayment} activeFilter={statusFilter} onFilterChange={handleFilterChange} />
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative w-full sm:w-80">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by patient, request ID, technician, or status..."
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:bg-white transition-colors"
-          />
-        </div>
+      <div className="relative w-full sm:w-80">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          ref={searchInputRef}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape" && search) clearSearch();
+          }}
+          placeholder="Search by patient, request ID, technician, or status..."
+          className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-9 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:bg-white transition-colors"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={clearSearch}
+            aria-label="Clear search"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+        )}
+      </div>
 
         {/* ADDED: calendar filter — day, range, month or year */}
         <SlotDateFilter onChange={handleDatesChange} />

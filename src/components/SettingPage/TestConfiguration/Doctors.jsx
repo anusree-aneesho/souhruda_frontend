@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getDoctorsApi, deleteDoctorApi } from "../../../api/api";
 import AddDoctorModal from "./modals/AddDoctorModal";
 import Toast from "../../common/Toast/Toast";
@@ -6,6 +6,7 @@ import { useToast } from "../../common/Toast/useToast";
 import ConfirmModal from "../../Patients/modals/ConfirmModal";
 import {
   Search,
+  X,
   Plus,
   Pencil,
   Trash2,
@@ -25,21 +26,22 @@ export default function Doctors() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingDoctor, setEditingDoctor] = useState(null);
-  const [confirmingRemove, setConfirmingRemove] = useState(null); 
+  const [confirmingRemove, setConfirmingRemove] = useState(null);
+  const searchInputRef = useRef(null); // ADDED: lets the clear button refocus the search box
 
   const fetchDoctors = async (pageNum = 1, q = search) => {
-  setLoading(true);
-  try {
-    const res = await getDoctorsApi(pageNum, q.trim());
-    setDoctors(res.data);
-    setLastPage(res.last_page);
-    setPage(res.current_page);
-  } catch (err) {
-    showToast(err.message || "Failed to load doctors.", "error");
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      const res = await getDoctorsApi(pageNum, q.trim());
+      setDoctors(res.data);
+      setLastPage(res.last_page);
+      setPage(res.current_page);
+    } catch (err) {
+      showToast(err.message || "Failed to load doctors.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Runs on first load and whenever the search text changes (after a short pause),
   // always starting from page 1.
@@ -47,6 +49,12 @@ export default function Doctors() {
     const timer = setTimeout(() => fetchDoctors(1, search), 300);
     return () => clearTimeout(timer);
   }, [search]);
+
+  // ADDED: clears the search box and puts the cursor back in it
+  const clearSearch = () => {
+    setSearch("");
+    searchInputRef.current?.focus();
+  };
 
   const handleDelete = (id) => {
     const target = doctors.find((d) => d.id === id);
@@ -87,7 +95,6 @@ export default function Doctors() {
           <div>
             <h2 className="text-xl font-bold text-gray-900">
               Doctors
-            
             </h2>
             <p className="text-sm text-gray-500 mt-0.5">
               Referring doctors linked to patient reports.
@@ -113,12 +120,26 @@ export default function Doctors() {
           className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
         />
         <input
+          ref={searchInputRef}
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape" && search) clearSearch();
+          }}
           placeholder="Search name, reg no, phone, hospital..."
-          className="w-full border border-gray-200 rounded-lg pl-9 pr-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+          className="w-full border border-gray-200 rounded-lg pl-9 pr-9 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
         />
+        {search && (
+          <button
+            type="button"
+            onClick={clearSearch}
+            aria-label="Clear search"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
@@ -242,16 +263,16 @@ export default function Doctors() {
       </div>
 
       {confirmingRemove && (
-      <ConfirmModal
-        title="Remove Doctor"
-        message={`Are you sure you want to remove Dr. ${confirmingRemove.name}?`}
-        confirmLabel="Remove"
-        cancelLabel="Cancel"
-        danger
-        onConfirm={confirmRemove}
-        onClose={() => setConfirmingRemove(null)}
-      />
-    )}
+        <ConfirmModal
+          title="Remove Doctor"
+          message={`Are you sure you want to remove Dr. ${confirmingRemove.name}?`}
+          confirmLabel="Remove"
+          cancelLabel="Cancel"
+          danger
+          onConfirm={confirmRemove}
+          onClose={() => setConfirmingRemove(null)}
+        />
+      )}
 
       {(showAddModal || editingDoctor) && (
         <AddDoctorModal

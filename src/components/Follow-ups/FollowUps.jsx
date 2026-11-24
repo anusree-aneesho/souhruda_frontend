@@ -1,5 +1,5 @@
 // src/components/FollowUps/FollowUps.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Search, X } from "lucide-react";
 import SlotDateFilter from "../common/SlotDateFilter";
@@ -63,6 +63,7 @@ export default function FollowUps() {
   const navigate = useNavigate();
   const [refreshKey, setRefreshKey] = useState(0);
   const branchId = useSelectedBranch()?.id ?? null; // refetch when branch changes
+  const searchInputRef = useRef(null); // ADDED: lets the clear button refocus the search box
 
   // Wait for a short pause in typing before hitting the API.
   useEffect(() => {
@@ -128,6 +129,17 @@ export default function FollowUps() {
     };
   }, [activeTab, debouncedSearch, dateFrom, dateTo, page, refreshKey, branchId, dueBrief]);
 
+  // ADDED: clears the search box, removes ?q= from the address, and refocuses the input
+  function clearSearch() {
+    setSearch("");
+    if (searchParams.get("q")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("q");
+      setSearchParams(next, { replace: true });
+    }
+    searchInputRef.current?.focus();
+  }
+
   function clearDueBrief() {
     setDueBrief(false);
     const next = new URLSearchParams(searchParams);
@@ -145,11 +157,25 @@ export default function FollowUps() {
             <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2.5 w-full sm:w-72">
               <Search size={16} className="text-gray-400 shrink-0" />
               <input
+                ref={searchInputRef}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape" && search) clearSearch();
+                }}
                 placeholder="Search patient, test, reg no, date..."
                 className="flex-1 text-sm outline-none placeholder:text-gray-400 min-w-0"
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={clearSearch}
+                  aria-label="Clear search"
+                  className="shrink-0 rounded-full p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              )}
             </div>
 
             {/* Date range (same calendar as Lab Orders): filters the date shown in the tab,

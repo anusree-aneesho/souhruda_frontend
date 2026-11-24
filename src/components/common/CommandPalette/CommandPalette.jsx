@@ -1,7 +1,7 @@
 // src/components/common/CommandPalette/CommandPalette.jsx
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useCommandPalette } from "../../../Context/CommandPaletteContext";
 import CommandPaletteItem from "../CommandPalette/CommandPaletteItem";
 
@@ -54,6 +54,12 @@ export default function CommandPalette() {
     close();
   }
 
+  // ADDED: clears the search text and puts the cursor back in the input
+  function clearQuery() {
+    setQuery("");
+    inputRef.current?.focus();
+  }
+
   function handleKeyDown(e) {
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -78,15 +84,26 @@ export default function CommandPalette() {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-100">
-          <Search size={18} className="text-gray-400" />
+          <Search size={18} className="text-gray-400 shrink-0" />
           <input
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search patients, orders, or jump to a page..."
-            className="flex-1 text-sm outline-none placeholder:text-gray-400"
+            className="flex-1 text-sm outline-none placeholder:text-gray-400 min-w-0"
           />
+          {/* ADDED: clear button, only shown when there is text */}
+          {query && (
+            <button
+              type="button"
+              onClick={clearQuery}
+              aria-label="Clear search"
+              className="shrink-0 rounded-full p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
 
         <div ref={listRef} className="max-h-80 overflow-y-auto p-2">

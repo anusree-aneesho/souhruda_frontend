@@ -1,6 +1,6 @@
 // src/components/SettingPage/StaffManagement.jsx
-import { useState, useEffect } from "react";
-import { Plus, Search, Pencil, Trash2, Star } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Plus, Search, X, Pencil, Trash2, Star } from "lucide-react";
 import AddStaffModal from "./modals/AddStaffModal";
 import TechnicianDetailsDrawer from "./TechnicianDetailsDrawer";
 import ConfirmModal from "../Patients/modals/ConfirmModal";
@@ -86,28 +86,50 @@ function StaffHeader({ onAddStaff }) {
 }
 
 function StaffSearch({ value, onChange }) {
+  const inputRef = useRef(null);
+
+  const handleClear = () => {
+    onChange("");
+    inputRef.current?.focus();
+  };
+
   return (
     <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2.5 w-full sm:w-72">
       <Search size={16} className="text-gray-400 shrink-0" />
       <input
+        ref={inputRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape" && value) handleClear();
+        }}
         placeholder="Search Staff..."
         className="flex-1 text-sm outline-none placeholder:text-gray-400 min-w-0"
       />
+      {value && (
+        <button
+          type="button"
+          onClick={handleClear}
+          aria-label="Clear search"
+          className="shrink-0 rounded-full p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer"
+        >
+          <X size={16} />
+        </button>
+      )}
     </div>
   );
 }
 
 function RoleFilter({ value, onChange, roles }) {
   return (
-    <div className="flex flex-col gap-1 w-full sm:w-48">
-      
+    <div className="flex items-center gap-2 w-full sm:w-auto">
       <select
         id="staff-role-filter"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-teal-500 cursor-pointer"
+        className={`rounded-lg border bg-white px-3 py-2.5 text-sm outline-none focus:border-teal-500 cursor-pointer w-full sm:w-48 ${
+          value ? "border-teal-500 text-teal-700" : "border-gray-200 text-gray-700"
+        }`}
       >
         <option value="">All Roles</option>
         {roles.map((r) => (
@@ -116,6 +138,17 @@ function RoleFilter({ value, onChange, roles }) {
           </option>
         ))}
       </select>
+
+      {value && (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          title="Clear role filter"
+          className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-red-500 transition-colors cursor-pointer whitespace-nowrap"
+        >
+          <X size={14} /> Clear
+        </button>
+      )}
     </div>
   );
 }

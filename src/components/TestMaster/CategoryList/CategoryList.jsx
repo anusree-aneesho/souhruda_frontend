@@ -1,6 +1,6 @@
 // src/components/TestMaster/CategoryList/CategoryList.jsx
-import { useState, useEffect, useMemo } from "react";
-import { Search } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Search, X } from "lucide-react";
 import CategoryItem from "./CategoryItem";
 import { useAuth } from "../../../Context/AuthContext";
 
@@ -11,6 +11,7 @@ const LIST_MIN_HEIGHT = PAGE_SIZE * ROW_HEIGHT;
 export default function CategoryList({ categories, activeCategory, onSelect, onDeleteCategory }) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const searchInputRef = useRef(null); // ADDED: lets the clear button refocus the search box
   const { user } = useAuth();
   const canManage = user?.role !== "front_office";
 
@@ -31,6 +32,12 @@ export default function CategoryList({ categories, activeCategory, onSelect, onD
     setPage(1);
   }, [search]);
 
+  // ADDED: clears the search box and puts the cursor back in it
+  function clearSearch() {
+    setSearch("");
+    searchInputRef.current?.focus();
+  }
+
   const lastPage = Math.max(1, Math.ceil(filteredCategories.length / PAGE_SIZE));
   const pageCategories = filteredCategories.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -42,12 +49,26 @@ export default function CategoryList({ categories, activeCategory, onSelect, onD
         <div className="relative mb-3">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
+            ref={searchInputRef}
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape" && search) clearSearch();
+            }}
             placeholder="Search categories..."
-            className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+            className="w-full pl-9 pr-9 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={clearSearch}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
       )}
 
@@ -77,14 +98,14 @@ export default function CategoryList({ categories, activeCategory, onSelect, onD
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="px-2.5 py-1 rounded-md border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-2.5 py-1 rounded-md border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
               ←
             </button>
             <button
               onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
               disabled={page >= lastPage}
-              className="px-2.5 py-1 rounded-md border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-2.5 py-1 rounded-md border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
               →
             </button>

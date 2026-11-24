@@ -1,5 +1,5 @@
 // TestPrice.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   Calendar,
@@ -161,6 +161,7 @@ export default function TestPrice() {
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
+  const searchInputRef = useRef(null);
   const [activeCat, setActiveCat] = useState("all");
   const [priceRange, setPriceRange] = useState("all");
   const [view, setView] = useState("list");
@@ -261,6 +262,12 @@ export default function TestPrice() {
     fn(v);
     setPage(1);
   };
+
+   function clearSearch() {
+    setSearch("");
+    setPage(1);
+    searchInputRef.current?.focus();
+  }
 
   function applySaved(id, price) {
     setTests((prev) =>
@@ -398,16 +405,30 @@ export default function TestPrice() {
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative min-w-60 flex-1 max-w-md">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => resetPage(setSearch)(e.target.value)}
-              placeholder="Search tests, categories or price..."
-              className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
-            />
-          </div>
+        <div className="relative min-w-60 flex-1 max-w-md">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={search}
+            onChange={(e) => resetPage(setSearch)(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape" && search) clearSearch();
+            }}
+            placeholder="Search tests, categories or price..."
+            className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-9 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={clearSearch}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
 
           <div className="flex items-center gap-2">
               <select

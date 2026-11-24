@@ -12,7 +12,7 @@ export default function SearchBar() {
     >
       <Search size={16} />
       <span className="flex-1 text-left">Search patients, orders...</span>
-      <kbd className="text-xs font-medium text-gray-400 bg-white border border-gray-200 rounded px-1.5 py-0.5">
+      <kbd className="text-xs font-medium text-gray-400 bg-white border border-gray-200 rounded px-1.5 py-0.5 cursor-pointer">
         ⌘K
       </kbd>
     </button>

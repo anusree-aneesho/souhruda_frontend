@@ -1,6 +1,6 @@
 // src/components/TestMaster/TestsTable/TestsTable.jsx
-import { useState, useEffect, useMemo, Fragment } from "react";
-import { Plus, Search, ArrowLeft } from "lucide-react";
+import { useState, useEffect, useMemo, useRef, Fragment } from "react";
+import { Plus, Search, X, ArrowLeft } from "lucide-react";
 import TestRow from "./TestRow";
 import TestCard from "./TestCard";
 import DemographicRangeModal from "../../modals/DemographicRangeModal";
@@ -28,6 +28,7 @@ export default function TestsTable({
   const [openGroupId, setOpenGroupId] = useState(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const searchInputRef = useRef(null); // ADDED: lets the clear button refocus the search box
   const { user } = useAuth();
   const canManage = user?.role !== "front_office";
 
@@ -71,6 +72,12 @@ export default function TestsTable({
     setOpenGroupId(null);
     setSearch("");
     setPage(1);
+  }
+
+  // ADDED: clears the search box and puts the cursor back in it
+  function clearSearch() {
+    setSearch("");
+    searchInputRef.current?.focus();
   }
 
   useEffect(() => {
@@ -134,12 +141,26 @@ export default function TestsTable({
         <div className="relative mb-4">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
+            ref={searchInputRef}
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape" && search) clearSearch();
+            }}
             placeholder={openGroup ? "Search parameters..." : "Search tests in all categories..."}
-            className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+            className="w-full pl-9 pr-9 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={clearSearch}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
       )}
 
@@ -231,14 +252,14 @@ export default function TestsTable({
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
               ← Prev
             </button>
             <button
               onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
               disabled={page >= lastPage}
-              className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
               Next →
             </button>

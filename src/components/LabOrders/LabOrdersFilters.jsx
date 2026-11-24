@@ -1,5 +1,6 @@
 // src/components/LabOrders/LabOrdersFilters.jsx
-import { Search } from "lucide-react";
+import { useRef } from "react";
+import { Search, X } from "lucide-react";
 
 const tabs = ["All", "Pending", "Sample Collected", "Completed", "Cancelled"];
 
@@ -10,17 +11,38 @@ export default function LabOrdersFilters({
   onTabChange,
   dateFilter,
 }) {
+  const inputRef = useRef(null);
+
+  const handleClear = () => {
+    onSearchChange("");
+    inputRef.current?.focus();
+  };
+
   return (
     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2.5 w-full sm:w-72">
           <Search size={16} className="text-gray-400 shrink-0" />
           <input
+            ref={inputRef}
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape" && search) handleClear();
+            }}
             placeholder="Search order, patient, ID..."
             className="flex-1 text-sm outline-none placeholder:text-gray-400 min-w-0"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={handleClear}
+              aria-label="Clear search"
+              className="shrink-0 rounded-full p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
 
         {dateFilter}

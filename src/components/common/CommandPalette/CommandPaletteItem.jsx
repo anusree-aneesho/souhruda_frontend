@@ -1,10 +1,11 @@
 // src/components/common/CommandPalette/CommandPaletteItem.jsx
-export default function CommandPaletteItem({ icon, title, subtitle, isActive, onClick, onMouseEnter }) {
+export default function CommandPaletteItem({ icon, title, subtitle, isActive, onClick, onMouseEnter, onMouseMove }) {
   return (
     <button
       onClick={onClick}
       onMouseEnter={onMouseEnter}
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
+      onMouseMove={onMouseMove}
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors cursor-pointer ${
         isActive ? "bg-gray-100" : "hover:bg-gray-50"
       }`}
     >

@@ -722,7 +722,7 @@ async function handleDownloadPdf() {
 
     ${panelsHtml}
 
-    <div class="end-line">**** End of Report ****</div>
+    
 
     ${signaturesHtml}
 
@@ -1198,10 +1198,6 @@ className="text-sm font-medium text-teal-600 hover:underline cursor-pointer"
                     </div>
                   </div>
                 ))}
-
-                <div className="text-center text-[9px] text-gray-400 tracking-[0.05em] mx-6 mt-0.5 mb-1">
-                  **** End of Report ****
-                </div>
 
                 {/* Signatures (Technician, Lab Assistant, Lab Incharge from Lab Settings) */}
                 {signatories.length > 0 && (

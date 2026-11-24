@@ -5,6 +5,15 @@ import OrdersTableRow from "./OrdersTableRow";
 import SampleCollectionModal from "../../LabOrders/SampleCollectionModal";
 import { getTodaysOrdersApi } from "../../../api/api";
 import CancelledOrderModal from "../../LabOrders/CancelledOrderModal";
+import { useAuth } from "../../../Context/AuthContext";
+
+// Roles that see every order but can only open the ones that are Completed.
+// Compared after lower-casing and turning spaces/hyphens into underscores.
+const OPEN_COMPLETED_ONLY_ROLES = ["front_office"];
+
+function normalizeRole(role) {
+  return String(role || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+}
 
 function capitalize(str) {
   return str ? str.charAt(0).toUpperCase() + str.slice(1) : str;
@@ -47,10 +56,15 @@ function mapOrder(o) {
 
 export default function TodaysOrders() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [modalOrder, setModalOrder] = useState(null);
   const [cancelledOrder, setCancelledOrder] = useState(null);
+
+  // Front office sees every order, but can only open Completed ones.
+  const isOpenRestricted = OPEN_COMPLETED_ONLY_ROLES.includes(normalizeRole(user?.role));
+  const canOpenOrder = (order) => !isOpenRestricted || order.rawStatus === "completed";
 
   async function loadOrders() {
     try {
@@ -81,6 +95,8 @@ export default function TodaysOrders() {
   }, []);
 
   function handleOpenOrder(order) {
+    if (!canOpenOrder(order)) return;
+
     if (order.rawStatus === "pending") {
       setModalOrder(order);
     } else if (order.rawStatus === "cancelled") {
@@ -135,7 +151,12 @@ export default function TodaysOrders() {
         </thead>
         <tbody>
           {orders.map((o) => (
-            <OrdersTableRow key={o.order} {...o} onOpen={handleOpenOrder} />
+            <OrdersTableRow
+              key={o.order}
+              {...o}
+              onOpen={handleOpenOrder}
+              canOpen={canOpenOrder(o)}
+            />
           ))}
         </tbody>
       </table>

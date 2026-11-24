@@ -110,6 +110,9 @@ export default function LatestActivities() {
             type,
             targetId,
             patientNumber: log.follow_up_patient_number ?? null, // ADDED
+            // ADDED: current status of the linked order / home collection request, used
+            // by ActivityItem to decide whether restricted roles (front office) may open it
+            subjectStatus: log.subject_status ?? null,
             branchName: log.branch_name ?? "",
           };
         });

@@ -12,10 +12,19 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { useHomeCollectionModal } from "../../Context/HomeCollectionModalContext";
+import { useAuth } from "../../Context/AuthContext";
 import SampleCollectionModal from "../LabOrders/SampleCollectionModal";
 import CancelledOrderModal from "../LabOrders/CancelledOrderModal";
 import { getOrderApi } from "../../api/api";
 import { BranchTag } from "./TodaysOrders/StatusBadge";
+
+// Roles that can only open completed orders and report-ready home collections.
+// Compared after lower-casing and turning spaces/hyphens into underscores.
+const OPEN_RESTRICTED_ROLES = ["front_office"];
+
+function normalizeRole(role) {
+  return String(role || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+}
 
 function getIconMeta(text = "") {
   const t = text.toLowerCase();
@@ -42,9 +51,12 @@ function getIconMeta(text = "") {
 }
 
 // ADDED: patientNumber is used by type "followUpReminder" to open Follow-ups for that patient
-export default function ActivityItem({ date, text, type, targetId, patientNumber, branchName, fromDashboard = false, isLatest, hideDate = false }) {
+// ADDED: subjectStatus is the current status of the linked order / home collection request
+// (from the activity log API's subject_status); restricted roles use it to decide if the item can be opened.
+export default function ActivityItem({ date, text, type, targetId, patientNumber, subjectStatus = null, branchName, fromDashboard = false, isLatest, hideDate = false }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   // ADDED: tells the next page where we came from, so it can show a "Back" button
   // that returns here (the dashboard, or the Activity Log page).
   const backState = {
@@ -62,7 +74,24 @@ export default function ActivityItem({ date, text, type, targetId, patientNumber
   const [cancelledOrder, setCancelledOrder] = useState(null);
   const [checkingOrder, setCheckingOrder] = useState(false);
 
+  // Front office: orders open only when Completed, home collections only when Report Ready.
+  // Everything else (patients, follow-ups) stays clickable. Unknown status = not allowed.
+  const isRestricted = OPEN_RESTRICTED_ROLES.includes(normalizeRole(user?.role));
+  const statusAllowsOpen =
+    type === "order"
+      ? subjectStatus === "completed"
+      : type === "homeCollection"
+        ? subjectStatus === "report_ready"
+        : true;
+  const canOpen = !isRestricted || statusAllowsOpen;
+  const blockedTitle =
+    type === "homeCollection"
+      ? "Only report-ready requests can be opened"
+      : "Only completed orders can be opened";
+
   async function handleClick() {
+    if (!canOpen) return;
+
     if (type === "order") {
       setCheckingOrder(true);
       try {
@@ -71,6 +100,9 @@ export default function ActivityItem({ date, text, type, targetId, patientNumber
         const patientName = [o.patient?.title, o.patient?.first_name, o.patient?.last_name]
           .filter(Boolean)
           .join(" ");
+
+        // Safety net: the list may be out of date, so check the live status too.
+        if (isRestricted && o.status !== "completed") return;
 
         // Deleted orders are soft-deleted, so check both the status and deleted_at.
         if (o.status === "cancelled" || o.deleted_at) {
@@ -97,7 +129,8 @@ export default function ActivityItem({ date, text, type, targetId, patientNumber
       } catch (err) {
         // If the status check fails for any reason, fall back to
         // navigating straight through rather than blocking the click.
-        navigate(`/lab-orders/${targetId}`, { state: backState });
+        // (Restricted roles are never let through on a failed check.)
+        if (!isRestricted) navigate(`/lab-orders/${targetId}`, { state: backState });
       } finally {
         setCheckingOrder(false);
       }
@@ -144,12 +177,13 @@ export default function ActivityItem({ date, text, type, targetId, patientNumber
     type === "patient" ||
     type === "followUp" ||
     type === "followUpReminder"; // ADDED
+  const isActive = isClickable && canOpen;
   const { Icon, bg, color } = getIconMeta(text);
 
   return (
     <div
       className={`flex items-start gap-3 py-2.5 px-2 rounded-lg transition-colors ${
-        isClickable ? "hover:bg-gray-50" : ""
+        isActive ? "hover:bg-gray-50" : ""
       }`}
     >
       <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 relative ${bg}`}>
@@ -160,7 +194,7 @@ export default function ActivityItem({ date, text, type, targetId, patientNumber
       </div>
 
       <div className="min-w-0 flex-1 pt-1.5">
-        {isClickable ? (
+        {isActive ? (
           <button
             onClick={handleClick}
             disabled={checkingOrder}
@@ -168,6 +202,14 @@ export default function ActivityItem({ date, text, type, targetId, patientNumber
           >
             {text}
           </button>
+        ) : isClickable ? (
+          // Restricted role and this order / request can't be opened yet: dimmed, not clickable
+          <span
+            title={blockedTitle}
+            className="text-sm font-medium text-gray-400 cursor-not-allowed"
+          >
+            {text}
+          </span>
         ) : (
           <span className="text-sm font-medium text-gray-900">{text}</span>
         )}

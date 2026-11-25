@@ -66,8 +66,9 @@ function mapOrder(o, gstRate = 0) {
     tests: o.items_count ?? o.items?.length ?? 0,
     testNames: (o.items || []).map((item) => item.lab_test?.name).filter(Boolean),
     status: statusLabel(o.status),
-    date: o.ordered_at
-      ? new Date(o.ordered_at).toLocaleString("en-GB", {
+    // Shows when the order was last updated (falls back to the order date).
+    date: (o.updated_at || o.ordered_at)
+      ? new Date(o.updated_at || o.ordered_at).toLocaleString("en-GB", {
           day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
         })
       : "",

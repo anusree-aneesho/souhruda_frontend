@@ -23,14 +23,18 @@ export default function PatientRow({ id, regNo, title, name, age, gender, contac
   const { user } = useAuth();
   const canBookTests = user?.role !== "front_office";
 
+  // Same vertical + right padding on every cell, matching the header, so column gaps are equal.
+  const TD = "py-3 pr-4 text-sm align-middle";
+  const fullName = formatNameWithTitle(title, name);
+
   return (
     <tr className="border-b border-gray-100 last:border-0">
-      <td className="py-3 text-sm text-gray-500">{regNo}</td>
-      <td className="py-3 text-sm font-medium text-gray-900">{formatNameWithTitle(title, name)}</td>
-      <td className="py-3 text-sm text-gray-500">{age} Yrs, {gender}</td>
-      <td className="py-3 text-sm text-gray-500">{contact}</td>
-      <td className="py-3 text-sm text-teal-600 font-medium">{orders}</td>
-      <td className="py-3 whitespace-nowrap">
+      <td className={`${TD} tabular-nums text-gray-500`}>{regNo}</td>
+      <td className={`${TD} font-medium text-gray-900 truncate`} title={fullName}>{fullName}</td>
+      <td className={`${TD} text-gray-500`}>{age} Yrs, {gender}</td>
+      <td className={`${TD} tabular-nums text-gray-500`}>{contact}</td>
+      <td className={`${TD} text-teal-600 font-medium`}>{orders}</td>
+      <td className="py-3 align-middle whitespace-nowrap">
         <div className="flex items-center justify-end gap-1">
           <IconButton label="View patient" onClick={() => onView(id)} className="text-teal-600 hover:bg-teal-50">
             <Eye size={17} />
@@ -45,6 +49,7 @@ export default function PatientRow({ id, regNo, title, name, age, gender, contac
             <>
               <span className="mx-2 h-4 w-px bg-gray-200" />
               <button
+                type="button"
                 onClick={() => open("order", regNo)}
                 className="text-sm text-teal-600 font-medium hover:underline cursor-pointer"
               >

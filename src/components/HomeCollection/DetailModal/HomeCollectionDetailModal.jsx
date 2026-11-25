@@ -413,6 +413,7 @@ export default function HomeCollectionDetailModal() {
   }
 
   async function handleSendWhatsApp() {
+    if (!hc.isPaid) return; // report can only be sent once payment is done
     try {
       const updated = await updateHomeCollectionStatusApi(hc.id, "sent");
       setBaseHc(mapDetail(updated));
@@ -727,7 +728,9 @@ export default function HomeCollectionDetailModal() {
                   {hc.status === "Report Ready" && (
                     <button
                       onClick={handleSendWhatsApp}
-                      className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer"
+                      disabled={!hc.isPaid}
+                      title={hc.isPaid ? undefined : "Payment is pending. Collect payment to send the report."}
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer disabled:bg-gray-300 disabled:hover:bg-gray-300 disabled:cursor-not-allowed"
                     >
                       💬 Send Report via WhatsApp
                     </button>

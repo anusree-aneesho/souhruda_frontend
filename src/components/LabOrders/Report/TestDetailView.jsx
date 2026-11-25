@@ -70,7 +70,13 @@ export default function TestDetailView({
               <Pencil size={16} /> Payment
             </button>
           )}
-          <button type="button" onClick={onWhatsApp} className={actionBtn}>
+          <button
+            type="button"
+            onClick={() => paymentDone && onWhatsApp()}
+            disabled={!paymentDone}
+            title={paymentDone ? undefined : "Payment is pending. Collect payment to send the report."}
+            className={`${actionBtn} disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white`}
+          >
             <MessageCircle size={16} /> WhatsApp
           </button>
 

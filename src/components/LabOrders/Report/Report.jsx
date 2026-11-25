@@ -846,7 +846,13 @@ className="text-sm font-medium text-teal-600 hover:underline cursor-pointer"
                 <Pencil size={16} /> Payment
               </button>
             )}
-              <button type="button" onClick={() => setWhatsAppOpen(true)} className={actionBtn}>
+              <button
+                type="button"
+                onClick={() => paymentDone && setWhatsAppOpen(true)}
+                disabled={!paymentDone}
+                title={paymentDone ? undefined : "Payment is pending. Collect payment to send the report."}
+                className={`${actionBtn} disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white`}
+              >
                 <MessageCircle size={16} /> WhatsApp
               </button>
               <button type="button" onClick={handlePrint} className={actionBtn}>

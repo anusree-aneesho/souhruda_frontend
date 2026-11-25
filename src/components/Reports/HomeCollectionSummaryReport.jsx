@@ -9,9 +9,13 @@ import { getHomeCollectionSummaryReportApi } from "../../api/api";
 import { HcStatusBadge, formatHcDate } from "./shared/hcStatus";
 import Pagination from "./shared/Pagination";
 
-const PAGE_SIZE = 7;
-const COMPLETED_STATUSES = ["collected", "processing", "report_ready", "sent"];
-const PENDING_STATUSES = ["requested", "assigned", "en_route"];
+
+const PAGE_SIZE = 10;
+
+// Change statuses between these two groups here only.
+// Cards, table filter and exports all follow these arrays.
+const COMPLETED_STATUSES = ["report_ready", "sent"];
+const PENDING_STATUSES = ["requested", "assigned", "en_route", "collected", "processing"];
 
 const FILTER_LABELS = {
   completed: "Completed",
@@ -50,19 +54,40 @@ export default function HomeCollectionSummaryReport({ onBack }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateFrom, dateTo, search]);
 
-  // Reset the card filter whenever the underlying data changes (new date
-  // range or search) so it never silently filters against stale data.
+  // Reset the card filter whenever the underlying data changes.
   useEffect(() => {
     setActiveFilter(null);
   }, [dateFrom, dateTo, search]);
 
-  // Back to page 1 whenever the filter or the underlying rows change, so
-  // pagination never gets stuck past the end of a shorter result set.
+  // Back to page 1 whenever the filter or the rows change.
   useEffect(() => {
     setPage(1);
   }, [activeFilter, data]);
 
-  const allRows = data?.rows || [];
+  const allRows = useMemo(() => data?.rows || [], [data]);
+
+  // Card numbers are calculated from the same rows the table uses.
+  const counts = useMemo(() => {
+    const total = allRows.length;
+    const completed = allRows.filter((r) => COMPLETED_STATUSES.includes(r.status)).length;
+    const pending = allRows.filter((r) => PENDING_STATUSES.includes(r.status)).length;
+    const cancelled = allRows.filter((r) => r.status === "cancelled").length;
+    const withDistance = allRows.filter((r) => r.distance_km != null);
+    const avgDistance = withDistance.length
+      ? withDistance.reduce((sum, r) => sum + r.distance_km, 0) / withDistance.length
+      : null;
+    const totalCharge = allRows.reduce((sum, r) => sum + (r.collection_charge || 0), 0);
+
+    return {
+      total,
+      completed,
+      pending,
+      cancelled,
+      completionRate: total ? ((completed / total) * 100).toFixed(1) : "0.0",
+      avgDistance: avgDistance != null ? avgDistance.toFixed(2) : null,
+      totalCharge,
+    };
+  }, [allRows]);
 
   const rows = useMemo(() => {
     switch (activeFilter) {
@@ -125,7 +150,7 @@ export default function HomeCollectionSummaryReport({ onBack }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
           label="Total Requests"
-          value={data?.summary?.total_requests ?? "—"}
+          value={data ? counts.total : "—"}
           sublabel="In selected range"
           icon={MapPin}
           color="amber"
@@ -134,8 +159,8 @@ export default function HomeCollectionSummaryReport({ onBack }) {
         />
         <StatCard
           label="Completed"
-          value={data?.summary?.completed ?? "—"}
-          sublabel={data?.summary ? `${data.summary.completion_rate}% completion rate` : undefined}
+          value={data ? counts.completed : "—"}
+          sublabel={data ? `${counts.completionRate}% completion rate` : undefined}
           icon={CheckCircle2}
           color="teal"
           onClick={() => toggleFilter("completed")}
@@ -143,8 +168,8 @@ export default function HomeCollectionSummaryReport({ onBack }) {
         />
         <StatCard
           label="Pending"
-          value={data?.summary?.pending ?? "—"}
-          sublabel="Unassigned or in progress"
+          value={data ? counts.pending : "—"}
+          sublabel="Not yet report ready"
           icon={Hourglass}
           color="blue"
           onClick={() => toggleFilter("pending")}
@@ -152,7 +177,7 @@ export default function HomeCollectionSummaryReport({ onBack }) {
         />
         <StatCard
           label="Cancelled"
-          value={data?.summary?.cancelled ?? "—"}
+          value={data ? counts.cancelled : "—"}
           icon={XCircle}
           color="gray"
           onClick={() => toggleFilter("cancelled")}
@@ -160,8 +185,8 @@ export default function HomeCollectionSummaryReport({ onBack }) {
         />
         <StatCard
           label="Avg. Distance"
-          value={data?.summary?.avg_distance_km != null ? `${data.summary.avg_distance_km} km` : "—"}
-          sublabel={data?.summary ? formatCurrency(data.summary.total_collection_charge) + " total charges" : undefined}
+          value={counts.avgDistance != null ? `${counts.avgDistance} km` : "—"}
+          sublabel={data ? `${formatCurrency(counts.totalCharge)} total charges` : undefined}
           icon={Route}
           color="purple"
           onClick={() => toggleFilter("distance")}

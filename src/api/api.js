@@ -688,6 +688,13 @@ export async function getDoctorsApi(page = 1, q = "") {
   return request(`/doctors?${params.toString()}`);
 }
 
+// Existing hospital / clinic names (for autocomplete). Returns { data: ["City Hospital", ...] }
+export async function getDoctorHospitalsApi(q = "") {
+  const params = new URLSearchParams();
+  if (q) params.append("q", q);
+  return request(`/doctors/hospitals?${params.toString()}`);
+}
+
 export async function createDoctorApi(payload) {
   return request("/doctors", {
     method: "POST",

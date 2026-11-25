@@ -1,4 +1,8 @@
 // src/components/Reports/shared/format.js
+
+// Rows per page for all report tables. Change it here and every report follows.
+export const PAGE_SIZE = 10;
+
 export function formatCurrency(value) {
   const n = Number(value) || 0;
   return `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;

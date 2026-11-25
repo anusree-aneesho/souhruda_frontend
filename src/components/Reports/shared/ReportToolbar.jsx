@@ -1,5 +1,5 @@
 // src/components/Reports/shared/ReportToolbar.jsx
-import { ArrowLeft, Search, FileDown, FileSpreadsheet } from "lucide-react";
+import { ArrowLeft, Search, X, FileDown, FileSpreadsheet } from "lucide-react";
 
 const inputClass =
   "rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500";
@@ -78,6 +78,16 @@ export default function ReportToolbar({
                   placeholder={searchPlaceholder}
                   className="flex-1 text-sm outline-none placeholder:text-gray-400 min-w-0"
                 />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => onSearchChange("")}
+                    aria-label="Clear search"
+                    className="shrink-0 rounded-full p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
             </div>
           )}

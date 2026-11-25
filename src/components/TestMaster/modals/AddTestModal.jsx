@@ -150,6 +150,37 @@ function AgeBoundInput({ label, bound, onChange, hasError }) {
   );
 }
 
+// Search input with a clear (X) button that appears when there is text.
+function ClearableSearch({ value, onChange, placeholder, className }) {
+  return (
+    <div className="relative">
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          // Esc clears the text first instead of closing the whole modal.
+          if (e.key === "Escape" && value) {
+            e.stopPropagation();
+            onChange("");
+          }
+        }}
+        placeholder={placeholder}
+        className={`${className} pr-9`}
+      />
+      {value && (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          aria-label="Clear search"
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer"
+        >
+          <X size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function AddTestModal({
   categories,
   defaultCategory,
@@ -446,9 +477,9 @@ export default function AddTestModal({
                     <p className="text-sm font-semibold text-gray-900">Included in</p>
                     <p className="text-xs text-gray-500">{form.groupIds.length} selected</p>
                   </div>
-                  <input
+                  <ClearableSearch
                     value={groupSearch}
-                    onChange={(e) => setGroupSearch(e.target.value)}
+                    onChange={setGroupSearch}
                     placeholder="Search tests..."
                     className={inputClass(false)}
                   />
@@ -485,9 +516,9 @@ export default function AddTestModal({
                       {form.parameterIds.length} selected · shown in the order you pick them
                     </p>
                   </div>
-                  <input
+                  <ClearableSearch
                     value={parameterSearch}
-                    onChange={(e) => setParameterSearch(e.target.value)}
+                    onChange={setParameterSearch}
                     placeholder="Search tests..."
                     className={inputClass(false)}
                   />

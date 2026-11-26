@@ -22,6 +22,14 @@ import {
   markOrderPaidApi,
 } from "../../../api/api";
 
+// "14.9108 minute(s)" -> "15 minutes" (rounded up, never shows seconds)
+function cleanMinutes(text) {
+  return text.replace(/(\d+(?:\.\d+)?)\s*minute\(s\)/i, (_, n) => {
+    const m = Math.max(1, Math.ceil(Number(n)));
+    return `${m} minute${m === 1 ? "" : "s"}`;
+  });
+}
+
 function formatStatus(status) {
   return (status || "")
     .split("_")
@@ -248,6 +256,7 @@ export default function HomeCollectionDetailModal() {
   const [isAssignOpen, setAssignOpen] = useState(false);
   const [isLabelOpen, setLabelOpen] = useState(false);
   const [otpInput, setOtpInput] = useState("");
+  const [otpError, setOtpError] = useState(null); // { message, attemptsLeft }
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [cancelError, setCancelError] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
@@ -274,6 +283,8 @@ export default function HomeCollectionDetailModal() {
     setPaymentReceived(false);
     setPaymentDeferred(false);
     setView("details");
+    setOtpError(null);
+    setOtpInput("");
 
     (async () => {
       try {
@@ -337,8 +348,10 @@ export default function HomeCollectionDetailModal() {
   }
 
   async function handleConfirmCollected() {
+    setOtpError(null);
+
     if (!otpInput.trim()) {
-      alert("Enter the OTP from the patient first.");
+      setOtpError({ message: "Enter the OTP from the patient first.", attemptsLeft: null });
       return;
     }
 
@@ -350,7 +363,14 @@ export default function HomeCollectionDetailModal() {
       setOtpInput("");
       showToast(`${hc.id} marked Collected`);
     } catch (err) {
-      alert(err.message || "Couldn't confirm sample collection.");
+      const raw = err.message || "Couldn't confirm sample collection.";
+      // Server sends "... (4 attempt(s) left)": pull the number out for the badge
+      const match = raw.match(/\((\d+)\s*attempt/i);
+      setOtpError({
+        message: cleanMinutes(raw.replace(/\s*\(\d+\s*attempt.*?\)\s*$/i, "")),
+        attemptsLeft: match ? Number(match[1]) : null,
+      });
+      setOtpInput("");
     }
   }
 
@@ -469,68 +489,68 @@ export default function HomeCollectionDetailModal() {
                   {/* Two columns: bill + confirmation on the left, UPI QR on the right */}
                   <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_300px] gap-5 items-start">
                     <div className="min-w-0 space-y-4">
-                  <div className="rounded-xl bg-teal-50/60 px-5 py-4 space-y-2.5 text-sm">
-                    <div className="space-y-1.5">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                        Tests ({hc.tests.length})
-                      </p>
-                      {hc.tests.map((t) => (
-                        <div key={t.id} className="flex justify-between gap-4 text-gray-600">
-                          <span className="truncate">{t.name}</span>
-                          <span className="text-gray-800 shrink-0">{fmt(t.price)}</span>
+                      <div className="rounded-xl bg-teal-50/60 px-5 py-4 space-y-2.5 text-sm">
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                            Tests ({hc.tests.length})
+                          </p>
+                          {hc.tests.map((t) => (
+                            <div key={t.id} className="flex justify-between gap-4 text-gray-600">
+                              <span className="truncate">{t.name}</span>
+                              <span className="text-gray-800 shrink-0">{fmt(t.price)}</span>
+                            </div>
+                          ))}
+                          {Math.abs(listedAdjustment) > 0.005 && (
+                            <div className="flex justify-between text-gray-600">
+                              <span>Package adjustment</span>
+                              <span className="text-gray-800">
+                                {listedAdjustment < 0 ? "− " : ""}
+                                {fmt(Math.abs(listedAdjustment))}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex justify-between border-t border-teal-100 pt-1.5 text-gray-600">
+                            <span>Tests total</span>
+                            <span className="text-gray-800">{fmt(hc.testsTotal)}</span>
+                          </div>
                         </div>
-                      ))}
-                      {Math.abs(listedAdjustment) > 0.005 && (
+
                         <div className="flex justify-between text-gray-600">
-                          <span>Package adjustment</span>
+                          <span>Home visit fee</span>
+                          <span className="text-gray-800">{fmt(hc.collectionCharge)}</span>
+                        </div>
+                        <div className="flex justify-between text-gray-600">
+                          <span>Discount</span>
                           <span className="text-gray-800">
-                            {listedAdjustment < 0 ? "− " : ""}
-                            {fmt(Math.abs(listedAdjustment))}
+                            {hc.discountAmount > 0 ? `− ${fmt(hc.discountAmount)}` : fmt(0)}
                           </span>
                         </div>
-                      )}
-                      <div className="flex justify-between border-t border-teal-100 pt-1.5 text-gray-600">
-                        <span>Tests total</span>
-                        <span className="text-gray-800">{fmt(hc.testsTotal)}</span>
+                        <div className="flex justify-between text-gray-600">
+                          <span>Subtotal</span>
+                          <span className="text-gray-800">{fmt(hc.subtotal)}</span>
+                        </div>
+                        {hc.gstRate > 0 && (
+                          <div className="flex justify-between text-gray-600">
+                            <span>GST ({hc.gstRate}%)</span>
+                            <span className="text-gray-800">{fmt(hc.gstAmount)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center border-t border-teal-100 pt-3">
+                          <span className="text-base font-semibold text-teal-700">Total payable</span>
+                          <span className="text-2xl font-bold text-teal-700">{fmt(hc.grandTotal)}</span>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex justify-between text-gray-600">
-                      <span>Home visit fee</span>
-                      <span className="text-gray-800">{fmt(hc.collectionCharge)}</span>
-                    </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>Discount</span>
-                      <span className="text-gray-800">
-                        {hc.discountAmount > 0 ? `− ${fmt(hc.discountAmount)}` : fmt(0)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>Subtotal</span>
-                      <span className="text-gray-800">{fmt(hc.subtotal)}</span>
-                    </div>
-                    {hc.gstRate > 0 && (
-                      <div className="flex justify-between text-gray-600">
-                        <span>GST ({hc.gstRate}%)</span>
-                        <span className="text-gray-800">{fmt(hc.gstAmount)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between items-center border-t border-teal-100 pt-3">
-                      <span className="text-base font-semibold text-teal-700">Total payable</span>
-                      <span className="text-2xl font-bold text-teal-700">{fmt(hc.grandTotal)}</span>
-                    </div>
-                  </div>
-
-                  {/* Shown for UPI, Cash and Card */}
-                  <label className="flex items-center gap-3 text-sm font-medium text-gray-900 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={paymentReceived}
-                      onChange={(e) => setPaymentReceived(e.target.checked)}
-                      className="h-4 w-4 accent-teal-600"
-                    />
-                    Payment already received
-                  </label>
+                      {/* Shown for UPI, Cash and Card */}
+                      <label className="flex items-center gap-3 text-sm font-medium text-gray-900 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={paymentReceived}
+                          onChange={(e) => setPaymentReceived(e.target.checked)}
+                          className="h-4 w-4 accent-teal-600"
+                        />
+                        Payment already received
+                      </label>
                     </div>
 
                     {/* RIGHT: UPI QR (only for UPI) */}
@@ -619,7 +639,7 @@ export default function HomeCollectionDetailModal() {
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
                   {hc.status === "Requested" && (
                     <>
                       {!hc.assignable && (
@@ -667,18 +687,49 @@ export default function HomeCollectionDetailModal() {
                       )}
                       <input
                         value={otpInput}
-                        onChange={(e) => setOtpInput(e.target.value)}
+                        onChange={(e) => {
+                          setOtpInput(e.target.value);
+                          if (otpError) setOtpError(null);
+                        }}
+                        onKeyDown={(e) =>
+                          e.key === "Enter" && otpInput.trim() && !hc.otpLocked && handleConfirmCollected()
+                        }
                         placeholder="Enter OTP from patient"
                         disabled={hc.otpLocked}
-                        className="flex-1 w-full sm:w-auto rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 disabled:bg-gray-50 disabled:text-gray-400"
+                        aria-invalid={!!otpError}
+                        className={`flex-1 w-full sm:w-auto rounded-lg border px-3.5 py-2.5 text-sm outline-none disabled:bg-gray-50 disabled:text-gray-400 ${
+                          otpError
+                            ? "animate-shake border-red-400 bg-red-50 focus:ring-1 focus:ring-red-300"
+                            : "border-gray-200 focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                        }`}
                       />
                       <button
                         onClick={handleConfirmCollected}
-                        disabled={hc.otpLocked}
-                        className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 whitespace-nowrap disabled:bg-gray-300 cursor-pointer"
+                        disabled={hc.otpLocked || !otpInput.trim()}
+                        className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 whitespace-nowrap cursor-pointer disabled:bg-gray-300 disabled:hover:bg-gray-300 disabled:cursor-not-allowed"
                       >
                         Confirm Sample Collected
                       </button>
+
+                      {otpError && (
+                        <div
+                          role="alert"
+                          className="w-full flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+                        >
+                          <span className="text-base leading-none mt-0.5">⚠️</span>
+                          <div className="flex-1">
+                            <p className="font-medium">
+                              {otpError.attemptsLeft != null ? "Incorrect OTP" : "OTP required"}
+                            </p>
+                            <p className="text-red-700">{otpError.message}</p>
+                          </div>
+                          {otpError.attemptsLeft != null && (
+                            <span className="whitespace-nowrap rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold">
+                              {otpError.attemptsLeft} attempt{otpError.attemptsLeft === 1 ? "" : "s"} left
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </>
                   )}
 

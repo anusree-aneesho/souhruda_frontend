@@ -71,7 +71,7 @@ function ResultsModal({ test, onClose }) {
                   {/* NEW: opens the report and remembers this popup for the back button */}
                   {r.order_no && (
                     <Link
-                      to={`/lab-orders/${encodeURIComponent(r.order_no)}/report`}
+                      to={`/lab-orders/${encodeURIComponent(r.order_no)}/report?test=${r.order_item_id}`}
                       state={{
                         from: `/?testwatch=${test.test_id}`,
                         fromLabel: `Back to ${test.test_name}`,

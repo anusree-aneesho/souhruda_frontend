@@ -295,7 +295,7 @@ const order = existingOrder || (hasOrderState ? { orderId, ...state } : apiOrder
   // (used by "View Details" on the follow-up patient page).
   const showAll = selectedTestId === "all";
   const fromDashboard = searchParams.get("from") === "dashboard";
-
+  const fromTestWatch = Boolean(location.state?.from?.startsWith("/?testwatch"));
   function openTest(t) {
     setSearchParams({ test: String(t.id) }, { state });
   }
@@ -794,12 +794,14 @@ async function handleDownloadPdf() {
               : undefined
           }
           backLabel={
-              fromDashboard
-                ? "Back to dashboard"
-                : showAll
-                  ? (location.state?.fromLabel || "Back to lab orders")
-                  : undefined
-            }
+                fromTestWatch
+                  ? (location.state?.fromLabel || "Back to dashboard")
+                  : fromDashboard
+                    ? "Back to dashboard"
+                    : showAll
+                      ? (location.state?.fromLabel || "Back to lab orders")
+                      : undefined
+              }
           flags={flags}
           ageText={ageText}
           registered={registered}
@@ -809,13 +811,15 @@ async function handleDownloadPdf() {
           referredBy={order?.referredBy || "Self"}
           letterheadOn={letterheadOn}
           onLetterheadChange={setLetterheadOn}
-          onBack={
-            fromDashboard
-              ? () => navigate("/")
-              : showAll
-                ? () => navigate(location.state?.from || "/lab-orders", { state: location.state?.fromState })
-                : closeTest
-          }
+            onBack={
+              fromTestWatch
+                ? () => navigate(location.state.from)
+                : fromDashboard
+                  ? () => navigate("/")
+                  : showAll
+                    ? () => navigate(location.state?.from || "/lab-orders", { state: location.state?.fromState })
+                    : closeTest
+            }
           onBill={() => setBillOpen(true)}
           onEditBill={() => setEditBillOpen(true)}
           onWhatsApp={() => setWhatsAppOpen(true)}

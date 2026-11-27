@@ -7,6 +7,11 @@ import { getDailyBriefApi } from "../../api/insightsApi";
 
 const REFRESH_MS = 60_000;
 
+// Cancelled orders are shown as plain text, not a link.
+function isCancelled(s) {
+  return /cancel/i.test(`${s.key} ${s.text}`);
+}
+
 export default function DailyBrief() {
   const [brief, setBrief] = useState(null);
   const [error, setError] = useState("");
@@ -60,9 +65,13 @@ export default function DailyBrief() {
         return (
           <Fragment key={s.key}>
             {i > 0 && " · "}
-            <Link to={s.href} className="text-teal-600 font-medium hover:underline">
-              {s.label}
-            </Link>
+            {isCancelled(s) ? (
+              <span className="font-medium">{s.label}</span>
+            ) : (
+              <Link to={s.href} className="text-teal-600 font-medium hover:underline">
+                {s.label}
+              </Link>
+            )}
             {rest}
           </Fragment>
         );

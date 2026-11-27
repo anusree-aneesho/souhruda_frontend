@@ -82,16 +82,19 @@ function mapOrder(o, gstRate = 0) {
 // Daily Brief links -> which brief list to show (same conditions as the brief's counts).
 //   /lab-orders?status=pending            orders awaiting results today (pending + sample collected)
 //   /lab-orders?date=today                orders today (not cancelled)
+//   /lab-orders?status=cancelled&date=today  orders cancelled today
 //   /lab-orders?flag=abnormal&date=today  orders with abnormal results entered today
 const BRIEF_LABELS = {
   awaiting_results: "Orders awaiting results today",
   orders_today: "Orders today",
+  cancelled_today: "Orders cancelled today",
   abnormal_today: "Orders with abnormal results today",
 };
 
 function briefFromParams(sp) {
   if (sp.get("flag") === "abnormal") return "abnormal_today";
   if (sp.get("status") === "pending") return "awaiting_results";
+  if (sp.get("status") === "cancelled" && sp.get("date") === "today") return "cancelled_today";
   if (sp.get("date") === "today") return "orders_today";
   return null;
 }
